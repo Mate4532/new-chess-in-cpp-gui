@@ -102,4 +102,5 @@ public:
     static int MopUpEval(const Board& board, Color winner);
     static int EvaluateKingSafety(const Board& board, Color color);
     static int EvaluatePawnTerritory(const Board& board, Color color);
+    static void CalculateImbalancePenalty(const Board& board, Color c, int pieceCounts[2][6], int& midGameScore, int& endGameScore);
 };

@@ -606,14 +606,12 @@ bool Board::MakeMove(Move move, bool in_search) {
     boardStateHistory[m_ply] = newBoardState;
     m_side_to_move = enemy;
 
+    bool reset = (piece == PAWN) || (flags & CAPTURE_FLAG);
+
     if (!in_search) {
-		repetition_history.Push(newHash, piece == PAWN || (move.getFlags() & CAPTURE_FLAG));
+        repetition_history.Push(newHash, reset);
 		move_history.push_back(move);
     }
-
-    bool reset =
-        (piece == PAWN) ||
-        (flags & CAPTURE_FLAG);
 
     Square kingSq = getKingSquare(player);
     if (isSquareAttacked(kingSq, enemy)) {

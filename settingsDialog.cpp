@@ -83,6 +83,14 @@ QWidget* SettingsDialog::createRobotTab() {
 
     RobotSettings& rs = allS.robotSettings;
 
+    checkBlackRobot = new QCheckBox("Fekete Robot");
+    checkBlackRobot->setChecked(rs.isBlackRobot);
+
+    comboBlackDiff = new QComboBox();
+    comboBlackDiff->addItems(levels);
+    comboBlackDiff->setCurrentIndex((int)rs.blackRobotDifficulty);
+    comboBlackDiff->setEnabled(rs.isBlackRobot);
+
     checkWhiteRobot = new QCheckBox("Fehér Robot");
     checkWhiteRobot->setChecked(rs.isWhiteRobot);
 
@@ -93,21 +101,13 @@ QWidget* SettingsDialog::createRobotTab() {
 
     connect(checkWhiteRobot, &QCheckBox::toggled, comboWhiteDiff, &QWidget::setEnabled);
 
-    layout->addWidget(checkWhiteRobot, 0, 0);
-    layout->addWidget(comboWhiteDiff, 0, 1);
-
-    checkBlackRobot = new QCheckBox("Fekete Robot");
-    checkBlackRobot->setChecked(rs.isBlackRobot);
-
-    comboBlackDiff = new QComboBox();
-    comboBlackDiff->addItems(levels);
-    comboBlackDiff->setCurrentIndex((int)rs.blackRobotDifficulty);
-    comboBlackDiff->setEnabled(rs.isBlackRobot);
+    layout->addWidget(checkBlackRobot, 0, 0);
+    layout->addWidget(comboBlackDiff, 0, 1);
 
     connect(checkBlackRobot, &QCheckBox::toggled, comboBlackDiff, &QWidget::setEnabled);
 
-    layout->addWidget(checkBlackRobot, 1, 0);
-    layout->addWidget(comboBlackDiff, 1, 1);
+    layout->addWidget(checkWhiteRobot, 1, 0);
+    layout->addWidget(comboWhiteDiff, 1, 1);
 
     layout->setRowMinimumHeight(0, 35);
     layout->setRowStretch(2, 1);

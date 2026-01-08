@@ -97,19 +97,6 @@ int Searcher::quiescence(int alpha, int beta) {
 
     for (const Move& m : moves) {
 
-        bool isPromo = (m.getFlags() & PROMOTION_FLAG);
-
-		if (!isPromo && see(m) < 0) {
-            continue;
-        }
-
-        Color enemy = (Color)(board.getSideToMove() ^ 1);
-        PieceType victim = board.getPieceAt(m.getTo(), enemy);
-
-        if (!isPromo && standPat + Evaluation::GetPieceValue(victim) + 200 < alpha) {
-            continue;
-        }
-
         if (!board.MakeMove(m, true)) continue;
 
         int score = -quiescence(-beta, -alpha);
@@ -150,47 +137,36 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         return ScoreFromTT(ttScore, ply);
     }
 
-    bool inCheckBeforeMove = board.isSquareAttacked(
+    bool inCheck = board.isSquareAttacked(
         board.getKingSquare(board.getSideToMove()),
         (Color)(board.getSideToMove() ^ 1));
 
-
-    if (inCheckBeforeMove)
+    if (inCheck)
         depth++;
 
     if (depth <= 0)
         return quiescence(alpha, beta);
 
-    bool futilityPrune = false;
+    int staticEval = 0;
+    if (!inCheck) {
+        staticEval = Evaluation::EvaluatePos(board);
+    }
 
-    if (depth <= 4 && !inCheckBeforeMove && ply > 0 && abs(alpha) < 90000 && abs(beta) < 90000) {
-
-        int staticEval = Evaluation::EvaluatePos(board);
+    if (depth <= 4 && !inCheck && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
         int evalMargin = 120 * depth;
         if (staticEval - evalMargin >= beta) {
             return staticEval;
         }
-        if (staticEval + futility_margin[depth] <= alpha) {
-            futilityPrune = true;
-        }
     }
 
-    if (allowNull && depth >= 3 && !inCheckBeforeMove && ply > 0 && beta < MATE_SCORE) {
+    if (allowNull && depth >= 3 && !inCheck && ply > 0 && beta < MATE_SCORE) {
         if (board.HasNonPawnMaterial(board.getSideToMove())) {
-
+            int R = 3 + (depth / 6);
             board.MakeNullMove();
-            int R = 3;
-            if (depth > 6) R = 4;
-
             int score = -negamax(depth - 1 - R, -beta, -beta + 1, ply + 1, Move(), false, false);
-
             board.UndoNullMove();
-
             if (stop) return alpha;
-
-            if (score >= beta) {
-                return beta;
-            }
+            if (score >= beta) return beta;
         }
     }
 
@@ -201,9 +177,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
 
     if (ply < MAX_KILLER_HISTORY) {
 
-        Move currentKillers[2] = { Move(), Move() };
-        currentKillers[0] = killerMoves[ply][0];
-        currentKillers[1] = killerMoves[ply][1];
+        Move currentKillers[2] = { killerMoves[ply][0], killerMoves[ply][1] };
 
         important_move = MoveOrdering::SortMoves(
             board,
@@ -226,25 +200,33 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         }
         movesSearched++;
 
-        Color us = board.getSideToMove();
-        Color enemy = (Color)(us ^ 1);
+        Color enemy = (Color)(board.getSideToMove());
+        bool givesCheck = board.isSquareAttacked(board.getKingSquare(enemy), (Color)(enemy ^ 1));
 
         bool isCapture = m.getFlags() & CAPTURE_FLAG;
-        bool quiet =
-            !(isCapture) &&
-            !(m.getFlags() & PROMOTION_FLAG);
+        bool isPromo = m.getFlags() & PROMOTION_FLAG;
+        bool quiet = !isCapture && !isPromo;
 
-        if ((futilityPrune && quiet && movesSearched > 0) || (!inCheckBeforeMove && depth <= 5 && movesSearched >= lmp_table[depth] && quiet)) {
-
-            bool isKiller = false;
-            if (ply < MAX_KILLER_HISTORY) {
-                if (killerMoves[ply][0].isValid() && m.getMoveData() == killerMoves[ply][0].getMoveData()) isKiller = true;
-                else if (killerMoves[ply][1].isValid() && m.getMoveData() == killerMoves[ply][1].getMoveData()) isKiller = true;
+        if (depth <= 4 && !inCheck && !givesCheck && quiet && abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
+            int futilityMargin = 150 * depth;
+            if (staticEval + futilityMargin <= alpha) {
+                bool isKiller = (ply < MAX_KILLER_HISTORY) &&
+                                (m == killerMoves[ply][0] || m == killerMoves[ply][1]);
+                if (!isKiller) {
+                    board.UndoMove(m, true);
+                    continue;
+                }
             }
+        }
 
-            if (!isKiller) {
-                board.UndoMove(m, true);
-                continue;
+        if (!inCheck && !givesCheck && quiet && depth <= 5) {
+            if (movesSearched >= lmp_table[depth]) {
+                bool isKiller = (ply < MAX_KILLER_HISTORY) &&
+                                (m == killerMoves[ply][0] || m == killerMoves[ply][1]);
+                if (!isKiller) {
+                    board.UndoMove(m, true);
+                    continue;
+                }
             }
         }
 
@@ -253,12 +235,13 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         repetitionTable.Push(hash_after_move, irreversible);
 
         int score;
-        bool gives_check = false;
+
         int reduction = 0;
-        if (depth >= 3 && quiet) {
-            gives_check = board.isSquareAttacked(board.getKingSquare(enemy), us);
-            if (!gives_check) {
-                reduction = LMR::GetReduction(depth, movesSearched);
+        if (depth >= 3 && movesSearched > important_move && quiet && !givesCheck) {
+            reduction = LMR::GetReduction(depth, movesSearched);
+
+            if (!inCheck && (staticEval + 100 <= alpha)) {
+                reduction++;
             }
         }
 
@@ -266,11 +249,9 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
             score = -negamax(depth - 1, -beta, -alpha, ply + 1, m, isCapture, true);
         }
         else {
-            int r = (movesSearched <= important_move) ? 0 : reduction;
+            score = -negamax(depth - 1 - reduction, -alpha - 1, -alpha, ply + 1, m, isCapture, true);
 
-            score = -negamax(depth - 1 - r, -alpha - 1, -alpha, ply + 1, m, isCapture, true);
-
-            if (score > alpha && r > 0) {
+            if (score > alpha && reduction > 0) {
                 score = -negamax(depth - 1, -alpha - 1, -alpha, ply + 1, m, isCapture, true);
             }
 
@@ -303,7 +284,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
     }
 
     if (movesSearched == 0) {
-        int score = inCheckBeforeMove ? -MATE_SCORE + ply : 0;
+        int score = inCheck ? -MATE_SCORE + ply : 0;
         return score;
     }
 
@@ -542,15 +523,15 @@ void Searcher::ClearSearcher() {
 void Searcher::setDifficulty(Difficulty diff) {
     switch (diff) {
     case Difficulty::EASY:
-        max_depth = 3;
-        break;
-
-    case Difficulty::MEDIUM:
         max_depth = 5;
         break;
 
-    case Difficulty::HARD:
+    case Difficulty::MEDIUM:
         max_depth = 7;
+        break;
+
+    case Difficulty::HARD:
+        max_depth = 9;
         break;
 
     case Difficulty::IMPOSSIBLE:

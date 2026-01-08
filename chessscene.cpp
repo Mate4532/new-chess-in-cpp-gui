@@ -77,25 +77,14 @@ QPointF ChessScene::squareToScenePos(int file, int visualRank) const
     return QPointF(x, y);
 }
 
-void ChessScene::updateLayout()
-{
-    if (!cvm) return;
-
-    clear();
-    activeItem = nullptr;
-
+void ChessScene::drawPieces(bool isFlipped) {
     auto boardMatrix = cvm->getBoardMatrix();
-    bool isFlipped = cvm->getIsBoardFlipped();
 
-    // FIX MINŐSÉG SZORZÓ
-    // 4.0 = Ultra HD minőség. (Mindig 4x annyi pixelből rajzol, mint kéne)
-    // Ez garantálja, hogy sose legyen homályos, még teljes képernyőn sem.
     const qreal qualityMultiplier = 1.5;
 
     for (int visualRow = 0; visualRow < 8; ++visualRow) {
         for (int visualCol = 0; visualCol < 8; ++visualCol) {
 
-            // --- Adatlekérés (Változatlan) ---
             int matrixRow = isFlipped ? (7 - visualRow) : visualRow;
             int matrixCol = isFlipped ? (7 - visualCol) : visualCol;
 
@@ -119,13 +108,8 @@ void ChessScene::updateLayout()
 
             if (originalPixmaps.count(resource)) {
 
-                // --- ITT A JAVÍTÁS ---
-
-                // 1. Kiszámoljuk a felbontást (PIECE_SIZE * 4)
-                // Tehát ha a bábu helye 100px, mi 400px-es képet gyártunk.
                 int highResSize = static_cast<int>(PIECE_SIZE * qualityMultiplier);
 
-                // 2. Legyártjuk a nagy felbontású képet
                 QPixmap scaled = originalPixmaps[resource].scaled(
                     highResSize,
                     highResSize,
@@ -133,18 +117,11 @@ void ChessScene::updateLayout()
                     Qt::SmoothTransformation
                     );
 
-                // 3. Beállítjuk a pixelsűrűséget 4-re.
-                // Ezzel azt mondjuk a Qt-nak: "Ez a kép 400 pixel széles,
-                // de rajzold úgy a képernyőre, mintha csak 100 lenne."
                 scaled.setDevicePixelRatio(qualityMultiplier);
 
-                // Eredmény:
-                // - A kép logikai mérete (boundingRect) = PIECE_SIZE (JÓ AZ EGÉRNEK!)
-                // - A kép valódi felbontása = 4x (TŰÉLES!)
                 item->setPixmap(scaled);
             }
 
-            // --- Pozicionálás (Változatlan) ---
             item->setPos(squareToScenePos(visualCol, visualRow));
 
             int logicalRank = 7 - matrixRow;
@@ -157,6 +134,18 @@ void ChessScene::updateLayout()
             addItem(item);
         }
     }
+}
+
+void ChessScene::updateLayout()
+{
+    if (!cvm) return;
+
+    clear();
+    activeItem = nullptr;
+
+    bool isFlipped = cvm->getIsBoardFlipped();
+
+    drawPieces(isFlipped);
 }
 
 void ChessScene::onBoardChanged() {
@@ -248,7 +237,9 @@ void ChessScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
         if (insideBoard && cvm) {
             int toLogicalRank = 7 - visualRank;
 
-            cvm->movePiece(fromFile, fromRank, toFile, toLogicalRank);
+            bool isMovePromotion = cvm->isMovePromotion(fromFile, fromRank, toFile, toLogicalRank);
+            PieceType promotionPiece = isMovePromotion ? PieceType::QUEEN : PieceType::PIECE_NONE;
+            cvm->movePiece(fromFile, fromRank, toFile, toLogicalRank, promotionPiece);
         }
 
         if (items().contains(activeItem)) {

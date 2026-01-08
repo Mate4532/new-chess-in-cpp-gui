@@ -38,6 +38,7 @@ private:
 public:
 
     static const int MATE_SCORE = 100000;
+    static const int MATE_SCORE_BOUND = 90000;
 
     Searcher(Board& board) : board(board), tt(TT_SIZE_MB) {
         ClearHistory(); 

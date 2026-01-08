@@ -10,7 +10,7 @@ ChessViewModel::ChessViewModel(BoardManager& b, QObject* parent)
 void ChessViewModel::startGame() {
 
     if (isGameRunning || isRobotUnderSearch())
-        return;
+        endGame();
 
     if (!isBeginnerPos)
         loadNewGame();
@@ -33,11 +33,16 @@ void ChessViewModel::startGame() {
 void ChessViewModel::endGame() {
 
     if (isRobotUnderSearch()) {
-        stopRobotCalculation();
+        stopRobotSearch();
     }
 
     isGameRunning = false;
 }
+
+bool ChessViewModel::isMovePromotion(int fromX, int fromY, int toX, int toY) const {
+    return bm.isMovePromotion(fromX, fromY, toX, toY);
+}
+
 
 bool ChessViewModel::isRobotUnderSearch() const {
     if (!robotMoveThread)
@@ -45,12 +50,14 @@ bool ChessViewModel::isRobotUnderSearch() const {
     return robotMoveThread->isRunning();
 }
 
-void ChessViewModel::stopRobotCalculation() {
+void ChessViewModel::stopRobotSearch() {
 
     if (!isRobotUnderSearch())
         return;
 
     bm.stopRobotCalculation();
+    robotMoveThread->requestInterruption();
+    robotMoveThread->wait();
 }
 
 void ChessViewModel::currentPlayerGaveUp() {
@@ -58,8 +65,7 @@ void ChessViewModel::currentPlayerGaveUp() {
         return;
     endGame();
 }
-
-void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, MoveFlag mf) {
+void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType promotionPiece) {
 
     if (!isGameRunning && isBeginnerPos)
         startGame();
@@ -70,7 +76,7 @@ void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, MoveFlag 
     if (isBeginnerPos)
         isBeginnerPos = false;
 
-    bool validMove = bm.MakeMove(fromX, fromY, toX, toY, mf);
+    bool validMove = bm.MakeMove(fromX, fromY, toX, toY, promotionPiece);
 
     if (validMove) {
         afterMoveBeenMade();
@@ -187,8 +193,11 @@ void ChessViewModel::makeRobotMove() {
 }
 
 void ChessViewModel::undoLastMove(){
-    if (!isGameRunning || isRobotUnderSearch())
+    if (!isGameRunning)
         return;
+
+    if (isRobotUnderSearch())
+        stopRobotSearch();
 
     bm.undoLastMove();
     emit boardChanged();

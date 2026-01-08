@@ -40,7 +40,7 @@ void BoardManager::goPerft(int perftDepth) {
     board.PrintBoard();
 }
 
-void BoardManager::loadNewGame(){
+void BoardManager::loadNewGame() {
     whiteRobot.ClearSearcher();
     blackRobot.ClearSearcher();
     board.loadNewGame();
@@ -52,7 +52,48 @@ void BoardManager::printBestMove() {
     std::cout << "Best move: " + square_to_coordinates[best_move.getFrom()] + square_to_coordinates[best_move.getTo()] << std::endl;
 }
 
-bool BoardManager::MakeMove(int fromX, int fromY, int toX, int toY, MoveFlag mf){
+MoveFlag BoardManager::getMoveFlagBasedOnPromotionPiece(PieceType promotionPiece) {
+
+    switch(promotionPiece){
+    case PieceType::KNIGHT:
+        return MoveFlag::PROMOTION_TYPE_KNIGHT;
+
+    case PieceType::BISHOP:
+        return MoveFlag::PROMOTION_TYPE_BISHOP;
+
+    case PieceType::ROOK:
+        return MoveFlag::PROMOTION_TYPE_ROOK;
+
+    case PieceType::QUEEN:
+        return MoveFlag::PROMOTION_TYPE_QUEEN;
+
+    default:
+        return MoveFlag::NORMAL_MOVE;
+    }
+}
+
+bool BoardManager::isMovePromotion(int fromX, int fromY, int toX, int toY) {
+    int fromSqIndex = fromY * 8 + fromX;
+    int toSqIndex = toY * 8 + toX;
+
+    MoveList moves;
+
+    MoveGenerator::GenerateMoves(board, moves);
+
+    for (int i = 0; i < moves.count; ++i) {
+        Move& m = moves[i];
+
+        if (m.getFrom() == fromSqIndex && m.getTo() == toSqIndex) {
+            if (m.getFlags() & MoveFlag::PROMOTION_FLAG) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool BoardManager::MakeMove(int fromX, int fromY, int toX, int toY, PieceType promotionPiece) {
 
     Square fromSq = (Square)(fromY * 8 + fromX);
     Square toSq = (Square)(toY * 8 + toX);
@@ -66,15 +107,23 @@ bool BoardManager::MakeMove(int fromX, int fromY, int toX, int toY, MoveFlag mf)
 
         if (m.getFrom() == fromSq && m.getTo() == toSq) {
 
-            MoveFlag withoutCaptureFlag = (MoveFlag)(m.getFlags() & ~MoveFlag::CAPTURE_FLAG);
+            bool isPromotion = m.getFlags() & MoveFlag::PROMOTION_FLAG;
+            MoveFlag promotionFlag;
 
-            if (mf & MoveFlag::PROMOTION_FLAG && withoutCaptureFlag == mf){
-                board.MakeMove(moves[i]);
-                return true;
+            if (isPromotion) {
+                promotionFlag = getMoveFlagBasedOnPromotionPiece(promotionPiece);
+            }
+
+            const int promotionBits = 0b1011;
+            if (isPromotion){
+                if ((m.getFlags() & promotionBits) == promotionFlag) {
+                    board.MakeMove(moves[i]);
+                    return true;
+                }
             }
 
             else {
-                board.MakeMove(moves[i]);
+                board.MakeMove(m);
                 return true;
             }
         }

@@ -2,7 +2,7 @@
 #include "PrecomputedEvaluationData.h"
 #include "Searcher.h"
 
-const int passedPawnBonuses[] = { 0, 80, 65, 40, 25, 10 };
+const int passedPawnBonuses[] = { 0, 10, 20, 40, 70, 120, 200 };
 const int isolatedPawnPenalty[] = { 0, -10, -25, -50, -75, -75, -75, -75, -75 };
 const int kingPawnShieldScores[] = { 4, 7, 4, 3, 6, 3 };
 
@@ -34,6 +34,7 @@ int Evaluation::GetPieceValue(PieceType p) {
 int Evaluation::EvaluateMobility(const Board& board, Color color) {
     int score = 0;
     uint64_t occ = board.getAllOccupancy();
+    uint64_t myPieces = board.getSideOccupancy(color);
     uint64_t enemyTerritory =
         (color == WHITE) ? blackTerritoryMask : whiteTerritoryMask;
 
@@ -41,8 +42,8 @@ int Evaluation::EvaluateMobility(const Board& board, Color color) {
     while (knights) {
         Square sq = PopBit(knights);
         uint64_t a = board.getKnightAttacks(sq);
-        int m = std::popcount(a);
-        int t = std::popcount(a & enemyTerritory);
+        int m = std::popcount(a & ~myPieces);
+        int t = std::popcount(a & enemyTerritory & ~myPieces);
 
         score += m * 4;
         score += t * 1;
@@ -52,8 +53,8 @@ int Evaluation::EvaluateMobility(const Board& board, Color color) {
     while (bishops) {
         Square sq = PopBit(bishops);
         uint64_t a = board.getBishopAttacks(sq, occ);
-        int m = std::popcount(a);
-        int t = std::popcount(a & enemyTerritory);
+        int m = std::popcount(a & ~myPieces);
+        int t = std::popcount(a & enemyTerritory & ~myPieces);
 
         score += m * 5;
         score += t * 2;
@@ -63,8 +64,8 @@ int Evaluation::EvaluateMobility(const Board& board, Color color) {
     while (rooks) {
         Square sq = PopBit(rooks);
         uint64_t a = board.getRookAttacks(sq, occ);
-        int m = std::popcount(a);
-        int t = std::popcount(a & enemyTerritory);
+        int m = std::popcount(a & ~myPieces);
+        int t = std::popcount(a & enemyTerritory & ~myPieces);
 
         score += m * 3;
         score += t * 1;
@@ -77,7 +78,7 @@ int Evaluation::EvaluateMobility(const Board& board, Color color) {
             board.getBishopAttacks(sq, occ) |
             board.getRookAttacks(sq, occ);
 
-        score += std::popcount(a) / 2;
+        score += std::popcount(a & ~myPieces);
     }
 
     return score;
@@ -171,8 +172,8 @@ int Evaluation::EvaluatePawns(const Board& board, Color color) {
         }
 
         if (!(enemyPawns & pathMask & forwardMask)) {
-            int dist = (color == WHITE) ? (7 - rank) : rank;
-            score += passedPawnBonuses[std::clamp(dist - 1, 0, 5)];
+            int relativeRank = (color == WHITE) ? rank : 7 - rank;
+            score += passedPawnBonuses[std::clamp(relativeRank, 0, 6)];
 
             uint64_t defenders = board.getPawnAttacks(sq, (Color)(color ^ 1));
             if (defenders & pawns)
@@ -230,29 +231,24 @@ int Evaluation::KingPawnShield(const Board& board, Color color) {
 }
 
 int Evaluation::EvaluateInvasion(const Board& board, Color color) {
-    int penalty = 0;
-    Color enemy = (Color)(color ^ 1);
+    int bonus = 0;
 
-    uint64_t myTerritory = (color == WHITE) ? whiteTerritoryMask : blackTerritoryMask;
-
-    uint64_t myBackyard = (color == WHITE) ? (RANK_1 | RANK_2) : (RANK_7 | RANK_8);
+    uint64_t enemyTerritory = (color == WHITE) ? blackTerritoryMask : whiteTerritoryMask;
+    uint64_t enemyBackyard = (color == WHITE) ? (RANK_7 | RANK_8) : (RANK_1 | RANK_2);
 
     for (int pt = KNIGHT; pt <= QUEEN; pt++) {
-        uint64_t enemyPieces = board.getPieceBitboard(enemy, (PieceType)pt);
-        uint64_t invaders = enemyPieces & myTerritory;
+        uint64_t myPieces = board.getPieceBitboard(color, (PieceType)pt);
+        uint64_t invaders = myPieces & enemyTerritory;
 
         while (invaders) {
             Square sq = PopBit(invaders);
-
-            penalty += 15;
-
-            if ((1ULL << sq) & myBackyard) {
-                penalty += 20;
+            bonus += 15;
+            if ((1ULL << sq) & enemyBackyard) {
+                bonus += 20;
             }
         }
     }
-
-    return -penalty;
+    return bonus;
 }
 
 
@@ -265,10 +261,48 @@ int Evaluation::MopUpEval(const Board& board, Color winner) {
     return (14 - dist) * 10;
 }
 
+void Evaluation::CalculateImbalancePenalty(const Board& board, Color c, int pieceCounts[2][6], int& midGameScore, int& endGameScore) {
+    int opp = c ^ 1;
+
+    if (pieceCounts[c][BISHOP] >= 2) {
+        midGameScore += 30;
+        endGameScore += 50;
+    }
+
+    int myPawns = pieceCounts[c][PAWN];
+    int oppPawns = pieceCounts[opp][PAWN];
+    int myMinors = pieceCounts[c][KNIGHT] + pieceCounts[c][BISHOP];
+    int oppMinors = pieceCounts[opp][KNIGHT] + pieceCounts[opp][BISHOP];
+    int myRooks = pieceCounts[c][ROOK];
+    int oppRooks = pieceCounts[opp][ROOK];
+    int myQueens = pieceCounts[c][QUEEN];
+    int oppQueens = pieceCounts[opp][QUEEN];
+
+    if (myRooks > oppRooks && oppMinors >= myMinors + 2) {
+        midGameScore -= 40;
+        endGameScore -= 80;
+    }
+
+    if (myQueens > oppQueens && oppRooks >= myRooks + 2) {
+        midGameScore -= 30;
+        endGameScore -= 60;
+    }
+
+    if (myQueens > oppQueens && oppMinors >= myMinors + 3) {
+        midGameScore -= 40;
+        endGameScore -= 80;
+    }
+
+    if (oppMinors - myMinors > 0 && myPawns - oppPawns >= 3) {
+
+        midGameScore -= 60;
+        endGameScore -= 80;
+    }
+}
+
 int Evaluation::RookBlockPenalty(const Board& board, Color color) {
     Square kingSq = board.getKingSquare(color);
     int kFile = kingSq & 7;
-    int kRank = kingSq >> 3;
     int penalty = 0;
 
     if (kFile <= 2 || kFile >= 5) {
@@ -276,6 +310,7 @@ int Evaluation::RookBlockPenalty(const Board& board, Color color) {
         while (rooks) {
             Square rSq = PopBit(rooks);
             int rFile = rSq & 7;
+            int rRank = rSq >> 3;
 
             if ((rFile == 0 && kFile < 3 && kFile > 0) || (rFile == 7 && kFile > 4 && kFile < 7)) {
 
@@ -332,32 +367,7 @@ int Evaluation::EvaluatePos(const Board& board) {
     for (int c = WHITE; c <= BLACK; c++) {
         int opp = c ^ 1;
 
-        int myMinors = pieceCounts[c][KNIGHT] + pieceCounts[c][BISHOP];
-        int oppMinors = pieceCounts[opp][KNIGHT] + pieceCounts[opp][BISHOP];
-        int myRooks = pieceCounts[c][ROOK];
-        int oppRooks = pieceCounts[opp][ROOK];
-        int myPawns = pieceCounts[c][PAWN];
-        int oppPawns = pieceCounts[opp][PAWN];
-
-        if (oppMinors > myMinors && myRooks == oppRooks) {
-            mg[c] -= 70;
-            eg[c] -= 140;
-        }
-
-        if (oppRooks > myRooks && myMinors == oppMinors) {
-            mg[c] -= 80;
-            eg[c] -= 160;
-        }
-
-        if (oppMinors - myMinors >= 2 && myRooks - oppRooks == 1) {
-            mg[c] -= 80;
-            eg[c] -= 160;
-		}
-
-        if (pieceCounts[c][BISHOP] >= 2) {
-            mg[c] += 30;
-            eg[c] += 50;
-        }
+        CalculateImbalancePenalty(board, (Color)c, pieceCounts, mg[c], eg[c]);
 
         int pScore = EvaluatePawns(board, (Color)c);
         mg[c] += pScore;
@@ -369,9 +379,8 @@ int Evaluation::EvaluatePos(const Board& board) {
 
         int invasion = EvaluateInvasion(board, (Color)c);
         mg[c] += invasion;
-        eg[c] += (invasion / 2);
 
-		mg[c] += RookBlockPenalty(board, (Color)c);
+        mg[c] += RookBlockPenalty(board, (Color)c);
 
         mg[c] += EvaluatePawnTerritory(board, (Color)c);
 

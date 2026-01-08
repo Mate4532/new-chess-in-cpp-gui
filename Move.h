@@ -51,4 +51,11 @@ public:
         return static_cast<PieceType>((getFlags() & 0b0011) + 1);
     }
 
+    inline bool operator==(const Move& other) const {
+        return m_move_data == other.m_move_data;
+    }
+
+    inline bool operator!=(const Move& other) const {
+        return !(*this == other);
+    }
 };

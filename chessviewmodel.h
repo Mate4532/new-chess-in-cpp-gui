@@ -18,14 +18,15 @@ public:
     void endGame();
     void currentPlayerGaveUp();
 
-    void stopRobotCalculation();
+    void stopRobotSearch();
 
-    void movePiece(int fromX, int fromY, int toX, int toY, MoveFlag mf = MoveFlag::NORMAL_MOVE);
+    void movePiece(int fromX, int fromY, int toX, int toY, PieceType promotionPiece = PieceType::PIECE_NONE);
     void makeRobotMove();
     void undoLastMove();
     std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const;
     void refreshView();
 
+    bool isMovePromotion(int fromX, int fromY, int toX, int toY) const;
     bool isRobotUnderSearch() const;
     inline bool getIsBoardFlipped() const { return isBoardFlipped; }
 

@@ -31,7 +31,9 @@ public:
     Move getBestMoveOnBoard() { return board.getSideToMove() == WHITE ? whiteRobot.GetBestMove() : blackRobot.GetBestMove(); }
     void MakeRobotMove();
     void printBestMove();
-    bool MakeMove(int fromX, int fromY, int toX, int toY, MoveFlag mf);
+    MoveFlag getMoveFlagBasedOnPromotionPiece(PieceType promotionPiece);
+    bool isMovePromotion(int fromX, int fromY, int toX, int toY);
+    bool MakeMove(int fromX, int fromY, int toX, int toY, PieceType promotionPiece);
     void undoMove(int plyToUndo);
     void undoLastMove();
 	bool didGameEnd();
