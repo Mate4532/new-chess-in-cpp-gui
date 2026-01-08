@@ -26,6 +26,11 @@ inline int Searcher::ScoreFromTT(int score, int ply) {
     return score;
 }
 
+void Searcher::stopSearch() {
+    stop = true;
+    isStoppedManually = true;
+}
+
 int Searcher::see(Move m) {
     Square from = m.getFrom();
     Square to = m.getTo();
@@ -332,6 +337,8 @@ void Searcher::ClearKillers() {
 Move Searcher::IterativeDeepening() {
     startTime = now_ms();
     stop = false;
+    isStoppedManually = false;
+    isSearching = true;
     nodes = 0;
 
 	repetitionTable.Init(board);
@@ -403,6 +410,11 @@ Move Searcher::IterativeDeepening() {
         std::vector<Move> baseLine = GetPVLine(50);
         PrintPvLine(50);
 	}
+
+    isSearching = false;
+
+    if (isStoppedManually)
+        return Move();
 
     return bestMove;
 }
@@ -519,4 +531,33 @@ std::vector<Move> Searcher::GetWhatIfPV(const std::vector<Move>& baseLine, Move 
 
 Move Searcher::GetBestMove() {
     return IterativeDeepening();
+}
+
+void Searcher::ClearSearcher() {
+    ClearKillers();
+    ClearHistory();
+    repetitionTable.Clear();
+}
+
+void Searcher::setDifficulty(Difficulty diff) {
+    switch (diff) {
+    case Difficulty::EASY:
+        max_depth = 3;
+        break;
+
+    case Difficulty::MEDIUM:
+        max_depth = 5;
+        break;
+
+    case Difficulty::HARD:
+        max_depth = 7;
+        break;
+
+    case Difficulty::IMPOSSIBLE:
+        max_depth = MAXIMUM_DEPTH;
+        break;
+
+    default:
+        break;
+    }
 }

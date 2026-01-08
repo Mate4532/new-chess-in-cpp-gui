@@ -143,3 +143,10 @@ const uint8_t castling_mask[64] = {
     15, 15, 15, 15, 15, 15, 15, 15,
     7,  15, 15, 15,  3, 15, 15, 11
 };
+
+enum class Difficulty {
+    EASY,
+    MEDIUM,
+    HARD,
+    IMPOSSIBLE
+};

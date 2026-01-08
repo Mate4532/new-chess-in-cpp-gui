@@ -1,13 +1,14 @@
 #include "chessview.h"
-#include "chessscene.h"
 
 #include <QPainter>
 
 ChessView::ChessView(QWidget* parent) : QGraphicsView(parent),
     background(":/resources/resources/chessboard.png")
 {
-    setMinimumHeight(ChessView::WHOLE_CHESSBOARD_PX / 2);
-    setMinimumWidth(ChessView::WHOLE_CHESSBOARD_PX / 2);
+    setMinimumHeight(WHOLE_CHESSBOARD_WIDTH_PX / 2);
+    setMinimumWidth(WHOLE_CHESSBOARD_HEIGHT_PX / 2);
+    setRenderHint(QPainter::SmoothPixmapTransform);
+    setRenderHint(QPainter::Antialiasing);
 }
 
 void ChessView::resizeEvent(QResizeEvent* event)
@@ -15,14 +16,9 @@ void ChessView::resizeEvent(QResizeEvent* event)
     QGraphicsView::resizeEvent(event);
 
     if (scene()) {
-        QRectF board = boardRect();
-
-        scene()->setSceneRect(0, 0, board.width(), board.height());
-
-        if (auto* cs = dynamic_cast<ChessScene*>(scene())) {
-            cs->updateLayout();
-        }
+        fitInView(scene()->sceneRect(), Qt::KeepAspectRatio);
     }
+
 }
 
 QRectF ChessView::boardRect() const
@@ -37,9 +33,11 @@ QRectF ChessView::boardRect() const
 }
 
 
-void ChessView::drawBackground(QPainter* painter, const QRectF&)
+void ChessView::drawBackground(QPainter* painter, const QRectF& rect)
 {
     QRectF scene = sceneRect();
+
+    painter->fillRect(rect, QColor(49, 46, 43));
 
     QPixmap scaled = background.scaled(
         scene.size().toSize(),

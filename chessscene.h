@@ -1,8 +1,8 @@
 #ifndef CHESSSCENE_H
 #define CHESSSCENE_H
 
-#include "chessview.h"
 #include "chessviewmodel.h"
+#include "chessview.h"
 
 #include <QGraphicsScene>
 #include <QGraphicsSceneMouseEvent>
@@ -12,7 +12,6 @@
 class ChessScene : public QGraphicsScene {
     Q_OBJECT
 public:
-    static constexpr double PIECE_SIZE_SQUARE_RATIO = 0.9;
 
     enum PieceData {
         FileKey = Qt::UserRole + 1,
@@ -20,6 +19,15 @@ public:
     };
 
     explicit ChessScene(QObject* parent = nullptr);
+
+    static constexpr double CHESSBOARD_OFFSET_LEFT_PX = 47;
+    static constexpr double CHESSBOARD_OFFSET_DOWN_PX = 47;
+    static constexpr double CHESSBOARD_OFFSET_RIGHT_PX = 13;
+    static constexpr double CHESSBOARD_OFFSET_UP_PX = 13;
+    static constexpr double TILE_SIZE = std::min(ChessView::WHOLE_CHESSBOARD_WIDTH_PX - CHESSBOARD_OFFSET_LEFT_PX - CHESSBOARD_OFFSET_RIGHT_PX,
+                                                 ChessView::WHOLE_CHESSBOARD_HEIGHT_PX - CHESSBOARD_OFFSET_UP_PX - CHESSBOARD_OFFSET_DOWN_PX) / 8;
+    static constexpr double PIECE_SIZE_SQUARE_RATIO = 0.9;
+    static constexpr double PIECE_SIZE = TILE_SIZE * 0.9;
 
     void setViewModel(ChessViewModel* cvm);
     void preloadPixmaps();
@@ -48,20 +56,6 @@ private:
     static const std::unordered_map<PieceType, QString> blackPieceMap;
 
     void sceneRectChanged(const QRectF &rect);
-    const double leftMarginRatio = static_cast<double>(ChessView::CHESSBOARD_OFFSET_LEFT_PX) / ChessView::WHOLE_CHESSBOARD_PX;
-    const double rightMarginRatio = static_cast<double>(ChessView::CHESSBOARD_OFFSET_RIGHT_PX) / ChessView::WHOLE_CHESSBOARD_PX;
-    const double upMarginRatio = static_cast<double>(ChessView::CHESSBOARD_OFFSET_UP_PX) / ChessView::WHOLE_CHESSBOARD_PX;
-    const double downMarginRatio = static_cast<double>(ChessView::CHESSBOARD_OFFSET_DOWN_PX) / ChessView::WHOLE_CHESSBOARD_PX;
-
-    double currentWholeBoardWidth;
-    double currentWholeBoardHeight;
-    double currentLeftMarginPx;
-    double currentRightMarginPx;
-    double currentUpMarginPx;
-    double currentDownMarginPx;
-    double currentRealBoardSize;
-    double currentTileSize;
-    double currentPieceSize;
 
 private slots:
     void onSceneRectChanged(const QRectF& rect);

@@ -8,4 +8,5 @@ ChessPieceItem::ChessPieceItem()
     setFlag(QGraphicsItem::ItemIsMovable, false);
     setAcceptedMouseButtons(Qt::LeftButton);
     setCursor(Qt::OpenHandCursor);
+    setTransformationMode(Qt::SmoothTransformation);
 }

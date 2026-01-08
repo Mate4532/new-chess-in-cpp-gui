@@ -15,8 +15,7 @@ private:
 
 public:
     RepetitionTable() : count(0) {
-        std::fill(hashes, hashes + MAX_REPETITION, 0ULL);
-        std::fill(startIndices, startIndices + MAX_REPETITION + 1, 0);
+        Clear();
     }
 
     void Init(const Board& board);
@@ -27,4 +26,5 @@ public:
     inline std::vector<uint64_t> getHashes() const {
         return std::vector<uint64_t>(hashes, hashes + count);
     }
+    void Clear();
 };

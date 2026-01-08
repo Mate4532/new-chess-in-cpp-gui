@@ -1,5 +1,7 @@
 #include "chessscene.h"
 #include "chesspieceitem.h"
+#include "chessview.h"
+
 #include <QDebug>
 #include <QCursor>
 
@@ -25,8 +27,7 @@ ChessScene::ChessScene(QObject* parent) : QGraphicsScene(parent)
 {
     preloadPixmaps();
     connect(this, &QGraphicsScene::sceneRectChanged, this, &ChessScene::onSceneRectChanged);
-    currentTileSize = 100;
-    currentPieceSize = 90;
+    setSceneRect(0, 0, ChessView::WHOLE_CHESSBOARD_WIDTH_PX, ChessView::WHOLE_CHESSBOARD_HEIGHT_PX);
 }
 
 void ChessScene::setViewModel(ChessViewModel* cvm){
@@ -55,8 +56,13 @@ void ChessScene::preloadPixmaps()
 
 bool ChessScene::scenePosToSquare(const QPointF& pos, int& file, int& visualRank) const
 {
-    file = int((pos.x() - currentLeftMarginPx) / currentTileSize);
-    visualRank = int((pos.y() - currentUpMarginPx) / currentTileSize);
+    double xInsideBoard = pos.x() - CHESSBOARD_OFFSET_LEFT_PX;
+    double yInsideBoard = pos.y() - CHESSBOARD_OFFSET_UP_PX;
+
+    if (xInsideBoard < 0 || yInsideBoard < 0) return false;
+
+    file = cvm->getIsBoardFlipped() ? 7 - static_cast<int>(xInsideBoard / TILE_SIZE) : static_cast<int>(xInsideBoard / TILE_SIZE);
+    visualRank = cvm->getIsBoardFlipped() ? 7 - static_cast<int>(yInsideBoard / TILE_SIZE) : static_cast<int>(yInsideBoard / TILE_SIZE);
 
     if (file < 0 || file > 7 || visualRank < 0 || visualRank > 7)
         return false;
@@ -66,8 +72,8 @@ bool ChessScene::scenePosToSquare(const QPointF& pos, int& file, int& visualRank
 
 QPointF ChessScene::squareToScenePos(int file, int visualRank) const
 {
-    double x = currentLeftMarginPx + file * currentTileSize + (currentTileSize - currentPieceSize) / 2;
-    double y = currentUpMarginPx + visualRank * currentTileSize + (currentTileSize - currentPieceSize) / 2;
+    double x = CHESSBOARD_OFFSET_LEFT_PX + file * TILE_SIZE + (TILE_SIZE - PIECE_SIZE) / 2;
+    double y = CHESSBOARD_OFFSET_UP_PX + visualRank * TILE_SIZE + (TILE_SIZE - PIECE_SIZE) / 2;
     return QPointF(x, y);
 }
 
@@ -79,12 +85,22 @@ void ChessScene::updateLayout()
     activeItem = nullptr;
 
     auto boardMatrix = cvm->getBoardMatrix();
+    bool isFlipped = cvm->getIsBoardFlipped();
 
-    for (int row = 0; row < 8; ++row) {
-        for (int col = 0; col < 8; ++col) {
+    // FIX MINŐSÉG SZORZÓ
+    // 4.0 = Ultra HD minőség. (Mindig 4x annyi pixelből rajzol, mint kéne)
+    // Ez garantálja, hogy sose legyen homályos, még teljes képernyőn sem.
+    const qreal qualityMultiplier = 1.5;
 
-            PieceType type = boardMatrix[row][col].first;
-            Color color = boardMatrix[row][col].second;
+    for (int visualRow = 0; visualRow < 8; ++visualRow) {
+        for (int visualCol = 0; visualCol < 8; ++visualCol) {
+
+            // --- Adatlekérés (Változatlan) ---
+            int matrixRow = isFlipped ? (7 - visualRow) : visualRow;
+            int matrixCol = isFlipped ? (7 - visualCol) : visualCol;
+
+            PieceType type = boardMatrix[matrixRow][matrixCol].first;
+            Color color = boardMatrix[matrixRow][matrixCol].second;
 
             if (type == PieceType::PIECE_NONE) continue;
 
@@ -102,20 +118,40 @@ void ChessScene::updateLayout()
             QGraphicsPixmapItem* item = new ChessPieceItem();
 
             if (originalPixmaps.count(resource)) {
+
+                // --- ITT A JAVÍTÁS ---
+
+                // 1. Kiszámoljuk a felbontást (PIECE_SIZE * 4)
+                // Tehát ha a bábu helye 100px, mi 400px-es képet gyártunk.
+                int highResSize = static_cast<int>(PIECE_SIZE * qualityMultiplier);
+
+                // 2. Legyártjuk a nagy felbontású képet
                 QPixmap scaled = originalPixmaps[resource].scaled(
-                    currentPieceSize, currentPieceSize,
-                    Qt::KeepAspectRatio, Qt::SmoothTransformation
+                    highResSize,
+                    highResSize,
+                    Qt::KeepAspectRatio,
+                    Qt::SmoothTransformation
                     );
+
+                // 3. Beállítjuk a pixelsűrűséget 4-re.
+                // Ezzel azt mondjuk a Qt-nak: "Ez a kép 400 pixel széles,
+                // de rajzold úgy a képernyőre, mintha csak 100 lenne."
+                scaled.setDevicePixelRatio(qualityMultiplier);
+
+                // Eredmény:
+                // - A kép logikai mérete (boundingRect) = PIECE_SIZE (JÓ AZ EGÉRNEK!)
+                // - A kép valódi felbontása = 4x (TŰÉLES!)
                 item->setPixmap(scaled);
             }
 
-            item->setPos(squareToScenePos(col, row));
+            // --- Pozicionálás (Változatlan) ---
+            item->setPos(squareToScenePos(visualCol, visualRow));
 
-            int logicalRank = 7 - row;
+            int logicalRank = 7 - matrixRow;
+            int logicalFile = matrixCol;
 
-            item->setData(FileKey, col);
+            item->setData(FileKey, logicalFile);
             item->setData(RankKey, logicalRank);
-
             item->setZValue(10);
 
             addItem(item);
@@ -130,18 +166,6 @@ void ChessScene::onBoardChanged() {
 void ChessScene::onSceneRectChanged(const QRectF& rect)
 {
     Q_UNUSED(rect);
-    currentWholeBoardWidth = sceneRect().width();
-    currentWholeBoardHeight = sceneRect().height();
-
-    currentLeftMarginPx = leftMarginRatio * currentWholeBoardWidth;
-    currentRightMarginPx = rightMarginRatio * currentWholeBoardWidth;
-    currentUpMarginPx = upMarginRatio * currentWholeBoardHeight;
-    currentDownMarginPx = downMarginRatio * currentWholeBoardHeight;
-
-    currentRealBoardSize = std::min(currentWholeBoardWidth, currentWholeBoardHeight) - currentLeftMarginPx - currentRightMarginPx;
-    currentTileSize = currentRealBoardSize / 8.0;
-    currentPieceSize = currentTileSize * PIECE_SIZE_SQUARE_RATIO;
-
     updateLayout();
 }
 

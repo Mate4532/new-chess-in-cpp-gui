@@ -24,6 +24,8 @@ private:
     ChessViewModel *chessViewModel;
     ChessScene* chessScene;
     InfoView* infoContainer;
+
+    AllSettings allS;
 };
 
 #endif

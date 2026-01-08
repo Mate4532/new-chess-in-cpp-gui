@@ -45,6 +45,8 @@ if(Qt6_FOUND)
         Utils.h
         Zobrist.cpp Zobrist.h
         chessviewmodel.h chessviewmodel.cpp
+        settingsDialog.h settingsDialog.cpp
+        Settings.h
     )
 endif()
 

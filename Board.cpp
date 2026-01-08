@@ -239,6 +239,8 @@ void Board::LoadFEN(std::string fen) {
 }
 
 void Board::loadNewGame() {
+    repetition_history.Clear();
+    move_history.clear();
     LoadFEN(newPosFen);
 }
 
@@ -486,6 +488,7 @@ bool Board::isSquareAttacked(Square sq, Color attackerColor) const {
 }
 
 bool Board::MakeMove(Move move, bool in_search) {
+
     Square from_sq = move.getFrom();
     Square to_sq = move.getTo();
     MoveFlag flags = move.getFlags();

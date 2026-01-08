@@ -1,6 +1,7 @@
 #include "Board.h"
 #include "BoardManager.h"
 #include "UCIParsing.h"
+#include "settingsDialog.h"
 
 #include <sstream>
 
@@ -40,6 +41,8 @@ void BoardManager::goPerft(int perftDepth) {
 }
 
 void BoardManager::loadNewGame(){
+    whiteRobot.ClearSearcher();
+    blackRobot.ClearSearcher();
     board.loadNewGame();
 }
 
@@ -102,15 +105,13 @@ void BoardManager::undoLastMove() {
     }
 }
 
-
-
 void BoardManager::MakeRobotMove() {
     Move robot_move;
 	std::cout << "Robot gondolkodik..." << std::endl;
     if (board.isDebugMode) {
         uint64_t hash_before = board.getHash();
         std::cout << "Hash kereses elott: " << board.getHash() << std::endl;
-        robot_move = searcher.GetBestMove();
+        robot_move = board.getSideToMove() == WHITE ? whiteRobot.GetBestMove() : blackRobot.GetBestMove();
 
         uint64_t hash_after = board.getHash();
         std::cout << "Hash kereses utan: " << board.getHash() << std::endl;
@@ -119,8 +120,11 @@ void BoardManager::MakeRobotMove() {
         }
     }
     else {
-        robot_move = searcher.GetBestMove();
+        robot_move = board.getSideToMove() == WHITE ? whiteRobot.GetBestMove() : blackRobot.GetBestMove();
     }
+    if (!robot_move.isValid())
+        return;
+
     board.MakeMove(robot_move);
     std::cout << "Robot lepese: " + robot_move.toAlgebraic() << std::endl;
 }
@@ -217,6 +221,41 @@ void BoardManager::startGameLoop() {
             std::cout << "Ervenytelen koordinatak vagy ures mezo!" << std::endl;
         }
     }
+}
+
+void BoardManager::setPlayer(Color c) {
+    if (c == WHITE) {
+        is_white_player = true;
+        is_white_robot = false;
+    }
+
+    else {
+        is_black_player = true;
+        is_black_robot = false;
+    }
+
+}
+
+void BoardManager::setRobot(Color c){
+    if (c == WHITE) {
+        is_white_player = false;
+        is_white_robot = true;
+    }
+
+    else {
+        is_black_player = false;
+        is_black_robot = true;
+    }
+}
+
+void BoardManager::setDifficulty(Color c, Difficulty d) {
+    if (c == WHITE) whiteRobot.setDifficulty(d);
+    else blackRobot.setDifficulty(d);
+}
+
+void BoardManager::stopRobotCalculation() {
+    if (whiteRobot.isUnderSearch()) whiteRobot.stopSearch();
+    if (blackRobot.isUnderSearch()) blackRobot.stopSearch();
 }
 
 

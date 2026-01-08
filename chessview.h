@@ -7,15 +7,13 @@
 class ChessView : public QGraphicsView {
     Q_OBJECT
 public:
-    static constexpr double WHOLE_CHESSBOARD_PX = 1358;
-    static constexpr double CHESSBOARD_OFFSET_LEFT_PX = 47;
-    static constexpr double CHESSBOARD_OFFSET_DOWN_PX = 47;
-    static constexpr double CHESSBOARD_OFFSET_RIGHT_PX = 13;
-    static constexpr double CHESSBOARD_OFFSET_UP_PX = 13;
+    static constexpr double WHOLE_CHESSBOARD_WIDTH_PX = 1358;
+    static constexpr double WHOLE_CHESSBOARD_HEIGHT_PX = 1358;
     explicit ChessView(QWidget* parent = nullptr);
 
-protected:
     void resizeEvent(QResizeEvent* event) override;
+
+protected:
     void drawBackground(QPainter* painter, const QRectF& rect) override;
 
 private:
