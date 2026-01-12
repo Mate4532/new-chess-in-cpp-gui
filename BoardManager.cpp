@@ -1,9 +1,13 @@
 #include "Board.h"
 #include "BoardManager.h"
 #include "UCIParsing.h"
-#include "settingsDialog.h"
+#include "openingloader.h"
+#include "ResultManager.h"
 
 #include <sstream>
+
+using ImpSearcher = ImprovedSearcher::Searcher;
+using OSearcher = OldSearcher::Searcher;
 
 std::vector<std::string> tokenize(const std::string& input) {
     std::vector<std::string> tokens;
@@ -14,6 +18,23 @@ std::vector<std::string> tokenize(const std::string& input) {
         tokens.push_back(token);
     }
     return tokens;
+}
+
+BoardManager::BoardManager(): board() {
+    Attacks::InitAll();
+    is_white_player = !is_white_robot;
+    is_black_player = !is_black_robot;
+    whiteRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+    blackRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+    OpeningLoader::loadOpenings(OPENING_PATH);
+}
+
+std::unique_ptr<ISearcher> BoardManager::createBot(SearcherType st) {
+    switch (st) {
+    case SearcherType::OLD_SEARCHER: return std::make_unique<OSearcher>(board);
+    case SearcherType::IMRPOVED_SEARCHER: return std::make_unique<ImpSearcher>(board);
+    default: return std::make_unique<ImpSearcher>(board);
+    }
 }
 
 
@@ -41,9 +62,18 @@ void BoardManager::goPerft(int perftDepth) {
 }
 
 void BoardManager::loadNewGame() {
-    whiteRobot.ClearSearcher();
-    blackRobot.ClearSearcher();
+    whiteRobot->ClearSearcher();
+    blackRobot->ClearSearcher();
+    board.ClearBoard();
     board.loadNewGame();
+}
+
+void BoardManager::loadFEN(std::string randomFEN) {
+    board.LoadFEN(randomFEN);
+}
+
+std::string BoardManager::getRandomOpening() {
+    return OpeningLoader::getRandomFen();
 }
 
 void BoardManager::printBestMove() {
@@ -160,7 +190,7 @@ void BoardManager::MakeRobotMove() {
     if (board.isDebugMode) {
         uint64_t hash_before = board.getHash();
         std::cout << "Hash kereses elott: " << board.getHash() << std::endl;
-        robot_move = board.getSideToMove() == WHITE ? whiteRobot.GetBestMove() : blackRobot.GetBestMove();
+        robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetBestMove() : blackRobot->GetBestMove();
 
         uint64_t hash_after = board.getHash();
         std::cout << "Hash kereses utan: " << board.getHash() << std::endl;
@@ -169,7 +199,7 @@ void BoardManager::MakeRobotMove() {
         }
     }
     else {
-        robot_move = board.getSideToMove() == WHITE ? whiteRobot.GetBestMove() : blackRobot.GetBestMove();
+        robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetBestMove() : blackRobot->GetBestMove();
     }
     if (!robot_move.isValid())
         return;
@@ -192,7 +222,40 @@ bool BoardManager::didGameEnd() {
         std::cout << "\nSakkmat, " << (board.getSideToMove() == WHITE ? "Fekete" : "Feher") << " nyert!" << std::endl;
         return true;
     }
+
     return false;
+}
+
+void BoardManager::writeGameResult() {
+    if (board.IsDraw()) {
+        ResultManager::saveGameResult(ResultManager::DRAW);
+        std::cout << "[ResultManager] Dontetlen." << std::endl;
+        return;
+    }
+
+    if (board.IsCheckMate()) {
+        Color winnerColor = (board.getSideToMove() == WHITE) ? BLACK : WHITE;
+
+        ISearcher* winnerBot = (winnerColor == WHITE) ? whiteRobot.get() : blackRobot.get();
+
+        SearcherType type = winnerBot->getType();
+
+        switch (type) {
+        case SearcherType::OLD_SEARCHER:
+            ResultManager::saveGameResult(ResultManager::OLD_WIN);
+            std::cout << "[ResultManager] Old Searcher nyert." << std::endl;
+            break;
+
+        case SearcherType::IMRPOVED_SEARCHER:
+            ResultManager::saveGameResult(ResultManager::IMPROVED_WIN);
+            std::cout << "[ResultManager] Improved Searcher nyert." << std::endl;
+            break;
+
+        default:
+            std::cout << "[ResultManager] Ismeretlen bot tipus!" << std::endl;
+            break;
+        }
+    }
 }
 
 void BoardManager::startGameLoop() {
@@ -297,14 +360,42 @@ void BoardManager::setRobot(Color c){
     }
 }
 
+void BoardManager::ClearSearchers() {
+    whiteRobot->ClearSearcher();
+    blackRobot->ClearSearcher();
+}
+
+void BoardManager::setupBotsForNormalGame() {
+    whiteRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+    blackRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+}
+
+void BoardManager::prepareImprovedBotVsOldBot() {
+    whiteRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+    blackRobot = createBot(SearcherType::OLD_SEARCHER);
+}
+
+void BoardManager::SwapRobots() {
+    std::swap(whiteRobot, blackRobot);
+}
+
 void BoardManager::setDifficulty(Color c, Difficulty d) {
-    if (c == WHITE) whiteRobot.setDifficulty(d);
-    else blackRobot.setDifficulty(d);
+    if (c == WHITE) whiteRobot->setDifficulty(d);
+    else blackRobot->setDifficulty(d);
+}
+
+void BoardManager::setSearchTime(int t) {
+    whiteRobot->setSearchTime(t);
+    blackRobot->setSearchTime(t);
 }
 
 void BoardManager::stopRobotCalculation() {
-    if (whiteRobot.isUnderSearch()) whiteRobot.stopSearch();
-    if (blackRobot.isUnderSearch()) blackRobot.stopSearch();
+    if (whiteRobot->isUnderSearch()) whiteRobot->stopSearch();
+    if (blackRobot->isUnderSearch()) blackRobot->stopSearch();
+}
+
+void BoardManager::ClearBoard() {
+    board.ClearBoard();
 }
 
 

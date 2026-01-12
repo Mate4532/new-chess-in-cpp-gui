@@ -25,8 +25,6 @@ MainWindow::MainWindow(QWidget* parent)
     board = new BoardManager();
     chessViewModel = new ChessViewModel(*board);
 
-    RobotSettings rs;
-
     chessView = new ChessView(central);
     chessScene = new ChessScene(chessView);
 

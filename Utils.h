@@ -7,7 +7,8 @@
 enum Color : uint8_t {
     WHITE = 0,
     BLACK = 1,
-    COLORS = 2
+    COLORS = 2,
+    COLOR_NONE = 3
 };
 
 enum PieceType : uint8_t {

@@ -142,4 +142,6 @@ public:
     uint64_t MultiThreadedPerft(int depth);
     void PrintBoard(bool is_white_player = true, bool is_black_player = true) const;
     std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const;
+
+    void ClearBoard();
 };

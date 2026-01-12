@@ -9,7 +9,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Concurrent)
 
 set(PROJECT_SOURCES
         main.cpp
@@ -31,29 +31,42 @@ if(Qt6_FOUND)
         Board.cpp Board.h
         BoardManager.cpp BoardManager.h
         BoardState.h
-        Evaluation.cpp Evaluation.h
-        LMR.cpp LMR.h
-        Move.h
         MoveGenerator.cpp MoveGenerator.h
-        MoveList.h
-        MoveOrdering.cpp MoveOrdering.h
-        PrecomputedEvaluationData.cpp PrecomputedEvaluationData.h
         RepetitionTable.cpp RepetitionTable.h
-        Searcher.cpp Searcher.h
-        TranspositionTable.cpp TranspositionTable.h
         UCIParsing.cpp UCIParsing.h
         Utils.h
         Zobrist.cpp Zobrist.h
         chessviewmodel.h chessviewmodel.cpp
         settingsDialog.h settingsDialog.cpp
         Settings.h
+        ISearcher.h
+        openingloader.h openingloader.cpp
+        assets/openings.txt
+        resultmanager.h resultmanager.cpp
+        filemanager.h filemanager.cpp
+        oldSearcher/OldSearcher.cpp oldsearcher/OldSearcher.h
+        improvedSearcher/Evaluation.cpp improvedSearcher/Evaluation.h improvedSearcher/LMR.cpp improvedSearcher/LMR.h improvedSearcher/MoveOrdering.cpp improvedSearcher/MoveOrdering.h improvedSearcher/Searcher.cpp improvedSearcher/Searcher.h improvedSearcher/TranspositionTable.cpp improvedSearcher/TranspositionTable.h
+        oldSearcher/OldEvaluation.cpp oldSearcher/OldEvaluation.h oldSearcher/OldLMR.cpp oldSearcher/OldLMR.h oldSearcher/OldMoveOrdering.cpp oldSearcher/OldMoveOrdering.h oldSearcher/OldTranspositionTable.cpp oldSearcher/OldTranspositionTable.h
+        Move.h MoveList.h
+        oldSearcher/OldPrecomputedEvaluationData.cpp oldSearcher/OldPrecomputedEvaluationData.h
+        improvedSearcher/PrecomputedEvaluationData.cpp improvedSearcher/PrecomputedEvaluationData.h
     )
 endif()
 
-target_link_libraries(new-chess-in-cpp-gui PRIVATE Qt6::Widgets)
+if(MINGW)
+    target_compile_options(new-chess-in-cpp-gui PRIVATE -g)
+endif()
+
+target_link_libraries(new-chess-in-cpp-gui PRIVATE Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Concurrent)
 
 set_target_properties(new-chess-in-cpp-gui PROPERTIES
-    WIN32_EXECUTABLE TRUE
+    WIN32_EXECUTABLE FALSE
+)
+
+target_include_directories(new-chess-in-cpp-gui PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/oldSearcher
+    ${CMAKE_CURRENT_SOURCE_DIR}/improvedSearcher
 )
 
 include(GNUInstallDirs)

@@ -8,6 +8,8 @@
 #include <QCheckBox>
 #include <QTabWidget>
 #include <QComboBox>
+#include <QLabel>
+#include <QLineEdit>
 
 class SettingsDialog : public QDialog
 {
@@ -21,14 +23,18 @@ public:
 private:
     QWidget* createRobotTab();
     QWidget* createBoardTab();
+    QWidget* creatBotVsBot();
 
     QTabWidget* tabWidget;
 
     QCheckBox* checkWhiteRobot;
     QComboBox* comboWhiteDiff;
-
     QCheckBox* checkBlackRobot;
     QComboBox* comboBlackDiff;
+    QCheckBox* checkBotVsBot;
+
+    QLabel* labelSearchTime;
+    QLineEdit *lineSearchTime;
 
     QCheckBox* checkBoardFlipped;
 

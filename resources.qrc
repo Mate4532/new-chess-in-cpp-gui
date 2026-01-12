@@ -14,4 +14,8 @@
         <file>resources/white_bishop.png</file>
         <file>resources/white_king.png</file>
     </qresource>
+    <qresource prefix="/">
+        <file>assets/openings.txt</file>
+        <file>botvsbotresults/botvsbot.txt</file>
+    </qresource>
 </RCC>

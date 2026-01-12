@@ -239,8 +239,6 @@ void Board::LoadFEN(std::string fen) {
 }
 
 void Board::loadNewGame() {
-    repetition_history.Clear();
-    move_history.clear();
     LoadFEN(newPosFen);
 }
 
@@ -853,6 +851,12 @@ std::vector<std::vector<std::pair<PieceType, Color>>> Board::getBoardMatrix() co
     }
 
     return boardMatrix;
+}
+
+void Board::ClearBoard() {
+    m_ply = 0;
+    repetition_history.Clear();
+    move_history.clear();
 }
 
 void perft_thread_worker(Board board_copy, std::vector<Move> moves_to_test, int depth) {

@@ -1,0 +1,3 @@
+old_searcher_win: 30
+improved_searcher_win: 26
+draw: 59

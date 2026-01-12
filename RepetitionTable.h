@@ -7,7 +7,7 @@ class Board;
 
 class RepetitionTable {
 private:
-    static constexpr int MAX_REPETITION = 256;
+    static constexpr int MAX_REPETITION = 1024;
 
     uint64_t hashes[MAX_REPETITION];
     int startIndices[MAX_REPETITION + 1];

@@ -6,6 +6,8 @@
 struct RobotSettings {
     bool isWhiteRobot = false;
     bool isBlackRobot = false;
+    bool isBotVsBot = false;
+    int botVsBotSearchTimeMs = 1000;
     Difficulty whiteRobotDifficulty = Difficulty::EASY;
     Difficulty blackRobotDifficulty = Difficulty::EASY;
 
@@ -13,20 +15,9 @@ struct RobotSettings {
         return isWhiteRobot != other.isWhiteRobot ||
                isBlackRobot != other.isBlackRobot ||
                whiteRobotDifficulty != other.whiteRobotDifficulty ||
-               blackRobotDifficulty != other.blackRobotDifficulty;
-    }
-
-    RobotSettings& operator=(const RobotSettings& other) {
-
-        if (this == &other) {
-            return *this;
-        }
-
-        isWhiteRobot = other.isWhiteRobot;
-        isBlackRobot = other.isBlackRobot;
-        whiteRobotDifficulty = other.whiteRobotDifficulty;
-        blackRobotDifficulty = other.blackRobotDifficulty;
-        return *this;
+               blackRobotDifficulty != other.blackRobotDifficulty ||
+               isBotVsBot != other.isBotVsBot ||
+               botVsBotSearchTimeMs != other.botVsBotSearchTimeMs;
     }
 };
 
@@ -35,16 +26,6 @@ struct BoardSettings {
 
     bool operator!=(const BoardSettings& other) const {
         return isBoardFlipped != other.isBoardFlipped;
-    }
-
-    BoardSettings& operator=(const BoardSettings& other) {
-
-        if (this == &other) {
-            return *this;
-        }
-
-        isBoardFlipped = other.isBoardFlipped;
-        return *this;
     }
 };
 
