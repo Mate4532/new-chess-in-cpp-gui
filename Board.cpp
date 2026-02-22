@@ -233,8 +233,8 @@ void Board::LoadFEN(std::string fen) {
 
     boardStateHistory[m_ply] = state;
     boardStateHistory[m_ply].zobrist_hash = GenerateFullHash();
-    
-    repetition_history.Init(*this);
+
+    repetition_history.Clear();
 	repetition_history.Push(boardStateHistory[m_ply].zobrist_hash, true);
 }
 
@@ -420,17 +420,41 @@ uint64_t Board::getNewXRayAttacks(Square to, uint64_t occupied) const {
 }
 
 bool Board::IsInsufficientMaterial() const {
-
     if (getPieceBitboard(WHITE, PAWN) || getPieceBitboard(BLACK, PAWN)) return false;
     if (getPieceBitboard(WHITE, ROOK) || getPieceBitboard(BLACK, ROOK)) return false;
     if (getPieceBitboard(WHITE, QUEEN) || getPieceBitboard(BLACK, QUEEN)) return false;
 
-    int whiteMinors = std::popcount(getPieceBitboard(WHITE, KNIGHT) | getPieceBitboard(WHITE, BISHOP));
-    int blackMinors = std::popcount(getPieceBitboard(BLACK, KNIGHT) | getPieceBitboard(BLACK, BISHOP));
+    uint64_t wN = getPieceBitboard(WHITE, KNIGHT);
+    uint64_t wB = getPieceBitboard(WHITE, BISHOP);
+    uint64_t bN = getPieceBitboard(BLACK, KNIGHT);
+    uint64_t bB = getPieceBitboard(BLACK, BISHOP);
 
-    if (whiteMinors == 0 && blackMinors == 0) return true;
+    int numWN = std::popcount(wN);
+    int numWB = std::popcount(wB);
+    int numBN = std::popcount(bN);
+    int numBB = std::popcount(bB);
 
-    if ((whiteMinors == 1 && blackMinors == 0) || (whiteMinors == 0 && blackMinors == 1)) return true;
+    int whiteTotal = numWN + numWB;
+    int blackTotal = numBN + numBB;
+
+    if (whiteTotal == 0 && blackTotal == 0) return true;
+
+    if ((whiteTotal == 1 && blackTotal == 0) || (whiteTotal == 0 && blackTotal == 1)) return true;
+
+    if (numWN == 1 && numWB == 0 && numBN == 1 && numBB == 0) return true;
+
+    if (numWB == 1 && numWN == 0 && numBB == 1 && numBN == 0) {
+
+        Square wBishopSq = (Square)std::countr_zero(wB);
+        Square bBishopSq = (Square)std::countr_zero(bB);
+
+        bool wBishopIsLight = (LIGHT_SQUARES & (1ULL << wBishopSq));
+        bool bBishopIsLight = (DARK_SQUARES & (1ULL << bBishopSq));
+
+        if (wBishopIsLight == bBishopIsLight) {
+            return true;
+        }
+    }
 
     return false;
 }

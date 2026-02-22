@@ -1,6 +1,8 @@
 #include "OldTranspositionTable.h"
+#include "oldsearcher.h"
 
 using namespace OldTT;
+using namespace OldSearcher;
 
 size_t TranspositionTable::NextPowerOf2(size_t n) {
     size_t count = 0;
@@ -10,16 +12,31 @@ size_t TranspositionTable::NextPowerOf2(size_t n) {
 }
 
 TranspositionTable::TranspositionTable(size_t mb) {
-
     size_t entryCount = (mb * 1024 * 1024) / sizeof(TTEntry);
     size_t size = NextPowerOf2(entryCount);
     table.resize(size);
     Clear();
 }
 
-void TranspositionTable::Store(uint64_t hash, int score, int depth, TTFlag flag, Move bestMove) {
+int TranspositionTable::ScoreToTT(int score, int ply) {
+    if (std::abs(score) > Searcher::MATE_SCORE_BOUND) {
+        return score > 0 ? score + ply : score - ply;
+    }
+    return score;
+}
+
+int TranspositionTable::ScoreFromTT(int score, int ply) {
+    if (std::abs(score) > Searcher::MATE_SCORE_BOUND) {
+        return score > 0 ? score - ply : score + ply;
+    }
+    return score;
+}
+
+void TranspositionTable::Store(uint64_t hash, int score, int ply, int depth, TTFlag flag, Move bestMove) {
     size_t index = (hash ^ (hash >> 32)) % table.size();
     TTEntry& e = table[index];
+
+    int writeScore = ScoreToTT(score, ply);
 
     if (e.key != hash || e.gen != generation || depth >= e.depth) {
 
@@ -28,7 +45,7 @@ void TranspositionTable::Store(uint64_t hash, int score, int depth, TTFlag flag,
         }
 
         e.key = hash;
-        e.score = (int32_t)score;
+        e.score = (int16_t)writeScore;
         e.depth = (int8_t)depth;
         e.type = (uint8_t)flag;
         e.gen = generation;
@@ -39,27 +56,29 @@ void TranspositionTable::Store(uint64_t hash, int score, int depth, TTFlag flag,
     }
 }
 
-bool TranspositionTable::Probe(uint64_t hash, int depth, int alpha, int beta, int& score, Move& bestMove) {
+bool TranspositionTable::Probe(uint64_t hash, int ply, int depth, int alpha, int beta, int& score, Move& bestMove) {
     size_t index = (hash ^ (hash >> 32)) % table.size();
     TTEntry& e = table[index];
 
-	if (e.key != hash)
+    if (e.key != hash)
         return false;
 
-	bestMove = e.move;
+    bestMove = e.move;
 
     if (e.depth >= depth) {
+        int retrievedScore = ScoreFromTT(e.score, ply);
+
         if (e.type == TT_EXACT) {
-            score = e.score;
+            score = retrievedScore;
             return true;
         }
 
-        if (e.type == TT_ALPHA && e.score <= alpha) {
-            score = e.score;
+        if (e.type == TT_ALPHA && retrievedScore <= alpha) {
+            score = retrievedScore;
             return true;
         }
-        if (e.type == TT_BETA && e.score >= beta) {
-            score = e.score;
+        if (e.type == TT_BETA && retrievedScore >= beta) {
+            score = retrievedScore;
             return true;
         }
     }
@@ -71,9 +90,9 @@ void TranspositionTable::Clear() {
     for (auto& e : table) {
         e.key = 0;
         e.score = 0;
-		e.move = Move();
+        e.move = Move();
         e.depth = 0;
-        e.type = 0;
+        e.type = TT_NONE;
         e.gen = 0;
     }
     generation = 0;

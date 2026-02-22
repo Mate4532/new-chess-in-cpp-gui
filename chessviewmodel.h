@@ -24,7 +24,6 @@ public:
     void currentPlayerGaveUp();
 
     void stopRobotSearch();
-    void switchBots();
 
     void movePiece(int fromX, int fromY, int toX, int toY, PieceType promotionPiece = PieceType::PIECE_NONE);
     void makeRobotMove();

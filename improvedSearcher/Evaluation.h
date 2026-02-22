@@ -3,10 +3,16 @@
 
 namespace ImprovedEvaluation {
 
+    static const int passedPawnBonusesMG[] = { 0, 5, 10, 20, 35, 60, 80, 0 };
+    static const int passedPawnBonusesEG[] = { 0, 10, 20, 35, 50, 90, 130, 0 };
+
+    static const int isolatedPawnPenaltyMG[] = { 0, -10, -25, -50, -75, -75, -75, -75, -75 };
+    static const int isolatedPawnPenaltyEG[] = { 0, -20, -40, -60, -80, -80, -80, -80, -80 };
+
     static const int kingsSafetyTable[] = {
         0,  0,   5,  10,  15,
-        25, 40,  60,  90, 130,
-        180, 250, 330, 450, 600
+        25, 40,  60,  80, 110,
+        150, 200, 260, 325, 400
     };
 
     static const int KnightMobilityBonus[] = {
@@ -125,7 +131,7 @@ namespace ImprovedEvaluation {
         static int GetPieceValue(PieceType p);
         static int EvaluateMobility(const Board& board, Color color);
         static int EvaluatePos(const Board& board);
-        static int EvaluatePawns(const Board& board, Color color);
+        static void EvaluatePawns(const Board& board, Color color, int& mgScore, int& egScore);
         static int EvaluatePawnCenter(const Board& board, Color color);
         static int KingPawnShield(const Board& board, Color color);
         static int EvaluateInvasion(const Board& board, Color color);
@@ -134,6 +140,10 @@ namespace ImprovedEvaluation {
         static int EvaluateKingSafety(const Board& board, Color color);
         static int EvaluatePawnTerritory(const Board& board, Color color);
         static void CalculateImbalancePenalty(const Board& board, Color c, int pieceCounts[2][6], int& midGameScore, int& endGameScore);
+        static bool OppositeColorBishopEndgame(const Board& board, const int pieceCounts[2][6]);
+        static bool IsDrawKnightEndgame(const int pieceCounts[2][6]);
+        static bool WrongColoredBishopDrawEndgame(const Board& board, const Color us, const int pieceCounts[2][6]);
+        static int RookAgainstMinorsEndgame(const int pieceCounts[2][6]);
 
         static int GetGamePhase(const Board& board);
     };

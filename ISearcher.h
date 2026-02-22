@@ -16,6 +16,7 @@ public:
     virtual bool isUnderSearch() = 0;
     virtual void stopSearch() = 0;
     virtual SearcherType getType() const = 0;
+    virtual std::string getName() const = 0;
     virtual ~ISearcher() = default;
 };
 

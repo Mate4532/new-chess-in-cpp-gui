@@ -45,7 +45,7 @@ public:
     void setPlayer(Color c);
     void setRobot(Color c);
     void ClearSearchers();
-    void setupBotsForNormalGame();
+    void setupBotsForNormalGame(const RobotSettings& rs);
     void prepareImprovedBotVsOldBot();
     void SwapRobots();
     void setDifficulty(Color c, Difficulty d);

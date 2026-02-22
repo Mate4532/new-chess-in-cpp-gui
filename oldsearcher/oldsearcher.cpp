@@ -1,4 +1,4 @@
-#include "oldsearcher.h".h"
+#include "oldsearcher.h"
 #include "OldEvaluation.h"
 #include <chrono>
 #include <iostream>
@@ -15,20 +15,6 @@ const int futility_margin[] = { 0, 150, 300, 500, 900, 1500 };
 inline long long now_ms() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
                std::chrono::steady_clock::now().time_since_epoch()).count();
-}
-
-inline int Searcher::ScoreToTT(int score, int ply) {
-    if (IsMateScore(score)) {
-        return score > 0 ? score + ply : score - ply;
-    }
-    return score;
-}
-
-inline int Searcher::ScoreFromTT(int score, int ply) {
-    if (IsMateScore(score)) {
-        return score > 0 ? score - ply : score + ply;
-    }
-    return score;
 }
 
 void Searcher::stopSearch() {
@@ -130,6 +116,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         if (board.getHalfMoveClock() >= 100 || repetitionTable.Contains(hash) || board.IsInsufficientMaterial()) {
             return 0;
         }
+
         alpha = std::max(alpha, -MATE_SCORE + ply);
         beta = std::min(beta, MATE_SCORE - ply);
         if (alpha >= beta) return alpha;
@@ -138,8 +125,8 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
     int ttScore;
     Move ttMove;
 
-    if (tt.Probe(hash, depth, alpha, beta, ttScore, ttMove)) {
-        return ScoreFromTT(ttScore, ply);
+    if (tt.Probe(hash, ply, depth, alpha, beta, ttScore, ttMove)) {
+        return ttScore;
     }
 
     bool inCheck = board.isSquareAttacked(
@@ -281,7 +268,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
                 }
                 historyMoves[board.getSideToMove()][m.getFrom()][m.getTo()] += depth * depth;
             }
-            tt.Store(hash, ScoreToTT(score, ply), depth, TT_BETA, m);
+            tt.Store(hash, score, ply, depth, TT_BETA, m);
             return score;
         }
 
@@ -292,12 +279,12 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
     }
 
     if (movesSearched == 0) {
-        int score = inCheck ? -MATE_SCORE + ply : 0;
+        int score = inCheck ? -MATE_SCORE + ply: 0;
         return score;
     }
 
     TTFlag flag = (alpha <= originalAlpha) ? TT_ALPHA : TT_EXACT;
-    tt.Store(hash, ScoreToTT(alpha, ply), depth, flag, bestMove);
+    tt.Store(hash, alpha, ply, depth, flag, bestMove);
 
     return alpha;
 }
@@ -343,28 +330,31 @@ Move Searcher::IterativeDeepening() {
     int lastScore = 0;
 
     for (int depth = 1; depth <= max_depth; depth++) {
-        int window = 50;
-        int alpha = lastScore - window;
-        int beta = lastScore + window;
-        int score;
+        int score = 0;
+        int alpha = -MATE_SCORE;
+        int beta = MATE_SCORE;
+        int delta = 50;
 
-        while (true) {
+        if (depth >= 5) {
+            alpha = std::max(-MATE_SCORE, score - delta);
+            beta = std::min(MATE_SCORE, score + delta);
+        }
+
+        score = negamax(depth, alpha, beta, 0);
+
+        if (score <= alpha) {
+            beta = (alpha + beta) / 2;
+            alpha = -MATE_SCORE;
             score = negamax(depth, alpha, beta, 0);
-            if (stop) break;
-            if (score <= alpha) {
-                alpha -= window;
-            }
-            else if (score >= beta) {
-                beta += window;
-            }
-            else {
-                break;
-            }
-            window *= 2;
         }
-        if (tt.Probe(board.getHash(), depth, -MATE_SCORE, MATE_SCORE, rawScore, tmpMove)) {
-            score = ScoreFromTT(rawScore, 0);
+
+        else if (score >= beta) {
+            alpha = (alpha + beta) / 2;
+            beta = MATE_SCORE;
+            score = negamax(depth, alpha, beta, 0);
         }
+
+        tt.Probe(board.getHash(), 0, depth, -MATE_SCORE, MATE_SCORE, rawScore, tmpMove);
 
         if (tmpMove.isValid()) {
             bestMove = tmpMove;
@@ -376,8 +366,8 @@ Move Searcher::IterativeDeepening() {
 
         if (board.isDebugMode) {
             std::cout << "info depth " << depth << " score ";
-            if (abs(score) > 90000)
-                std::cout << "mate " << ((score > 0) ? (100001 - score) / 2 : -(100001 + score) / 2);
+            if (abs(score) > MATE_SCORE_BOUND)
+                std::cout << "mate " << ((score > 0) ? (MATE_SCORE + 1 - score) / 2 : -(MATE_SCORE + 1 + score) / 2);
             else
                 std::cout << "cp " << (board.getSideToMove() == WHITE ? score : -score);
 
@@ -387,7 +377,7 @@ Move Searcher::IterativeDeepening() {
                       << std::endl;
         }
 
-        if (abs(score) > MATE_SCORE_BOUND)
+        if (IsMateScore(score))
             break;
     }
 
@@ -430,7 +420,7 @@ std::vector<Move> Searcher::GetPVLine(int depth) {
         Move ttMove;
         TTFlag flag;
 
-        if (tt.Probe(currentHash, 0, -MATE_SCORE, MATE_SCORE, ttScore, ttMove)) {
+        if (tt.Probe(currentHash, 0, 0, -MATE_SCORE, MATE_SCORE, ttScore, ttMove)) {
             if (ttMove.isValid()) {
 
                 if (board.MakeMove(ttMove, true)) {
@@ -497,7 +487,7 @@ std::vector<Move> Searcher::GetWhatIfPV(const std::vector<Move>& baseLine, Move 
         int ttScore;
         Move ttMove;
 
-        if (tt.Probe(currentHash, 0, -MATE_SCORE, MATE_SCORE, ttScore, ttMove)) {
+        if (tt.Probe(currentHash, 0, 0, -MATE_SCORE, MATE_SCORE, ttScore, ttMove)) {
             if (board.MakeMove(ttMove, true)) {
                 resultPV.push_back(ttMove);
                 fullHistory.push_back(ttMove);
@@ -555,4 +545,8 @@ void Searcher::setDifficulty(Difficulty diff) {
 
 SearcherType Searcher::getType() const {
     return SearcherType::OLD_SEARCHER;
+}
+
+std::string Searcher::getName() const {
+    return "Old searcher";
 }

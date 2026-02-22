@@ -17,7 +17,7 @@ void ChessViewModel::startGame() {
     }
 
     else {
-        bm.setupBotsForNormalGame();
+        bm.setupBotsForNormalGame(currentSettings.robotSettings);
     }
 
     if (!isBeginnerPos)
@@ -60,16 +60,13 @@ bool ChessViewModel::isRobotUnderSearch() const {
     return isUnderSearch;
 }
 
-void ChessViewModel::switchBots() {
-
-}
-
 void ChessViewModel::stopRobotSearch() {
 
     if (!isRobotUnderSearch())
         return;
 
     bm.stopRobotCalculation();
+    robotWatcher.waitForFinished();
 }
 
 void ChessViewModel::currentPlayerGaveUp() {

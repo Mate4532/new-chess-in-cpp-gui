@@ -67,15 +67,13 @@ namespace OldSearcher {
             return std::abs(score) >= MATE_SCORE - 1000;
         }
 
-        int ScoreToTT(int score, int ply);
-        int ScoreFromTT(int score, int ply);
-
         void ClearSearcher();
 
         void setDifficulty(Difficulty diff);
         inline bool isUnderSearch() { return isSearching; }
 
         SearcherType getType() const;
+        std::string getName() const;
     };
 
 }

@@ -186,14 +186,15 @@ void BoardManager::undoLastMove() {
 
 void BoardManager::MakeRobotMove() {
     Move robot_move;
-	std::cout << "Robot gondolkodik..." << std::endl;
+    std::cout << (board.getSideToMove() == WHITE ? (whiteRobot->getName() + " (feher) ") : (blackRobot->getName() + " (fekete) ")) <<"gondolkodik..." << std::endl;
     if (board.isDebugMode) {
         uint64_t hash_before = board.getHash();
         std::cout << "Hash kereses elott: " << board.getHash() << std::endl;
         robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetBestMove() : blackRobot->GetBestMove();
 
         uint64_t hash_after = board.getHash();
-        std::cout << "Hash kereses utan: " << board.getHash() << std::endl;
+        std::cout << "Hash kereses utan: " << hash_after << std::endl;
+        std::cout << "Repetition_history merete: " << board.getRepetitionHash().size() << std::endl;
         if (hash_before != hash_after) {
             std::cout << "BAJ VAN\n\n\n\n\n" << std::endl;
         }
@@ -365,9 +366,12 @@ void BoardManager::ClearSearchers() {
     blackRobot->ClearSearcher();
 }
 
-void BoardManager::setupBotsForNormalGame() {
+void BoardManager::setupBotsForNormalGame(const RobotSettings& rs) {
     whiteRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
     blackRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+
+    whiteRobot->setDifficulty(rs.whiteRobotDifficulty);
+    blackRobot->setDifficulty(rs.blackRobotDifficulty);
 }
 
 void BoardManager::prepareImprovedBotVsOldBot() {

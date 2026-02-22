@@ -69,14 +69,12 @@ namespace ImprovedSearcher {
             return std::abs(score) >= MATE_SCORE_BOUND;
         }
 
-        int ScoreToTT(int score, int ply);
-        int ScoreFromTT(int score, int ply);
-
         void ClearSearcher();
 
         void setDifficulty(Difficulty diff);
         inline bool isUnderSearch() { return isSearching; }
 
         SearcherType getType() const;
+        std::string getName() const;
     };
 }

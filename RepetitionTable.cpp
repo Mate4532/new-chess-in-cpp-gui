@@ -56,6 +56,7 @@ bool RepetitionTable::IsDraw(uint64_t hash) const
 }
 
 void RepetitionTable::Clear(){
+    count = 0;
     std::fill(hashes, hashes + MAX_REPETITION, 0ULL);
     std::fill(startIndices, startIndices + MAX_REPETITION + 1, 0);
 }

@@ -120,6 +120,9 @@ const uint64_t FILE_MASKS[8] = {
     FILE_H
 };
 
+const uint64_t LIGHT_SQUARES = 0x55AA55AA55AA55AAULL;
+const uint64_t DARK_SQUARES  = 0xAA55AA55AA55AA55ULL;
+
 const int rook_directions[4] = { 8, -8, 1, -1 };
 const int bishop_directions[4] = { 7, 9, -7, -9 };
 
