@@ -7,9 +7,9 @@ using namespace ImprovedEvaluation;
 int MoveOrdering::See(const Board& board, Move m) {
     Square from = m.getFrom();
     Square to = m.getTo();
-    PieceType attacker = m.getPieceType();
     PieceType victim = board.getPieceAt(to, (Color)(board.getSideToMove() ^ 1));
     if (m.getFlags() == EN_PASSANT) victim = PAWN;
+
     int gain[32];
     int d = 0;
     uint64_t occupied = board.getAllOccupancy();
@@ -39,19 +39,19 @@ int MoveOrdering::See(const Board& board, Move m) {
         attackers |= board.getNewXRayAttacks(nextSq, occupied);
     }
 
-    while (--d > 0) {
-        gain[d - 1] = -std::max(-gain[d - 1], gain[d]);
+    while (d > 0) {
+        d--;
+        gain[d] = -std::max(-gain[d], gain[d + 1]);
     }
 
     return gain[0];
 }
 
-
 static inline int ScoreMove(
     const Board& board,
     const Move& m,
     const Move& ttMove,
-    const int history[2][MAX_KILLER_HISTORY][MAX_KILLER_HISTORY],
+    const int history[2][SQUARE_COUNT][SQUARE_COUNT],
     const Move killers[2]
 ) {
     Color us = board.getSideToMove();
@@ -71,10 +71,11 @@ static inline int ScoreMove(
 
         int mvv_lva = v * 16 - a;
 
-        if (MoveOrdering::See(board, m) >= 0) {
+        if (v >= a) {
             return 5'000'000 + mvv_lva;
         } else {
-            return 1'000'000 + mvv_lva;
+            if (MoveOrdering::See(board, m) >= 0) return 5'000'000 + mvv_lva;
+            else return 1'000'000 + mvv_lva;
         }
     }
 
@@ -82,21 +83,6 @@ static inline int ScoreMove(
         if ((m.getFlags() & 0b0011) == PROMOTION_TYPE_QUEEN)
             return 4'000'000;
         return 3'000'000;
-    }
-
-    if (m.getPieceType() == PAWN) {
-        int rank = m.getTo() >> 3;
-        bool dangerous = false;
-
-        if (us == WHITE) {
-            if (rank >= 6) dangerous = true;
-        } else {
-            if (rank <= 1) dangerous = true;
-        }
-
-        if (dangerous) {
-            return 2'500'000;
-        }
     }
 
     if (m.isValid()) {
@@ -111,7 +97,7 @@ int MoveOrdering::SortMoves(
     const Board& board,
     MoveList& moves,
     Move ttMove,
-    const int history[2][MAX_KILLER_HISTORY][MAX_KILLER_HISTORY],
+    const int history[2][SQUARE_COUNT][SQUARE_COUNT],
     const Move killers[2]
 ) {
     int scores[256];

@@ -6,6 +6,8 @@
 using namespace ImprovedSearcher;
 using namespace ImprovedEvaluation;
 using namespace ImprovedMoveOrdering;
+using namespace ImprovedLMR;
+using namespace ImprovedTT;
 
 const int DELTA_MARGIN = 950;
 const int lmp_table[] = { 0, 3, 6, 10, 16, 24 };
@@ -30,12 +32,13 @@ int Searcher::quiescence(int alpha, int beta) {
 
     int standPat = Evaluation::EvaluatePos(board);
 
-    if (standPat >= beta) return standPat;
-    if (standPat < alpha - DELTA_MARGIN) {
-        return alpha;
+    if (standPat >= beta) {
+        return beta;
     }
 
-    if (standPat > alpha) alpha = standPat;
+    if (standPat > alpha) {
+        alpha = standPat;
+    }
 
     MoveList moves;
     MoveGenerator::GenerateMoves(board, moves, true);
@@ -44,24 +47,27 @@ int Searcher::quiescence(int alpha, int beta) {
     MoveOrdering::SortMoves(board, moves, Move(), historyMoves, dummyKillers);
 
     for (const Move& m : moves) {
-
         if (!board.MakeMove(m, true)) continue;
 
         int score = -quiescence(-beta, -alpha);
         board.UndoMove(m, true);
 
         if (stop) return alpha;
-
-        if (score >= beta) return score;
-        if (score > alpha) alpha = score;
+        if (score >= beta) {
+            return beta;
+        }
+        if (score > alpha) {
+            alpha = score;
+        }
     }
-
     return alpha;
 }
 
 int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, bool prev_was_capture, bool allowNull) {
 
     nodes++;
+    bool isPvNode = (beta - alpha > 1);
+
     if ((nodes & 2047) == 0 && now_ms() - startTime >= robot_thinking_time_ms)
         stop = true;
     if (stop)
@@ -81,13 +87,16 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
     int ttScore;
     Move ttMove;
 
-    if (tt.Probe(hash, ply, depth, alpha, beta, ttScore, ttMove)) {
+    bool foundInTT = tt.Probe(hash, ply, depth, alpha, beta, ttScore, ttMove);
+
+    if (ply > 0 && foundInTT) {
         return ttScore;
     }
 
     bool inCheck = board.isSquareAttacked(
         board.getKingSquare(board.getSideToMove()),
         (Color)(board.getSideToMove() ^ 1));
+
 
     if (inCheck)
         depth++;
@@ -107,8 +116,8 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         }
     }
 
-    if (allowNull && depth >= 3 && !inCheck && ply > 0 && beta < MATE_SCORE) {
-        if (board.HasNonPawnMaterial(board.getSideToMove())) {
+    if (!isPvNode && allowNull && depth >= 3 && !inCheck && ply > 0 && beta < MATE_SCORE) {
+        if (staticEval >= beta - 50 && board.HasNonPawnMaterial(board.getSideToMove())) {
             int R = 3 + (depth / 6);
             board.MakeNullMove();
             int score = -negamax(depth - 1 - R, -beta, -beta + 1, ply + 1, Move(), false, false);
@@ -160,7 +169,9 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
 
         if (depth <= 4 && !inCheck && !givesCheck && quiet && abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
             int futilityMargin = 150 * depth;
+
             if (staticEval + futilityMargin <= alpha) {
+
                 bool isKiller = (ply < MAX_KILLER_HISTORY) &&
                                 (m == killerMoves[ply][0] || m == killerMoves[ply][1]);
                 if (!isKiller) {
@@ -190,21 +201,28 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         bool isAdvancedPawnPush = false;
         if (m.getPieceType() == PAWN) {
             int rank = m.getTo() >> 3;
+            Color us = (Color)(board.getSideToMove() ^ 1);
 
-            if (board.getSideToMove() == BLACK) {
-                if (rank >= 6) isAdvancedPawnPush = true;
+            if (us == WHITE) {
+                if (rank >= 5) isAdvancedPawnPush = true;
             } else {
-                if (rank <= 1) isAdvancedPawnPush = true;
+                if (rank <= 2) isAdvancedPawnPush = true;
             }
         }
 
         int reduction = 0;
-        if (depth >= 3 && movesSearched > important_move && quiet && !givesCheck && !isAdvancedPawnPush) {
+        if (depth >= 3 && !inCheck && movesSearched > important_move && quiet && !givesCheck && !isAdvancedPawnPush) {
             reduction = LMR::GetReduction(depth, movesSearched);
 
-            if (!inCheck && (staticEval + 100 <= alpha)) {
+            if (staticEval + 100 <= alpha) {
                 reduction++;
             }
+
+            if (isPvNode) {
+                reduction -= 1;
+            }
+
+            reduction = std::max(0, reduction);
         }
 
         if (movesSearched == 1) {
@@ -212,10 +230,6 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         }
         else {
             score = -negamax(depth - 1 - reduction, -alpha - 1, -alpha, ply + 1, m, isCapture, true);
-
-            if (score > alpha && reduction > 0) {
-                score = -negamax(depth - 1, -alpha - 1, -alpha, ply + 1, m, isCapture, true);
-            }
 
             if (score > alpha && score < beta) {
                 score = -negamax(depth - 1, -beta, -alpha, ply + 1, m, isCapture, true);
@@ -258,15 +272,15 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
 
 void Searcher::ClearHistory() {
     for (int c = 0; c < 2; c++)
-        for (int f = 0; f < MAX_KILLER_HISTORY; f++)
-            for (int t = 0; t < MAX_KILLER_HISTORY; t++)
+        for (int f = 0; f < SQUARE_COUNT; f++)
+            for (int t = 0; t < SQUARE_COUNT; t++)
                 historyMoves[c][f][t] = 0;
 }
 
 void Searcher::AgeHistory() {
     for (int c = 0; c < 2; c++)
-        for (int f = 0; f < MAX_KILLER_HISTORY; f++)
-            for (int t = 0; t < MAX_KILLER_HISTORY; t++)
+        for (int f = 0; f < SQUARE_COUNT; f++)
+            for (int t = 0; t < SQUARE_COUNT; t++)
                 historyMoves[c][f][t] >>= 1;
 }
 
@@ -297,7 +311,7 @@ Move Searcher::IterativeDeepening() {
     int lastScore = 0;
 
     for (int depth = 1; depth <= max_depth; depth++) {
-        int score = 0;
+        int score = lastScore;
         int alpha = -MATE_SCORE;
         int beta = MATE_SCORE;
         int delta = 50;
@@ -310,24 +324,22 @@ Move Searcher::IterativeDeepening() {
         score = negamax(depth, alpha, beta, 0);
 
         if (score <= alpha) {
-            beta = (alpha + beta) / 2;
             alpha = -MATE_SCORE;
             score = negamax(depth, alpha, beta, 0);
         }
 
         else if (score >= beta) {
-            alpha = (alpha + beta) / 2;
             beta = MATE_SCORE;
             score = negamax(depth, alpha, beta, 0);
         }
+
+        if (stop) break;
 
         tt.Probe(board.getHash(), 0, depth, -MATE_SCORE, MATE_SCORE, rawScore, tmpMove);
 
         if (tmpMove.isValid()) {
             bestMove = tmpMove;
         }
-
-        if (stop) break;
 
         lastScore = score;
 

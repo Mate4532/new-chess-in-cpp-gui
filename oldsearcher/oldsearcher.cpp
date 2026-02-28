@@ -7,6 +7,7 @@ using namespace OldEvaluation;
 using namespace OldSearcher;
 using namespace OldMoveOrdering;
 using namespace OldTT;
+using namespace OldLMR;
 
 const int DELTA_MARGIN = 950;
 const int lmp_table[] = { 0, 3, 6, 10, 16, 24 };
@@ -25,7 +26,6 @@ void Searcher::stopSearch() {
 int Searcher::see(Move m) {
     Square from = m.getFrom();
     Square to = m.getTo();
-    PieceType attacker = m.getPieceType();
     PieceType victim = board.getPieceAt(to, (Color)(board.getSideToMove() ^ 1));
     if (m.getFlags() == EN_PASSANT) victim = PAWN;
     int gain[32];
@@ -388,7 +388,6 @@ Move Searcher::IterativeDeepening() {
         << std::endl;
 
         std::vector<Move> baseLine = GetPVLine(50);
-        PrintPvLine(50);
     }
 
     isSearching = false;

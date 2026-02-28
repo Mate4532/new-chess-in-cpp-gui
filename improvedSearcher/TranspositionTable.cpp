@@ -17,6 +17,7 @@ TranspositionTable::TranspositionTable(size_t mb) {
     size_t entryCount = (mb * 1024 * 1024) / sizeof(TTEntry);
     size_t size = NextPowerOf2(entryCount);
     table.resize(size);
+    Clear();
 }
 
 int TranspositionTable::ScoreToTT(int score, int ply) {
@@ -34,7 +35,7 @@ int TranspositionTable::ScoreFromTT(int score, int ply) {
 }
 
 void TranspositionTable::Store(uint64_t hash, int score, int ply, int depth, TTFlag flag, Move bestMove) {
-    size_t index = (hash ^ (hash >> 32)) % table.size();
+    size_t index = hash & (table.size() - 1);
     TTEntry& e = table[index];
 
     int writeScore = ScoreToTT(score, ply);
@@ -47,7 +48,7 @@ void TranspositionTable::Store(uint64_t hash, int score, int ply, int depth, TTF
         }
 
         e.key = hash;
-        e.score = (int16_t)writeScore;
+        e.score = (int32_t)writeScore;
         e.depth = (int8_t)depth;
         e.type = (uint8_t)flag;
         e.gen = generation;
@@ -60,7 +61,7 @@ void TranspositionTable::Store(uint64_t hash, int score, int ply, int depth, TTF
 }
 
 bool TranspositionTable::Probe(uint64_t hash, int ply, int depth, int alpha, int beta, int& score, Move& bestMove) {
-    size_t index = (hash ^ (hash >> 32)) % table.size();
+    size_t index = hash & (table.size() - 1);
     TTEntry& e = table[index];
 
     if (e.key != hash)

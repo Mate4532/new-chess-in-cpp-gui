@@ -5,6 +5,7 @@
 namespace ImprovedMoveOrdering {
 
     #define MAX_KILLER_HISTORY 128
+    #define SQUARE_COUNT 64
 
     class MoveOrdering {
     public:
@@ -13,7 +14,7 @@ namespace ImprovedMoveOrdering {
             const Board& board,
             MoveList& moves,
             Move ttMove,
-            const int history[2][MAX_KILLER_HISTORY][MAX_KILLER_HISTORY],
+            const int history[2][SQUARE_COUNT][SQUARE_COUNT],
             const Move killers[2]
         );
     };

@@ -8,10 +8,6 @@
 #include "PrecomputedEvaluationData.h"
 #include "LMR.h"
 
-using namespace ImprovedTT;
-using namespace ImprovedPED;
-using namespace ImprovedLMR;
-
 namespace ImprovedSearcher {
 
     class Searcher : public ISearcher{
@@ -21,7 +17,7 @@ namespace ImprovedSearcher {
         static constexpr int TT_SIZE_MB = 128;
 
         Board& board;
-        TranspositionTable tt;
+        ImprovedTT::TranspositionTable tt;
         bool isSearching;
 
         int negamax(int depth, int alpha, int beta, int ply, Move prev_move = Move(), bool prev_was_capture = false, bool allowNull = false);
@@ -35,8 +31,9 @@ namespace ImprovedSearcher {
         bool isStoppedManually;
         std::atomic<uint64_t> nodes;
 
-        int historyMoves[2][MAX_KILLER_HISTORY][MAX_KILLER_HISTORY];
+        int historyMoves[2][SQUARE_COUNT][SQUARE_COUNT];
         Move killerMoves[MAX_KILLER_HISTORY][2];
+
         RepetitionTable repetitionTable;
 
         void ClearHistory();
@@ -50,8 +47,8 @@ namespace ImprovedSearcher {
 
         Searcher(Board& board) : board(board), tt(TT_SIZE_MB) {
             ClearHistory();
-            PrecomputedEvaluationData::Init();
-            LMR::Init();
+            ImprovedPED::PrecomputedEvaluationData::Init();
+            ImprovedLMR::LMR::Init();
         }
 
         void setSearchTime(int t) { robot_thinking_time_ms = t; }

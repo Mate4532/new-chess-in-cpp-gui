@@ -9,10 +9,17 @@ namespace ImprovedEvaluation {
     static const int isolatedPawnPenaltyMG[] = { 0, -10, -25, -50, -75, -75, -75, -75, -75 };
     static const int isolatedPawnPenaltyEG[] = { 0, -20, -40, -60, -80, -80, -80, -80, -80 };
 
-    static const int kingsSafetyTable[] = {
-        0,  0,   5,  10,  15,
-        25, 40,  60,  80, 110,
-        150, 200, 260, 325, 400
+    static const int kingsSafetyTable[100] = {
+        0,   0,   1,   1,   2,   3,   4,   5,   7,   8,
+        10,  12,  14,  16,  18,  21,  24,  27,  30,  33,
+        36,  39,  43,  47,  51,  55,  59,  64,  68,  73,
+        78,  83,  88,  94,  100, 105, 111, 117, 123, 130,
+        137, 143, 150, 157, 164, 172, 179, 187, 195, 203,
+        211, 219, 228, 237, 246, 255, 265, 274, 284, 294,
+        304, 314, 325, 335, 346, 357, 368, 380, 391, 403,
+        415, 427, 440, 452, 465, 478, 492, 505, 519, 533,
+        547, 562, 576, 591, 606, 621, 636, 651, 667, 683,
+        699, 715, 731, 748, 765, 782, 799, 816, 834, 851
     };
 
     static const int KnightMobilityBonus[] = {
@@ -144,6 +151,7 @@ namespace ImprovedEvaluation {
         static bool IsDrawKnightEndgame(const int pieceCounts[2][6]);
         static bool WrongColoredBishopDrawEndgame(const Board& board, const Color us, const int pieceCounts[2][6]);
         static int RookAgainstMinorsEndgame(const int pieceCounts[2][6]);
+        static void DrawnEndgamePenalty(const Color us, const int pieceCounts[2][6], int& midGameScore, int& endGameScore);
 
         static int GetGamePhase(const Board& board);
     };

@@ -11,7 +11,7 @@ void LMR::Init() {
                 table[d][m] = 0;
                 continue;
             }
-            double reduction = 1.25 + std::log(d) * std::log(m) / 2.3;
+            double reduction = 0.75 + std::log(d) * std::log(m) / 2.25;
             table[d][m] = static_cast<int>(reduction);
         }
     }
