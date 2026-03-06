@@ -1,7 +1,29 @@
 #include <vector>
 #include "Board.h"
 #include "Move.h"
-#include "Attacks.h"
+
+PieceType MoveGenerator::GetPromotionPiece(MoveFlag promotion_piece) {
+    switch (promotion_piece) {
+    case PROMOTION_TYPE_KNIGHT:
+        return KNIGHT;
+        break;
+
+    case PROMOTION_TYPE_BISHOP:
+        return BISHOP;
+        break;
+
+    case PROMOTION_TYPE_ROOK:
+        return ROOK;
+        break;
+
+    case PROMOTION_TYPE_QUEEN:
+        return QUEEN;
+
+    default:
+        return PIECE_NONE;
+        break;
+    }
+}
 
 void MoveGenerator::GenerateMoves(const Board& board, MoveList& moveList, bool generate_only_captures) {
 
@@ -21,7 +43,7 @@ void MoveGenerator::GenerateMoves(const Board& board, MoveList& moveList, bool g
 
             switch (piece_type) {
             case PAWN: {
-                int direction = (player == WHITE) ? 8 : -8;
+                int direction = (player == WHITE) ? WHITE_ENPASSANT_PIECE_OFFSET : BLACK_ENPASSANT_PIECE_OFFSET;
                 Square to_sq = (Square)(from_sq + direction);
 
                 if (!generate_only_captures) {

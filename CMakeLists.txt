@@ -2,6 +2,19 @@ cmake_minimum_required(VERSION 3.16)
 
 project(new-chess-in-cpp-gui VERSION 0.1 LANGUAGES CXX)
 
+set(CMAKE_BUILD_TYPE Release)
+
+if(MSVC)
+    add_compile_options(/O2 /Oi /Ot /GL /arch:AVX2 /fp:fast)
+    add_link_options(/LTCG)
+    add_compile_definitions(USE_AVX2)
+else()
+    add_compile_options(-O3 -march=native -mtune=native -flto)
+    add_link_options(-flto -O3)
+    
+    add_compile_definitions(USE_AVX2)
+endif()
+
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -50,6 +63,8 @@ if(Qt6_FOUND)
         Move.h MoveList.h
         oldSearcher/OldPrecomputedEvaluationData.cpp oldSearcher/OldPrecomputedEvaluationData.h
         improvedSearcher/PrecomputedEvaluationData.cpp improvedSearcher/PrecomputedEvaluationData.h
+        nnue-probe-master/src/nnue.cpp nnue-probe-master/src/nnue.h
+        nnue-probe-master/src/misc.cpp nnue-probe-master/src/misc.h
     )
 endif()
 

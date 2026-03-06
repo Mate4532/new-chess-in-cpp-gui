@@ -1,5 +1,6 @@
 #pragma once
 #include "Board.h"
+#include "nnue-probe-master/src/nnue.h"
 
 namespace ImprovedEvaluation {
 
@@ -136,8 +137,9 @@ namespace ImprovedEvaluation {
     class Evaluation {
     public:
         static int GetPieceValue(PieceType p);
+        static int GetNnuePieceNum(PieceType p, Color c);
         static int EvaluateMobility(const Board& board, Color color);
-        static int EvaluatePos(const Board& board);
+        static int EvaluatePos(const Board& board, int ply, NNUEdata* nnue_state);
         static void EvaluatePawns(const Board& board, Color color, int& mgScore, int& egScore);
         static int EvaluatePawnCenter(const Board& board, Color color);
         static int KingPawnShield(const Board& board, Color color);

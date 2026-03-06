@@ -7,6 +7,7 @@
 #include "TranspositionTable.h"
 #include "PrecomputedEvaluationData.h"
 #include "LMR.h"
+#include "nnue-probe-master/src/nnue.h"
 
 namespace ImprovedSearcher {
 
@@ -21,7 +22,7 @@ namespace ImprovedSearcher {
         bool isSearching;
 
         int negamax(int depth, int alpha, int beta, int ply, Move prev_move = Move(), bool prev_was_capture = false, bool allowNull = false);
-        int quiescence(int alpha, int beta);
+        int quiescence(int alpha, int beta, int ply);
 
         int max_depth = 128;
         int robot_thinking_time_ms = 1000;
@@ -36,6 +37,8 @@ namespace ImprovedSearcher {
 
         RepetitionTable repetitionTable;
 
+        NNUEdata nnue_state[MAXIMUM_DEPTH + 10];
+
         void ClearHistory();
         void AgeHistory();
         void ClearKillers();
@@ -49,6 +52,7 @@ namespace ImprovedSearcher {
             ClearHistory();
             ImprovedPED::PrecomputedEvaluationData::Init();
             ImprovedLMR::LMR::Init();
+            nnue_init("nn-62ef826d1a6d.nnue");
         }
 
         void setSearchTime(int t) { robot_thinking_time_ms = t; }

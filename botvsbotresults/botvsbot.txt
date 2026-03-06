@@ -1,3 +1,3 @@
-old_searcher_win: 4
-improved_searcher_win: 5
-draw: 11
+old_searcher_win: 0
+improved_searcher_win: 9
+draw: 2

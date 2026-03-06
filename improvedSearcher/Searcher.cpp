@@ -23,14 +23,14 @@ void Searcher::stopSearch() {
     isStoppedManually = true;
 }
 
-int Searcher::quiescence(int alpha, int beta) {
+int Searcher::quiescence(int alpha, int beta, int ply) {
     nodes++;
 
     if ((nodes & 2047) == 0 && now_ms() - startTime >= robot_thinking_time_ms)
         stop = true;
     if (stop) return alpha;
 
-    int standPat = Evaluation::EvaluatePos(board);
+    int standPat = Evaluation::EvaluatePos(board, ply, nnue_state);
 
     if (standPat >= beta) {
         return beta;
@@ -47,9 +47,71 @@ int Searcher::quiescence(int alpha, int beta) {
     MoveOrdering::SortMoves(board, moves, Move(), historyMoves, dummyKillers);
 
     for (const Move& m : moves) {
+
+        nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
+        nnue_state[ply + 1].accumulator.computedAccumulation = 0;
+
+        MoveFlag flags = m.getFlags();
+        bool isCapture = flags & CAPTURE_FLAG;
+        bool isPromo = flags & PROMOTION_FLAG;
+
+        Color player = board.getSideToMove();
+        Color enemy = (Color)(player ^ 1);
+        PieceType mPieceType = m.getPieceType();
+        Square mFrom = m.getFrom();
+        Square mTo = m.getTo();
+
+        bool isEp = flags == EN_PASSANT;
+
+        if (isEp) {
+            nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
+
+            nnue_state[ply + 1].dirtyPiece.pc[0]   = Evaluation::GetNnuePieceNum(PAWN, player);
+            nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
+            nnue_state[ply + 1].dirtyPiece.to[0]   = mTo;
+
+            int epSquare = mTo + (player == WHITE ? MoveGenerator::WHITE_ENPASSANT_PIECE_OFFSET : MoveGenerator::BLACK_ENPASSANT_PIECE_OFFSET);
+            nnue_state[ply + 1].dirtyPiece.pc[1]   = Evaluation::GetNnuePieceNum(PAWN, enemy);
+            nnue_state[ply + 1].dirtyPiece.from[1] = epSquare;
+            nnue_state[ply + 1].dirtyPiece.to[1]   = 64;
+        }
+        else if (isCapture) {
+            if (isPromo) {
+                PieceType promoPiece = MoveGenerator::GetPromotionPiece(flags);
+                PieceType capPiece = board.getPieceAt(mTo, enemy);
+
+                nnue_state[ply + 1].dirtyPiece.dirtyNum = 3;
+
+                nnue_state[ply + 1].dirtyPiece.pc[0]   = Evaluation::GetNnuePieceNum(PAWN, player);
+                nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
+                nnue_state[ply + 1].dirtyPiece.to[0]   = 64;
+
+                nnue_state[ply + 1].dirtyPiece.pc[1]   = Evaluation::GetNnuePieceNum(capPiece, enemy);
+                nnue_state[ply + 1].dirtyPiece.from[1] = mTo;
+                nnue_state[ply + 1].dirtyPiece.to[1]   = 64;
+
+                nnue_state[ply + 1].dirtyPiece.pc[2]   = Evaluation::GetNnuePieceNum(promoPiece, player);
+                nnue_state[ply + 1].dirtyPiece.from[2] = 64;
+                nnue_state[ply + 1].dirtyPiece.to[2]   = mTo;
+            }
+
+            else {
+                PieceType capPiece = board.getPieceAt(mTo, enemy);
+                nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
+
+                nnue_state[ply + 1].dirtyPiece.pc[0]   = Evaluation::GetNnuePieceNum(mPieceType, player);
+                nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
+                nnue_state[ply + 1].dirtyPiece.to[0]   = mTo;
+
+                nnue_state[ply + 1].dirtyPiece.pc[1]   = Evaluation::GetNnuePieceNum(capPiece, enemy);
+                nnue_state[ply + 1].dirtyPiece.from[1] = mTo;
+                nnue_state[ply + 1].dirtyPiece.to[1]   = 64;
+            }
+        }
+
         if (!board.MakeMove(m, true)) continue;
 
-        int score = -quiescence(-beta, -alpha);
+        int score = -quiescence(-beta, -alpha, ply + 1);
         board.UndoMove(m, true);
 
         if (stop) return alpha;
@@ -102,14 +164,14 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         depth++;
 
     if (depth <= 0)
-        return quiescence(alpha, beta);
+        return quiescence(alpha, beta, ply);
 
     int staticEval = 0;
     if (!inCheck) {
-        staticEval = Evaluation::EvaluatePos(board);
+        staticEval = Evaluation::EvaluatePos(board, ply, nnue_state);
     }
 
-    if (depth <= 4 && !inCheck && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
+    if (!isPvNode && depth <= 4 && !inCheck && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
         int evalMargin = 120 * depth;
         if (staticEval - evalMargin >= beta) {
             return staticEval;
@@ -119,6 +181,8 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
     if (!isPvNode && allowNull && depth >= 3 && !inCheck && ply > 0 && beta < MATE_SCORE) {
         if (staticEval >= beta - 50 && board.HasNonPawnMaterial(board.getSideToMove())) {
             int R = 3 + (depth / 6);
+            nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
+            nnue_state[ply + 1].accumulator.computedAccumulation = 0;
             board.MakeNullMove();
             int score = -negamax(depth - 1 - R, -beta, -beta + 1, ply + 1, Move(), false, false);
             board.UndoNullMove();
@@ -145,13 +209,110 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
             );
     }
 
-    int important_move_min = 3;
-    important_move = std::max(important_move, important_move_min);
-
     Move bestMove;
     int movesSearched = 0;
 
     for (const Move& m : moves) {
+
+        nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
+        nnue_state[ply + 1].accumulator.computedAccumulation = 0;
+
+        MoveFlag flags = m.getFlags();
+        bool isCapture = flags & CAPTURE_FLAG;
+        bool isPromo = flags & PROMOTION_FLAG;
+        bool quiet = !isCapture && !isPromo;
+        bool isCastle = (flags == KINGSIDE_CASTLE || flags == QUEENSIDE_CASTLE);
+        bool isEp = flags == EN_PASSANT;
+
+        Color player = board.getSideToMove();
+        Color enemy = (Color)(player ^ 1);
+        PieceType mPieceType = m.getPieceType();
+        Square mFrom = m.getFrom();
+        Square mTo = m.getTo();
+
+        if (isCapture) {
+
+            if (isEp){
+                nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
+
+                nnue_state[ply + 1].dirtyPiece.pc[0]   = Evaluation::GetNnuePieceNum(PAWN, player);
+                nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
+                nnue_state[ply + 1].dirtyPiece.to[0]   = mTo;
+
+                int epSquare = mTo + (player == WHITE ? MoveGenerator::WHITE_ENPASSANT_PIECE_OFFSET : MoveGenerator::BLACK_ENPASSANT_PIECE_OFFSET);
+                nnue_state[ply + 1].dirtyPiece.pc[1]   = Evaluation::GetNnuePieceNum(PAWN, enemy);
+                nnue_state[ply + 1].dirtyPiece.from[1] = epSquare;
+                nnue_state[ply + 1].dirtyPiece.to[1]   = 64;
+            }
+
+            else {
+                nnue_state[ply + 1].dirtyPiece.pc[0]   = Evaluation::GetNnuePieceNum(mPieceType, player);
+                nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
+                nnue_state[ply + 1].dirtyPiece.to[0]   = isPromo ? 64 : mTo;
+
+                PieceType capPiece = board.getPieceAt(mTo, enemy);
+                nnue_state[ply + 1].dirtyPiece.pc[1]   = Evaluation::GetNnuePieceNum(capPiece, enemy);
+                nnue_state[ply + 1].dirtyPiece.from[1] = mTo;
+                nnue_state[ply + 1].dirtyPiece.to[1]   = 64;
+
+                if (isPromo) {
+                    PieceType promoPiece = MoveGenerator::GetPromotionPiece(flags);
+                    nnue_state[ply + 1].dirtyPiece.dirtyNum = 3;
+
+                    nnue_state[ply + 1].dirtyPiece.pc[2]   = Evaluation::GetNnuePieceNum(promoPiece, player);
+                    nnue_state[ply + 1].dirtyPiece.from[2] = 64;
+                    nnue_state[ply + 1].dirtyPiece.to[2]   = mTo;
+                }
+
+                else {
+                    nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
+                }
+            }
+        }
+
+        else if (isPromo){
+            nnue_state[ply + 1].dirtyPiece.pc[0]   = Evaluation::GetNnuePieceNum(PAWN, player);
+            nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
+            nnue_state[ply + 1].dirtyPiece.to[0]   = 64;
+
+            PieceType promoPiece = MoveGenerator::GetPromotionPiece(flags);
+            nnue_state[ply + 1].dirtyPiece.pc[1]   = Evaluation::GetNnuePieceNum(promoPiece, player);
+            nnue_state[ply + 1].dirtyPiece.from[1] = 64;
+            nnue_state[ply + 1].dirtyPiece.to[1]   = mTo;
+        }
+
+        else if (isCastle) {
+            nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
+            if (flags & KINGSIDE_CASTLE) {
+                nnue_state[ply + 1].dirtyPiece.pc[0]   = Evaluation::GetNnuePieceNum(KING, player);
+                nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
+                nnue_state[ply + 1].dirtyPiece.to[0]   = mTo;
+
+                nnue_state[ply + 1].dirtyPiece.pc[1]   = Evaluation::GetNnuePieceNum(ROOK, player);
+                nnue_state[ply + 1].dirtyPiece.from[1] = player == WHITE ? MoveGenerator::WHITE_KINGSIDE_CASTLE_ROOK_POS_FROM : MoveGenerator::BLACK_KINGSIDE_CASTLE_ROOK_POS_FROM;
+                nnue_state[ply + 1].dirtyPiece.to[1]   = player == WHITE ? MoveGenerator::WHITE_KINGSIDE_CASTLE_ROOK_POS_TO : MoveGenerator::BLACK_KINGSIDE_CASTLE_ROOK_POS_TO;
+
+            }
+
+            else if (flags & QUEENSIDE_CASTLE) {
+                nnue_state[ply + 1].dirtyPiece.pc[0]   = Evaluation::GetNnuePieceNum(KING, player);
+                nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
+                nnue_state[ply + 1].dirtyPiece.to[0]   = mTo;
+
+                nnue_state[ply + 1].dirtyPiece.pc[1]   = Evaluation::GetNnuePieceNum(ROOK, player);
+                nnue_state[ply + 1].dirtyPiece.from[1] = player == WHITE ? MoveGenerator::WHITE_QUEENSIDE_CASTLE_ROOK_POS_FROM : MoveGenerator::BLACK_QUEENSIDE_CASTLE_ROOK_POS_FROM;
+                nnue_state[ply + 1].dirtyPiece.to[1]   = player == WHITE ? MoveGenerator::WHITE_QUEENSIDE_CASTLE_ROOK_POS_TO : MoveGenerator::BLACK_QUEENSIDE_CASTLE_ROOK_POS_TO;
+            }
+        }
+
+        else {
+            nnue_state[ply + 1].dirtyPiece.dirtyNum = 1;
+
+            nnue_state[ply + 1].dirtyPiece.pc[0]   = Evaluation::GetNnuePieceNum(mPieceType, player);
+            nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
+            nnue_state[ply + 1].dirtyPiece.to[0]   = mTo;
+        }
+
         if (!board.MakeMove(m, true)) {
             continue;
         }
@@ -160,14 +321,22 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         if (!bestMove.isValid())
             bestMove = m;
 
-        Color enemy = (Color)(board.getSideToMove());
-        bool givesCheck = board.isSquareAttacked(board.getKingSquare(enemy), (Color)(enemy ^ 1));
+        bool givesCheck = board.isSquareAttacked(board.getKingSquare(enemy), player);
 
-        bool isCapture = m.getFlags() & CAPTURE_FLAG;
-        bool isPromo = m.getFlags() & PROMOTION_FLAG;
-        bool quiet = !isCapture && !isPromo;
+        bool isAdvancedPawnPush = false;
+        if (m.getPieceType() == PAWN) {
+            int rank = m.getTo() >> 3;
+            Color us = (Color)(board.getSideToMove() ^ 1);
 
-        if (depth <= 4 && !inCheck && !givesCheck && quiet && abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
+            if (us == WHITE) {
+                if (rank >= 5) isAdvancedPawnPush = true;
+            } else {
+                if (rank <= 2) isAdvancedPawnPush = true;
+            }
+        }
+
+        if (movesSearched > 0 && !isPvNode && !isAdvancedPawnPush && depth <= 4 && !inCheck && !givesCheck && quiet && abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
+
             int futilityMargin = 150 * depth;
 
             if (staticEval + futilityMargin <= alpha) {
@@ -181,8 +350,10 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
             }
         }
 
-        if (!inCheck && !givesCheck && quiet && depth <= 5) {
-            if (movesSearched >= lmp_table[depth]) {
+        if (!isPvNode && !inCheck && !givesCheck && quiet && !isAdvancedPawnPush && depth <= 5) {
+            int lmp_threshold = 3 + (2 * depth * depth);
+
+            if (movesSearched >= lmp_threshold) {
                 bool isKiller = (ply < MAX_KILLER_HISTORY) &&
                                 (m == killerMoves[ply][0] || m == killerMoves[ply][1]);
                 if (!isKiller) {
@@ -198,25 +369,9 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
 
         int score;
 
-        bool isAdvancedPawnPush = false;
-        if (m.getPieceType() == PAWN) {
-            int rank = m.getTo() >> 3;
-            Color us = (Color)(board.getSideToMove() ^ 1);
-
-            if (us == WHITE) {
-                if (rank >= 5) isAdvancedPawnPush = true;
-            } else {
-                if (rank <= 2) isAdvancedPawnPush = true;
-            }
-        }
-
         int reduction = 0;
-        if (depth >= 3 && !inCheck && movesSearched > important_move && quiet && !givesCheck && !isAdvancedPawnPush) {
+        if (depth >= 3 && !inCheck && quiet && !givesCheck && !isAdvancedPawnPush) {
             reduction = LMR::GetReduction(depth, movesSearched);
-
-            if (staticEval + 100 <= alpha) {
-                reduction++;
-            }
 
             if (isPvNode) {
                 reduction -= 1;
@@ -260,7 +415,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
     }
 
     if (movesSearched == 0) {
-        int score = inCheck ? -MATE_SCORE : 0;
+        int score = inCheck ? -MATE_SCORE + ply : 0;
         return score;
     }
 
@@ -303,6 +458,9 @@ Move Searcher::IterativeDeepening() {
     AgeHistory();
     ClearKillers();
     tt.NewWrite();
+
+    nnue_state[0].dirtyPiece.dirtyNum = 0;
+    nnue_state[0].accumulator.computedAccumulation = 0;
 
     int rawScore;
     Move tmpMove;
