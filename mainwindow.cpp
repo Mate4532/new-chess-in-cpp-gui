@@ -36,7 +36,9 @@ MainWindow::MainWindow(QWidget* parent)
     connect(chessViewModel, &ChessViewModel::moveMade, infoContainer, &InfoView::addMoveToDisplay);
     connect(chessViewModel, &ChessViewModel::clearInfoDisplay, infoContainer, &InfoView::clearMoveDisplay);
     connect(chessViewModel, &ChessViewModel::moveUndone, infoContainer, &InfoView::removeLastButFromDisplay);
+    connect(chessViewModel, &ChessViewModel::flipBoardToRequest, chessView, &ChessView::flipBoardTo);
 
+    connect(infoContainer, &InfoView::reviewRequested, chessViewModel, &ChessViewModel::reviewHistory);
     connect(infoContainer, &InfoView::settingsChanged, chessViewModel, &ChessViewModel::updateSettings);
     connect(infoContainer, &InfoView::newGameRequested, chessViewModel, &ChessViewModel::startGame);
     connect(infoContainer, &InfoView::undoRequested, chessViewModel, &ChessViewModel::undoLastMove);

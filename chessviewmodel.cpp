@@ -34,6 +34,11 @@ void ChessViewModel::loadNewGame() {
 
     isBeginnerPos = true;
     bm.loadNewGame();
+
+    visualHistory.clear();
+    visualHistory.push_back(bm.getBoardMatrix());
+    reviewingPly = -1;
+
     emit boardChanged();
     emit clearInfoDisplay();
 }
@@ -74,6 +79,12 @@ void ChessViewModel::currentPlayerGaveUp() {
 
 void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType promotionPiece) {
 
+    if (reviewingPly != -1) {
+        reviewingPly = -1;
+        emit boardChanged();
+        return;
+    }
+
     if (!isGameRunning && isBeginnerPos && !bm.isRobotToMove())
         startGame();
 
@@ -95,10 +106,14 @@ void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType
 }
 
 void ChessViewModel::afterMoveBeenMade(Move m) {
+
+    visualHistory.push_back(bm.getBoardMatrix());
+    reviewingPly = -1;
+
     emit boardChanged();
 
     Color moveColor = (Color)(bm.getSideToMove() ^ 1);
-    emit moveMade(bm.getFullMoveNumber(), QString::fromStdString(m.toHumanReadable()), moveColor);
+    emit moveMade(bm.getFullMoveNumber(), bm.getPly(), QString::fromStdString(m.toHumanReadable()), moveColor);
 
     if (bm.didGameEnd())
         endGame();
@@ -151,6 +166,8 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
 
     if (boardConfigChanged) {
         isBoardFlipped = newBs.isBoardFlipped;
+        if (oldS.boardSettings.isBoardFlipped != newS.boardSettings.isBoardFlipped)
+            flipBoardToRequest(isBoardFlipped);
         emit boardChanged();
     }
 
@@ -233,6 +250,10 @@ void ChessViewModel::onRobotMoveFinished() {
 }
 
 void ChessViewModel::undoLastMove() {
+
+    visualHistory.pop_back();
+    reviewingPly = -1;
+
     if (!isGameRunning)
         return;
 
@@ -248,8 +269,20 @@ void ChessViewModel::undoLastMove() {
 }
 
 std::vector<std::vector<std::pair<PieceType, Color>>> ChessViewModel::getBoardMatrix() const {
+
+    if (reviewingPly >= 0 && reviewingPly < visualHistory.size()) {
+        return visualHistory[reviewingPly];
+    }
+
     if (isRobotUnderSearch()) {
         return cachedMatrix;
     }
     return bm.getBoardMatrix();
+}
+
+void ChessViewModel::reviewHistory(int targetPly) {
+    if (targetPly >= 0 && targetPly < visualHistory.size()) {
+        reviewingPly = targetPly;
+        emit boardChanged();
+    }
 }

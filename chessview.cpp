@@ -32,7 +32,6 @@ QRectF ChessView::boardRect() const
     return QRectF(x, y, side, side);
 }
 
-
 void ChessView::drawBackground(QPainter* painter, const QRectF& rect)
 {
     QRectF scene = sceneRect();
@@ -46,4 +45,19 @@ void ChessView::drawBackground(QPainter* painter, const QRectF& rect)
         );
 
     painter->drawPixmap(0, 0, scaled);
+}
+
+void ChessView::flipBoardTo(bool isFlipped) {
+    if (isFlipped) {
+        setBackgroundImage(":/resources/resources/chessboard_flipped.png");
+    } else {
+        setBackgroundImage(":/resources/resources/chessboard.png");
+    }
+}
+
+void ChessView::setBackgroundImage(const QString& imagePath)
+{
+    background = QPixmap(imagePath);
+
+    viewport()->update();
 }

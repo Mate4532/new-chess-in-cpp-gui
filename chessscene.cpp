@@ -77,8 +77,9 @@ QPointF ChessScene::squareToScenePos(int file, int visualRank) const
     return QPointF(x, y);
 }
 
-void ChessScene::drawPieces(bool isFlipped) {
+void ChessScene::drawPieces() {
     auto boardMatrix = cvm->getBoardMatrix();
+    bool isFlipped = cvm->getIsBoardFlipped();
 
     const qreal qualityMultiplier = 1.5;
 
@@ -143,9 +144,7 @@ void ChessScene::updateLayout()
     clear();
     activeItem = nullptr;
 
-    bool isFlipped = cvm->getIsBoardFlipped();
-
-    drawPieces(isFlipped);
+    drawPieces();
 }
 
 void ChessScene::onBoardChanged() {

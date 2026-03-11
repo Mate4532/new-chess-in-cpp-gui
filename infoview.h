@@ -18,11 +18,12 @@ signals:
     void newGameRequested();
     void undoRequested();
     void giveUpRequested();
+    void reviewRequested(int targetPly);
 
     void settingsChanged(AllSettings& oldS, AllSettings& newS);
 
 public slots:
-    void addMoveToDisplay(int moveNumber, const QString& move, Color color);
+    void addMoveToDisplay(int moveNumber, int movePly, const QString& move, Color color);
     void removeLastButFromDisplay();
     void clearMoveDisplay();
 

@@ -42,13 +42,15 @@ public:
 
 public slots:
     void updateSettings(AllSettings& oldS, AllSettings& newS);
+    void reviewHistory(int targetPly);
 
 signals:
     void gameEnded();
     void boardChanged();
-    void moveMade(int moveNumber, const QString& move, Color c);
+    void moveMade(int moveNumber, int movePly, const QString& move, Color c);
     void moveUndone();
     void clearInfoDisplay();
+    void flipBoardToRequest(bool isFlipped);
 
 
 private:
@@ -64,6 +66,10 @@ private:
     QFutureWatcher<Move> robotWatcher;
 
     std::vector<std::vector<std::pair<PieceType, Color>>> cachedMatrix;
+
+    std::vector<std::vector<std::vector<std::pair<PieceType, Color>>>> visualHistory;
+
+    int reviewingPly = -1;
 };
 
 #endif // CHESSVIEWMODEL_H

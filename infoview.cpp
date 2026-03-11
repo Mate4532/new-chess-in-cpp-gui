@@ -133,7 +133,7 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     connect(btnSettings, &QPushButton::clicked, this, &InfoView::openSettings);
 }
 
-void InfoView::addMoveToDisplay(int moveNumber, const QString& move, Color color) {
+void InfoView::addMoveToDisplay(int moveNumber, int movePly, const QString& move, Color color) {
     QString numStyle = "color: #cccccc; font-size: 14px; font-weight: bold;";
 
     QString btnStyle = R"(
@@ -168,6 +168,13 @@ void InfoView::addMoveToDisplay(int moveNumber, const QString& move, Color color
     QPushButton* moveBtn = new QPushButton(move);
     moveBtn->setStyleSheet(btnStyle);
     moveBtn->setCursor(Qt::PointingHandCursor);
+
+    moveBtn->setProperty("ply", movePly);
+
+    connect(moveBtn, &QPushButton::clicked, this, [this, moveBtn]() {
+        int targetPly = moveBtn->property("ply").toInt();
+        emit reviewRequested(targetPly);
+    });
 
     movesLayout->addWidget(moveBtn, currentRow, currentCol);
 

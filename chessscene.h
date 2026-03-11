@@ -56,7 +56,7 @@ private:
     static const std::unordered_map<PieceType, QString> blackPieceMap;
 
     void sceneRectChanged(const QRectF &rect);
-    void drawPieces(bool isFlipped);
+    void drawPieces();
 
 private slots:
     void onSceneRectChanged(const QRectF& rect);

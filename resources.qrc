@@ -1,6 +1,5 @@
 <RCC>
     <qresource prefix="/resources">
-        <file>resources/chessboard.png</file>
         <file>resources/black_bishop.png</file>
         <file>resources/black_king.png</file>
         <file>resources/black_knight.png</file>
@@ -13,6 +12,8 @@
         <file>resources/white_rook.png</file>
         <file>resources/white_bishop.png</file>
         <file>resources/white_king.png</file>
+        <file>resources/chessboard.png</file>
+        <file>resources/chessboard_flipped.png</file>
     </qresource>
     <qresource prefix="/">
         <file>assets/openings.txt</file>
