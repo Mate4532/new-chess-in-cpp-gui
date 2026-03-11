@@ -6,6 +6,7 @@
 #include <QFrame>
 #include <QTimer>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <iostream>
 
 InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWidget(parent)
@@ -88,6 +89,11 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
             background-color: transparent;
         }
     )");
+
+    QScrollBar* vScrollBar = scrollArea->verticalScrollBar();
+    connect(vScrollBar, &QScrollBar::rangeChanged, this, [vScrollBar](int min, int max) {
+        vScrollBar->setValue(max);
+    });
 
     QWidget* scrollContent = new QWidget();
     scrollContent->setObjectName("scrollContent");
