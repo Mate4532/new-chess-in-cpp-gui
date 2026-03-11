@@ -39,7 +39,8 @@ public:
     bool MakeMove(Move m);
     void undoMove(int plyToUndo);
     void undoLastMove();
-	bool didGameEnd();
+    bool didGameEnd();
+    GameResult getGameResult();
     void writeGameResult();
     void startGameLoop();
 

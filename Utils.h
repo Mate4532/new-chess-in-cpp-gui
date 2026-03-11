@@ -4,6 +4,13 @@
 
 #define MAX_PLY 2048
 
+enum GameResult : uint8_t {
+    WHITE_WON,
+    BLACK_WON,
+    DRAW,
+    GAME_DID_NOT_END
+};
+
 enum Color : uint8_t {
     WHITE = 0,
     BLACK = 1,

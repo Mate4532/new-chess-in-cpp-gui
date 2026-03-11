@@ -25,6 +25,7 @@ signals:
 public slots:
     void addMoveToDisplay(int moveNumber, int movePly, const QString& move, Color color);
     void removeLastButFromDisplay();
+    void writeGameResultToDisplay(GameResult gr);
     void clearMoveDisplay();
 
 private:
@@ -32,13 +33,15 @@ private:
     void openSettings();
 
     QGridLayout* movesLayout;
-    int currentRow = 1;
+    int currentRow = 0;
     int buttonAmount = 0;
 
     QPushButton* btnSettings;
     QPushButton* btnNewGame;
     QPushButton* btnUndo;
     QPushButton* btnGiveUp;
+
+    QString numStyle = "color: #cccccc; font-size: 14px; font-weight: bold;";
 };
 
 #endif

@@ -33,6 +33,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     infoContainer = new InfoView(allS);
 
+     connect(chessViewModel, &ChessViewModel::gameEnded, infoContainer, &InfoView::writeGameResultToDisplay);
     connect(chessViewModel, &ChessViewModel::moveMade, infoContainer, &InfoView::addMoveToDisplay);
     connect(chessViewModel, &ChessViewModel::clearInfoDisplay, infoContainer, &InfoView::clearMoveDisplay);
     connect(chessViewModel, &ChessViewModel::moveUndone, infoContainer, &InfoView::removeLastButFromDisplay);

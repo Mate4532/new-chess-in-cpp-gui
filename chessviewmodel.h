@@ -45,7 +45,7 @@ public slots:
     void reviewHistory(int targetPly);
 
 signals:
-    void gameEnded();
+    void gameEnded(GameResult gr);
     void boardChanged();
     void moveMade(int moveNumber, int movePly, const QString& move, Color c);
     void moveUndone();

@@ -229,6 +229,18 @@ bool BoardManager::didGameEnd() {
     return false;
 }
 
+GameResult BoardManager::getGameResult(){
+    if (board.IsDraw())
+        return GameResult::DRAW;
+
+    if (board.IsCheckMate()) {
+        Color lastPlayerMoved = (Color)(board.getSideToMove() ^ 1);
+        return (lastPlayerMoved == WHITE ? GameResult::WHITE_WON : GameResult::BLACK_WON);
+    }
+
+    return GameResult::GAME_DID_NOT_END;
+}
+
 void BoardManager::writeGameResult() {
     if (board.IsDraw()) {
         ResultManager::saveGameResult(ResultManager::DRAW);

@@ -140,7 +140,6 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
 }
 
 void InfoView::addMoveToDisplay(int moveNumber, int movePly, const QString& move, Color color) {
-    QString numStyle = "color: #cccccc; font-size: 14px; font-weight: bold;";
 
     QString btnStyle = R"(
         QPushButton {
@@ -161,6 +160,10 @@ void InfoView::addMoveToDisplay(int moveNumber, int movePly, const QString& move
             color: white;
         }
     )";
+
+    if (color == WHITE) {
+        currentRow++;
+    }
 
     int currentCol = color == WHITE ? 1 : 2;
 
@@ -183,10 +186,6 @@ void InfoView::addMoveToDisplay(int moveNumber, int movePly, const QString& move
     });
 
     movesLayout->addWidget(moveBtn, currentRow, currentCol);
-
-    if (color == BLACK) {
-        currentRow++;
-    }
 
     buttonAmount++;
 }
@@ -226,6 +225,35 @@ void InfoView::removeLastButFromDisplay() {
     buttonAmount--;
 }
 
+void InfoView::writeGameResultToDisplay(GameResult gr) {
+
+    QString resultString = "";
+
+    switch(gr) {
+    case GameResult::WHITE_WON:
+        resultString = "1 - 0";
+        break;
+
+    case GameResult::BLACK_WON:
+        resultString = "0 - 1";
+        break;
+
+    case GameResult::DRAW:
+        resultString = "½ - ½";
+        break;
+
+    default:
+        break;
+    }
+
+    currentRow++;
+
+    QLabel* numLabel = new QLabel(resultString);
+    numLabel->setStyleSheet(numStyle);
+    numLabel->setAlignment(Qt::AlignCenter);
+    movesLayout->addWidget(numLabel, currentRow, 0, 1, 3);
+}
+
 void InfoView::clearMoveDisplay()
 {
     QLayoutItem* item;
@@ -238,7 +266,8 @@ void InfoView::clearMoveDisplay()
     movesLayout->addWidget(new QLabel(""), 0, 1);
     movesLayout->addWidget(new QLabel(""), 0, 2);
 
-    currentRow = 1;
+    currentRow = 0;
+    buttonAmount = 0;
 }
 
 void InfoView::openSettings()

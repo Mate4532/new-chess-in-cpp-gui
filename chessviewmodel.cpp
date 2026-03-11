@@ -8,7 +8,7 @@ ChessViewModel::ChessViewModel(BoardManager& b, QObject* parent)
 }
 
 void ChessViewModel::startGame() {
-    if (isGameRunning || isRobotUnderSearch())
+    if (isGameRunning)
         endGame();
 
     if (currentSettings.robotSettings.isBotVsBot) {
@@ -50,7 +50,8 @@ void ChessViewModel::endGame() {
     }
 
     isGameRunning = false;
-    emit gameEnded();
+    GameResult gr = bm.getGameResult();
+    emit gameEnded(gr);
 }
 
 bool ChessViewModel::isMovePromotion(int fromX, int fromY, int toX, int toY) const {
@@ -250,6 +251,9 @@ void ChessViewModel::onRobotMoveFinished() {
 }
 
 void ChessViewModel::undoLastMove() {
+
+    if (!isGameRunning)
+        return;
 
     visualHistory.pop_back();
     reviewingPly = -1;
