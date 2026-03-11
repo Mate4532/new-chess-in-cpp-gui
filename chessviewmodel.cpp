@@ -282,7 +282,10 @@ std::vector<std::vector<std::pair<PieceType, Color>>> ChessViewModel::getBoardMa
 
 void ChessViewModel::reviewHistory(int targetPly) {
     if (targetPly >= 0 && targetPly < visualHistory.size()) {
-        reviewingPly = targetPly;
+        if (bm.getPly() == targetPly)
+            reviewingPly = -1;
+        else
+            reviewingPly = targetPly;
         emit boardChanged();
     }
 }
