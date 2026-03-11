@@ -5,6 +5,7 @@
 
 #include <QWidget>
 #include <QPushButton>
+#include <QGridLayout>
 
 class InfoView : public QWidget
 {
@@ -20,17 +21,23 @@ signals:
 
     void settingsChanged(AllSettings& oldS, AllSettings& newS);
 
+public slots:
+    void addMoveToDisplay(int moveNumber, const QString& move, Color color);
+    void removeLastButFromDisplay();
+    void clearMoveDisplay();
+
 private:
     AllSettings& currentAllS;
     void openSettings();
+
+    QGridLayout* movesLayout;
+    int currentRow = 1;
+    int buttonAmount = 0;
 
     QPushButton* btnSettings;
     QPushButton* btnNewGame;
     QPushButton* btnUndo;
     QPushButton* btnGiveUp;
-
-    int currentDifficulty = 3;
-    bool soundEnabled = true;
 };
 
 #endif

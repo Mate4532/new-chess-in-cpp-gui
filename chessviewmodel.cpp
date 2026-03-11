@@ -4,7 +4,7 @@
 ChessViewModel::ChessViewModel(BoardManager& b, QObject* parent)
     : QObject(parent), bm(b)
 {
-    connect(&robotWatcher, &QFutureWatcher<void>::finished, this, &ChessViewModel::onRobotMoveFinished);
+    connect(&robotWatcher, &QFutureWatcher<Move>::finished, this, &ChessViewModel::onRobotMoveFinished);
 }
 
 void ChessViewModel::startGame() {
@@ -20,26 +20,23 @@ void ChessViewModel::startGame() {
         bm.setupBotsForNormalGame(currentSettings.robotSettings);
     }
 
-    if (!isBeginnerPos)
-        bm.loadNewGame();
-
+    loadNewGame();
     isGameRunning = true;
-    isBeginnerPos = true;
-    emit boardChanged();
 
     if (bm.isRobotToMove()) {
         makeRobotMove();
     }
 }
 
- void ChessViewModel::loadNewGame() {
+void ChessViewModel::loadNewGame() {
 
-     endGame();
+    endGame();
 
-     isBeginnerPos = true;
-     bm.loadNewGame();
-     emit boardChanged();
- }
+    isBeginnerPos = true;
+    bm.loadNewGame();
+    emit boardChanged();
+    emit clearInfoDisplay();
+}
 
 void ChessViewModel::endGame() {
 
@@ -86,15 +83,22 @@ void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType
     if (isBeginnerPos)
         isBeginnerPos = false;
 
-    bool validMove = bm.MakeMove(fromX, fromY, toX, toY, promotionPiece);
+    Move m = bm.getMove(fromX, fromY, toX, toY, promotionPiece);
+    bool isMoveValid = m.isValid();
 
-    if (validMove) {
-        afterMoveBeenMade();
+    if (isMoveValid) {
+
+        bool isMoveLegal = bm.MakeMove(m);
+        if (isMoveLegal)
+            afterMoveBeenMade(m);
     }
 }
 
-void ChessViewModel::afterMoveBeenMade() {
+void ChessViewModel::afterMoveBeenMade(Move m) {
     emit boardChanged();
+
+    Color moveColor = (Color)(bm.getSideToMove() ^ 1);
+    emit moveMade(bm.getFullMoveNumber(), QString::fromStdString(m.toHumanReadable()), moveColor);
 
     if (bm.didGameEnd())
         endGame();
@@ -169,7 +173,7 @@ void ChessViewModel::makeRobotMove() {
     cachedMatrix = bm.getBoardMatrix();
     isUnderSearch = true;
 
-    QFuture<void> future = QtConcurrent::run(&BoardManager::MakeRobotMove, &bm);
+    QFuture<Move> future = QtConcurrent::run(&BoardManager::MakeRobotMove, &bm);
 
     robotWatcher.setFuture(future);
 }
@@ -223,10 +227,12 @@ void ChessViewModel::onRobotMoveFinished() {
     cachedMatrix.clear();
     isUnderSearch = false;
 
-    afterMoveBeenMade();
+    Move robotMove = robotWatcher.result();
+
+    afterMoveBeenMade(robotMove);
 }
 
-void ChessViewModel::undoLastMove(){
+void ChessViewModel::undoLastMove() {
     if (!isGameRunning)
         return;
 
@@ -235,6 +241,7 @@ void ChessViewModel::undoLastMove(){
 
     bm.undoLastMove();
     emit boardChanged();
+    emit moveUndone();
 
     if (bm.isRobotToMove())
         makeRobotMove();

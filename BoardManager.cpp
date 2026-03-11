@@ -24,8 +24,6 @@ BoardManager::BoardManager(): board() {
     Attacks::InitAll();
     is_white_player = !is_white_robot;
     is_black_player = !is_black_robot;
-    whiteRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
-    blackRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
     OpeningLoader::loadOpenings(OPENING_PATH);
 }
 
@@ -62,8 +60,7 @@ void BoardManager::goPerft(int perftDepth) {
 }
 
 void BoardManager::loadNewGame() {
-    whiteRobot->ClearSearcher();
-    blackRobot->ClearSearcher();
+    ClearSearchers();
     board.ClearBoard();
     board.loadNewGame();
 }
@@ -123,8 +120,8 @@ bool BoardManager::isMovePromotion(int fromX, int fromY, int toX, int toY) {
     return false;
 }
 
-bool BoardManager::MakeMove(int fromX, int fromY, int toX, int toY, PieceType promotionPiece) {
-
+Move BoardManager::getMove(int fromX, int fromY, int toX, int toY, PieceType promotionPiece)
+{
     Square fromSq = (Square)(fromY * 8 + fromX);
     Square toSq = (Square)(toY * 8 + toX);
 
@@ -147,19 +144,22 @@ bool BoardManager::MakeMove(int fromX, int fromY, int toX, int toY, PieceType pr
             const int promotionBits = 0b1011;
             if (isPromotion){
                 if ((m.getFlags() & promotionBits) == promotionFlag) {
-                    board.MakeMove(moves[i]);
-                    return true;
+                    return moves[i];
                 }
             }
 
             else {
-                board.MakeMove(m);
-                return true;
+                return m;
             }
         }
     }
 
-    return false;
+    return Move();
+}
+
+bool BoardManager::MakeMove(Move m) {
+
+    return board.MakeMove(m);
 }
 
 void BoardManager::undoMove(int plyToUndo) {
@@ -184,7 +184,7 @@ void BoardManager::undoLastMove() {
     }
 }
 
-void BoardManager::MakeRobotMove() {
+Move BoardManager::MakeRobotMove() {
     Move robot_move;
     std::cout << (board.getSideToMove() == WHITE ? (whiteRobot->getName() + " (feher) ") : (blackRobot->getName() + " (fekete) ")) <<"gondolkodik..." << std::endl;
     if (board.isDebugMode) {
@@ -203,10 +203,12 @@ void BoardManager::MakeRobotMove() {
         robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetBestMove() : blackRobot->GetBestMove();
     }
     if (!robot_move.isValid())
-        return;
+        return Move();
 
     board.MakeMove(robot_move);
     std::cout << "Robot lepese: " + robot_move.toAlgebraic() << std::endl;
+
+    return robot_move;
 }
 
 bool BoardManager::didGameEnd() {
@@ -362,21 +364,31 @@ void BoardManager::setRobot(Color c){
 }
 
 void BoardManager::ClearSearchers() {
-    whiteRobot->ClearSearcher();
-    blackRobot->ClearSearcher();
+    if (whiteRobot != nullptr) whiteRobot->ClearSearcher();
+    if (blackRobot != nullptr) blackRobot->ClearSearcher();
 }
 
 void BoardManager::setupBotsForNormalGame(const RobotSettings& rs) {
-    whiteRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
-    blackRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
 
-    whiteRobot->setDifficulty(rs.whiteRobotDifficulty);
-    blackRobot->setDifficulty(rs.blackRobotDifficulty);
+    if (rs.isWhiteRobot && (whiteRobot == nullptr || whiteRobot->getType() != IMRPOVED_SEARCHER)) {
+        whiteRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+        whiteRobot->setDifficulty(rs.whiteRobotDifficulty);
+    }
+
+    if (rs.isBlackRobot && (blackRobot == nullptr || blackRobot->getType() != IMRPOVED_SEARCHER)) {
+        blackRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+        blackRobot->setDifficulty(rs.blackRobotDifficulty);
+    }
 }
 
 void BoardManager::prepareImprovedBotVsOldBot() {
-    whiteRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
-    blackRobot = createBot(SearcherType::OLD_SEARCHER);
+    if (whiteRobot == nullptr || whiteRobot->getType() != IMRPOVED_SEARCHER) {
+        whiteRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+    }
+
+    if (blackRobot == nullptr || blackRobot->getType() != OLD_SEARCHER) {
+        blackRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+    }
 }
 
 void BoardManager::SwapRobots() {
@@ -384,18 +396,18 @@ void BoardManager::SwapRobots() {
 }
 
 void BoardManager::setDifficulty(Color c, Difficulty d) {
-    if (c == WHITE) whiteRobot->setDifficulty(d);
-    else blackRobot->setDifficulty(d);
+    if (c == WHITE && whiteRobot != nullptr) whiteRobot->setDifficulty(d);
+    else if (blackRobot != nullptr) blackRobot->setDifficulty(d);
 }
 
 void BoardManager::setSearchTime(int t) {
-    whiteRobot->setSearchTime(t);
-    blackRobot->setSearchTime(t);
+    if (whiteRobot != nullptr) whiteRobot->setSearchTime(t);
+    if (blackRobot != nullptr )blackRobot->setSearchTime(t);
 }
 
 void BoardManager::stopRobotCalculation() {
-    if (whiteRobot->isUnderSearch()) whiteRobot->stopSearch();
-    if (blackRobot->isUnderSearch()) blackRobot->stopSearch();
+    if (whiteRobot != nullptr && whiteRobot->isUnderSearch()) whiteRobot->stopSearch();
+    if (blackRobot != nullptr && blackRobot->isUnderSearch()) blackRobot->stopSearch();
 }
 
 void BoardManager::ClearBoard() {

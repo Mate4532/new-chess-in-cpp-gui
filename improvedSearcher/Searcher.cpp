@@ -171,18 +171,17 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         staticEval = Evaluation::EvaluatePos(board, ply, nnue_state);
     }
 
-    if (!isPvNode && depth <= 4 && !inCheck && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
+    if (depth <= 4 && !inCheck && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
         int evalMargin = 120 * depth;
         if (staticEval - evalMargin >= beta) {
             return staticEval;
         }
     }
 
-    if (!isPvNode && allowNull && depth >= 3 && !inCheck && ply > 0 && beta < MATE_SCORE) {
+    if (allowNull && depth >= 3 && !inCheck && ply > 0 && beta < MATE_SCORE) {
         if (staticEval >= beta - 50 && board.HasNonPawnMaterial(board.getSideToMove())) {
             int R = 3 + (depth / 6);
-            nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
-            nnue_state[ply + 1].accumulator.computedAccumulation = 0;
+            nnue_state[ply + 1] = nnue_state[ply];
             board.MakeNullMove();
             int score = -negamax(depth - 1 - R, -beta, -beta + 1, ply + 1, Move(), false, false);
             board.UndoNullMove();
@@ -335,7 +334,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
             }
         }
 
-        if (movesSearched > 0 && !isPvNode && !isAdvancedPawnPush && depth <= 4 && !inCheck && !givesCheck && quiet && abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
+        if (movesSearched > 0 && !isAdvancedPawnPush && depth <= 4 && !inCheck && !givesCheck && quiet && abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
 
             int futilityMargin = 150 * depth;
 
@@ -350,7 +349,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
             }
         }
 
-        if (!isPvNode && !inCheck && !givesCheck && quiet && !isAdvancedPawnPush && depth <= 5) {
+        if (!inCheck && !givesCheck && quiet && !isAdvancedPawnPush && depth <= 5) {
             int lmp_threshold = 3 + (2 * depth * depth);
 
             if (movesSearched >= lmp_threshold) {
@@ -398,7 +397,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
 
         if (score >= beta) {
             if (quiet) {
-                if (ply < MAX_KILLER_HISTORY && m.isValid() && m.getMoveData() != killerMoves[ply][0].getMoveData()) {
+                if (ply < MAX_KILLER_HISTORY && m.isValid() && m != killerMoves[ply][0]) {
                     killerMoves[ply][1] = killerMoves[ply][0];
                     killerMoves[ply][0] = m;
                 }
@@ -415,7 +414,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
     }
 
     if (movesSearched == 0) {
-        int score = inCheck ? -MATE_SCORE + ply : 0;
+        int score = inCheck ? -MATE_SCORE : 0;
         return score;
     }
 
@@ -457,7 +456,6 @@ Move Searcher::IterativeDeepening() {
     repetitionTable.Push(board.getHash(), false);
     AgeHistory();
     ClearKillers();
-    tt.NewWrite();
 
     nnue_state[0].dirtyPiece.dirtyNum = 0;
     nnue_state[0].accumulator.computedAccumulation = 0;

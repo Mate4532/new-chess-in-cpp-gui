@@ -46,6 +46,10 @@ public slots:
 signals:
     void gameEnded();
     void boardChanged();
+    void moveMade(int moveNumber, const QString& move, Color c);
+    void moveUndone();
+    void clearInfoDisplay();
+
 
 private:
     BoardManager& bm;
@@ -55,9 +59,9 @@ private:
     bool isBoardFlipped = false;
     bool stopBotSimulation = false;
 
-    void afterMoveBeenMade();
+    void afterMoveBeenMade(Move m);
 
-    QFutureWatcher<void> robotWatcher;
+    QFutureWatcher<Move> robotWatcher;
 
     std::vector<std::vector<std::pair<PieceType, Color>>> cachedMatrix;
 };

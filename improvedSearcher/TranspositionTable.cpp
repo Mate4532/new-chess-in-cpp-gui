@@ -13,7 +13,6 @@ size_t TranspositionTable::NextPowerOf2(size_t n) {
 }
 
 TranspositionTable::TranspositionTable(size_t mb) {
-    Clear();
     size_t entryCount = (mb * 1024 * 1024) / sizeof(TTEntry);
     size_t size = NextPowerOf2(entryCount);
     table.resize(size);

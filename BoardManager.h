@@ -31,11 +31,12 @@ public:
     void loadFEN(std::string randomFEN);
     std::string getRandomOpening();
     Move getBestMoveOnBoard() { return board.getSideToMove() == WHITE ? whiteRobot->GetBestMove() : blackRobot->GetBestMove(); }
-    void MakeRobotMove();
+    Move MakeRobotMove();
     void printBestMove();
     MoveFlag getMoveFlagBasedOnPromotionPiece(PieceType promotionPiece);
     bool isMovePromotion(int fromX, int fromY, int toX, int toY);
-    bool MakeMove(int fromX, int fromY, int toX, int toY, PieceType promotionPiece);
+    Move getMove(int fromX, int fromY, int toX, int toY, PieceType promotionPiece);
+    bool MakeMove(Move m);
     void undoMove(int plyToUndo);
     void undoLastMove();
 	bool didGameEnd();
@@ -55,6 +56,8 @@ public:
     void ClearBoard();
 
     inline int getPly() { return board.getPly(); }
+    inline int getFullMoveNumber() { return board.getFullMoveNumber(); }
+    inline Color getSideToMove() { return board.getSideToMove(); }
     inline bool isRobot(Color c) const { return (c == WHITE && is_white_robot) || (c == BLACK && is_black_robot);}
     inline bool isRobotToMove() const { return (is_white_robot && board.getSideToMove() == WHITE) || (is_black_robot && board.getSideToMove() == BLACK); }
     inline std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const { return board.getBoardMatrix(); }
