@@ -336,7 +336,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
             }
         }
 
-        if (movesSearched > 0 && !isAdvancedPawnPush && depth <= 4 && !inCheck && !givesCheck && quiet && abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
+        if (movesSearched > 1 && !isAdvancedPawnPush && depth <= 4 && !inCheck && !givesCheck && quiet && abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
 
             int futilityMargin = 150 * depth;
 
@@ -351,7 +351,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
             }
         }
 
-        if (!inCheck && !givesCheck && quiet && !isAdvancedPawnPush && depth <= 5) {
+        if (movesSearched > 1 && !inCheck && !givesCheck && quiet && !isAdvancedPawnPush && depth <= 5) {
             int lmp_threshold = 3 + (2 * depth * depth);
 
             if (movesSearched >= lmp_threshold) {
@@ -458,7 +458,6 @@ Move Searcher::IterativeDeepening() {
     repetitionTable.Push(board.getHash(), false);
     AgeHistory();
     ClearKillers();
-    tt.NewWrite();
 
     nnue_state[0].dirtyPiece.dirtyNum = 0;
     nnue_state[0].accumulator.computedAccumulation = 0;
@@ -482,12 +481,8 @@ Move Searcher::IterativeDeepening() {
 
         score = negamax(depth, alpha, beta, 0);
 
-        if (score <= alpha) {
+        if (score <= alpha || score >= beta) {
             alpha = -MATE_SCORE;
-            score = negamax(depth, alpha, beta, 0);
-        }
-
-        else if (score >= beta) {
             beta = MATE_SCORE;
             score = negamax(depth, alpha, beta, 0);
         }
