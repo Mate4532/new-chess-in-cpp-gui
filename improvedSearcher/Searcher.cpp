@@ -178,7 +178,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         }
     }
 
-    if (allowNull && depth >= 3 && !inCheck && ply > 0 && beta < MATE_SCORE) {
+    if (allowNull && depth >= 3 && !inCheck && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
         if (staticEval >= beta - 50 && board.HasNonPawnMaterial(board.getSideToMove())) {
             int R = 3 + (depth / 6);
             nnue_state[ply + 1] = nnue_state[ply];
@@ -352,7 +352,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
             }
         }
 
-        if (movesSearched > 1 && !inCheck && !givesCheck && quiet && !isAdvancedPawnPush && depth <= 5) {
+        if (movesSearched > 1 && !inCheck && !givesCheck && quiet && !isAdvancedPawnPush && depth <= 5 && abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
             int lmp_threshold = 3 + (2 * depth * depth);
 
             if (movesSearched >= lmp_threshold) {

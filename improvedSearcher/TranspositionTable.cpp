@@ -47,7 +47,7 @@ void TranspositionTable::Store(uint64_t hash, int score, int ply, int depth, TTF
         }
 
         e.key = hash;
-        e.score = (int32_t)writeScore;
+        e.score = (int16_t)writeScore;
         e.depth = (int8_t)depth;
         e.type = (uint8_t)flag;
         e.gen = generation;

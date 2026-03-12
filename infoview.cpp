@@ -224,32 +224,46 @@ void InfoView::removeLastButFromDisplay() {
 }
 
 void InfoView::writeGameResultToDisplay(GameResult gr) {
-
-    QString resultString = "";
-
-    switch(gr) {
-    case GameResult::WHITE_WON:
-        resultString = "1 - 0";
-        break;
-
-    case GameResult::BLACK_WON:
-        resultString = "0 - 1";
-        break;
-
-    case GameResult::DRAW:
-        resultString = "½ - ½";
-        break;
-
-    default:
-        break;
-    }
-
     currentRow++;
 
-    QLabel* numLabel = new QLabel(resultString);
-    numLabel->setStyleSheet(numStyle);
-    numLabel->setAlignment(Qt::AlignCenter);
-    movesLayout->addWidget(numLabel, currentRow, 0, 1, 3);
+    QWidget* resultContainer = new QWidget();
+    QHBoxLayout* resultLayout = new QHBoxLayout(resultContainer);
+    resultLayout->setContentsMargins(0, 0, 0, 0);
+    resultLayout->setSpacing(8);
+    resultLayout->setAlignment(Qt::AlignCenter);
+
+    QLabel* textLabel = new QLabel();
+    textLabel->setStyleSheet(numStyle);
+
+    QLabel* whiteIconLabel = new QLabel();
+    QLabel* blackIconLabel = new QLabel();
+
+    QPixmap wpm(":/resources/resources/white_king.png");
+    whiteIconLabel->setPixmap(wpm.scaled(20, 20, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+
+    QPixmap bpm(":/resources/resources/black_king.png");
+    blackIconLabel->setPixmap(bpm.scaled(20, 20, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+
+    resultLayout->addWidget(whiteIconLabel);
+
+    if (gr == GameResult::WHITE_WON) {
+        textLabel->setText("1 - 0");
+
+        resultLayout->addWidget(textLabel);
+    }
+    else if (gr == GameResult::BLACK_WON) {
+        textLabel->setText("0 - 1");
+
+        resultLayout->addWidget(textLabel);
+    }
+    else if (gr == GameResult::DRAW) {
+        textLabel->setText("½ - ½");
+        resultLayout->addWidget(textLabel);
+    }
+
+    resultLayout->addWidget(blackIconLabel);
+
+    movesLayout->addWidget(resultContainer, currentRow, 0, 1, 3);
 }
 
 void InfoView::clearMoveDisplay()
