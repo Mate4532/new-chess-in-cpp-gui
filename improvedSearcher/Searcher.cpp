@@ -194,19 +194,20 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
     MoveGenerator::GenerateMoves(board, moves);
 
     int important_move = 0;
+    Move currentKillers[2] = { Move(), Move() };
 
     if (ply < MAX_KILLER_HISTORY) {
-
-        Move currentKillers[2] = { killerMoves[ply][0], killerMoves[ply][1] };
-
-        important_move = MoveOrdering::SortMoves(
-            board,
-            moves,
-            ttMove,
-            historyMoves,
-            currentKillers
-            );
+        currentKillers[0] = killerMoves[ply][0];
+        currentKillers[1] = killerMoves[ply][1];
     }
+
+    important_move = MoveOrdering::SortMoves(
+        board,
+        moves,
+        ttMove,
+        historyMoves,
+        currentKillers
+        );
 
     Move bestMove;
     int movesSearched = 0;

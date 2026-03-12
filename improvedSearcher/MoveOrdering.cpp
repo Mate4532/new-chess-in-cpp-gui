@@ -90,7 +90,8 @@ static inline int ScoreMove(
         if (m == killers[1]) return 1'500'000;
     }
 
-    return history[us][m.getFrom()][m.getTo()];
+    int histScore = history[us][m.getFrom()][m.getTo()];
+    return std::min(histScore, 999'999);
 }
 
 int MoveOrdering::SortMoves(
