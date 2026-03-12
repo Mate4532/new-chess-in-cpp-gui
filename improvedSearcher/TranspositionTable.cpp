@@ -90,14 +90,6 @@ bool TranspositionTable::Probe(uint64_t hash, int ply, int depth, int alpha, int
 }
 
 void TranspositionTable::Clear() {
-    for (auto& e : table) {
-        e.key = 0;
-        e.score = 0;
-        e.moveData = 0;
-        e.movePieceType = 0;
-        e.depth = 0;
-        e.type = TT_NONE;
-        e.gen = 0;
-    }
+    std::memset(table.data(), 0, table.size() * sizeof(TTEntry));
     generation = 0;
 }

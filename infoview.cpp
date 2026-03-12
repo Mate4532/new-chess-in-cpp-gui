@@ -217,8 +217,6 @@ void InfoView::removeLastButFromDisplay() {
             }
             delete numItem;
         }
-    }
-    else if (col == 2) {
         currentRow--;
     }
 

@@ -270,6 +270,8 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         }
 
         else if (isPromo){
+            nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
+
             nnue_state[ply + 1].dirtyPiece.pc[0]   = Evaluation::GetNnuePieceNum(PAWN, player);
             nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
             nnue_state[ply + 1].dirtyPiece.to[0]   = 64;
@@ -414,7 +416,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
     }
 
     if (movesSearched == 0) {
-        int score = inCheck ? -MATE_SCORE : 0;
+        int score = inCheck ? -MATE_SCORE + ply : 0;
         return score;
     }
 
@@ -456,6 +458,7 @@ Move Searcher::IterativeDeepening() {
     repetitionTable.Push(board.getHash(), false);
     AgeHistory();
     ClearKillers();
+    tt.NewWrite();
 
     nnue_state[0].dirtyPiece.dirtyNum = 0;
     nnue_state[0].accumulator.computedAccumulation = 0;
