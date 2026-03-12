@@ -106,12 +106,45 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     movesLayout->setColumnStretch(1, 2);
     movesLayout->setColumnStretch(2, 2);
 
-    clearMoveDisplay();
-
     scrollContent->setLayout(movesLayout);
     scrollArea->setWidget(scrollContent);
 
     mainLayout->addWidget(scrollArea);
+
+    resultBox = new QWidget(this);
+    resultBox->setVisible(false);
+    resultBox->setStyleSheet("background: transparent;");
+    QVBoxLayout* vLay = new QVBoxLayout(resultBox);
+
+    QHBoxLayout* hLay = new QHBoxLayout();
+    whiteKing = new QLabel();
+    blackKing = new QLabel();
+    scoreLabel = new QLabel();
+
+    whiteKing->setAlignment(Qt::AlignRight);
+    blackKing->setAlignment(Qt::AlignLeft);
+
+    scoreLabel->setAlignment(Qt::AlignCenter);
+    scoreLabel->setStyleSheet("color: white; font-weight: bold;");
+
+    hLay->addWidget(whiteKing);
+    hLay->addWidget(scoreLabel);
+    hLay->addWidget(blackKing);
+
+    statusLabel = new QLabel();
+    statusLabel->setAlignment(Qt::AlignCenter);
+    statusLabel->setStyleSheet("color: #888;");
+
+    vLay->setAlignment(Qt::AlignBottom);
+
+    vLay->addLayout(hLay);
+    vLay->addWidget(statusLabel);
+
+    vLay->addSpacing(10);
+
+    mainLayout->addWidget(resultBox);
+
+    clearMoveDisplay();
 
     btnNewGame = new QPushButton("Új Játék");
     btnUndo = new QPushButton("Visszavonás");
@@ -125,6 +158,7 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
         QPushButton:hover { background-color: #906C51; }
         QPushButton:pressed { background-color: #644B38; }
     )";
+
     btnNewGame->setStyleSheet(buttonStyle);
     btnUndo->setStyleSheet(buttonStyle);
     btnGiveUp->setStyleSheet(buttonStyle);
@@ -132,6 +166,12 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     mainLayout->addWidget(btnNewGame);
     mainLayout->addWidget(btnUndo);
     mainLayout->addWidget(btnGiveUp);
+
+    mainLayout->setStretch(1, 10);
+    mainLayout->setStretch(2, 2);
+    mainLayout->setStretch(3, 0);
+    mainLayout->setStretch(4, 0);
+    mainLayout->setStretch(5, 0);
 
     connect(btnNewGame, &QPushButton::clicked, this, &InfoView::newGameRequested);
     connect(btnUndo, &QPushButton::clicked, this, &InfoView::undoRequested);
@@ -223,47 +263,62 @@ void InfoView::removeLastButFromDisplay() {
     buttonAmount--;
 }
 
+void InfoView::updateResultDisplay() {
+
+    if (gameRes == GameResult::GAME_DID_NOT_END)
+        return;
+
+    int panelWidth = this->width();
+
+    int sSize = qMax(14, panelWidth / 12);
+    int iSize = qMax(24, panelWidth / 7);
+
+    QPixmap wP(":/resources/resources/white_king.png");
+    QPixmap bP(":/resources/resources/black_king.png");
+
+    whiteKing->setPixmap(wP.scaled(iSize, iSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    blackKing->setPixmap(bP.scaled(iSize, iSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+
+    QFont f = scoreLabel->font();
+    f.setPixelSize(sSize);
+    scoreLabel->setFont(f);
+
+    QFont sf = statusLabel->font();
+    sf.setPixelSize(qMax(10, panelWidth / 22));
+    statusLabel->setFont(sf);
+}
+
 void InfoView::writeGameResultToDisplay(GameResult gr) {
-    currentRow++;
 
-    QWidget* resultContainer = new QWidget();
-    QHBoxLayout* resultLayout = new QHBoxLayout(resultContainer);
-    resultLayout->setContentsMargins(0, 0, 0, 0);
-    resultLayout->setSpacing(8);
-    resultLayout->setAlignment(Qt::AlignCenter);
+    gameRes = gr;
 
-    QLabel* textLabel = new QLabel();
-    textLabel->setStyleSheet(numStyle);
+    switch(gr){
+    case GameResult::WHITE_WON:
+        scoreLabel->setText("1 - 0");
+        statusLabel->setText("Világos nyert");
+        break;
 
-    QLabel* whiteIconLabel = new QLabel();
-    QLabel* blackIconLabel = new QLabel();
+    case GameResult::BLACK_WON:
+        scoreLabel->setText("0 - 1");
+        statusLabel->setText("Fekete nyert");
+        break;
 
-    QPixmap wpm(":/resources/resources/white_king.png");
-    whiteIconLabel->setPixmap(wpm.scaled(20, 20, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+    case GameResult::DRAW:
+        scoreLabel->setText("½ - ½");
+        statusLabel->setText("Döntetlen");
+        break;
 
-    QPixmap bpm(":/resources/resources/black_king.png");
-    blackIconLabel->setPixmap(bpm.scaled(20, 20, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-
-    resultLayout->addWidget(whiteIconLabel);
-
-    if (gr == GameResult::WHITE_WON) {
-        textLabel->setText("1 - 0");
-
-        resultLayout->addWidget(textLabel);
-    }
-    else if (gr == GameResult::BLACK_WON) {
-        textLabel->setText("0 - 1");
-
-        resultLayout->addWidget(textLabel);
-    }
-    else if (gr == GameResult::DRAW) {
-        textLabel->setText("½ - ½");
-        resultLayout->addWidget(textLabel);
+    default:
+        break;
     }
 
-    resultLayout->addWidget(blackIconLabel);
+    resultBox->setVisible(true);
+    updateResultDisplay();
+}
 
-    movesLayout->addWidget(resultContainer, currentRow, 0, 1, 3);
+void InfoView::resizeEvent(QResizeEvent* event) {
+    QWidget::resizeEvent(event);
+    updateResultDisplay();
 }
 
 void InfoView::clearMoveDisplay()
@@ -277,6 +332,8 @@ void InfoView::clearMoveDisplay()
     movesLayout->addWidget(new QLabel(""), 0, 0);
     movesLayout->addWidget(new QLabel(""), 0, 1);
     movesLayout->addWidget(new QLabel(""), 0, 2);
+
+    resultBox->setVisible(false);
 
     currentRow = 0;
     buttonAmount = 0;
