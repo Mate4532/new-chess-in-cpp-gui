@@ -107,12 +107,18 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
             border-radius: 5px;
         }
         QScrollBar::handle:vertical {
-            background: #555555;
+            background-color: #555555; /* A csúszka színe */
             min-height: 20px;
-            border-radius: 5px;
+            border-radius: 4px;
         }
         QScrollBar::handle:vertical:hover {
-            background: #888888;
+            background-color: #888888;
+        }
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+            height: 0px; /* Eltünteti a nyilakat alul-felül */
+        }
+        QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
+            background: none; /* Megszünteti a szemcsés textúrát a csúszka alatt/felett */
         }
         QWidget#scrollContent {
             background-color: transparent;
@@ -280,7 +286,8 @@ void InfoView::removeLastButFromDisplay() {
                 break;
             }
         }
-
+    }
+    else{
         currentRow--;
     }
 

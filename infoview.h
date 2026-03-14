@@ -75,10 +75,11 @@ private:
             color: #ffffff;
         }
         QPushButton:pressed {
-            background-color: #B48866;
+            background-color: #262421;
             color: white;
         }
     )";
+
     QString mainButtonStyle = R"(
         QPushButton {
             background-color: #B48866; color: white; border: none; padding: 10px;
