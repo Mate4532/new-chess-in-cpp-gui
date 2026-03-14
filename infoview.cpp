@@ -9,11 +9,41 @@
 #include <QScrollBar>
 #include <iostream>
 
+QFont InfoView::resizeFontSize(QFont f) {
+    QFont mbf = f;
+    mbf.setPixelSize(qMax(16, panelCurrentWidth / 20));
+    return mbf;
+}
+
+int InfoView::getCurrentFontMinWidth() {
+    int sSize = qMax(14, panelCurrentWidth / 15);
+    return sSize * 3;
+}
+
+QPushButton* InfoView::createMoveButton(const QString& move, int movePly) {
+
+    QFont btnFont;
+    btnFont.setWeight(QFont::Bold);
+
+    QFont resizedBtnFont = resizeFontSize(btnFont);
+
+    QPushButton* moveBtn = new QPushButton(move);
+    moveBtn->setStyleSheet(moveBtnStyle);
+    moveBtn->setCursor(Qt::PointingHandCursor);
+    moveBtn->setProperty("ply", movePly);
+    moveBtn->setFont(resizedBtnFont);
+    moveBtn->setMinimumWidth(getCurrentFontMinWidth());
+    moveBtn->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+
+    return moveBtn;
+}
+
 InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWidget(parent)
 {
     setMinimumWidth(MIN_WIDTH);
     this->setObjectName("InfoPanel");
     this->setAttribute(Qt::WA_StyledBackground, true);
+    panelCurrentWidth = this->width();
 
     this->setStyleSheet(R"(
         #InfoPanel {
@@ -49,7 +79,6 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
             font-size: 30px;
             border: none;
             border-radius: 22px;
-            padding: 0px;
         }
         QPushButton:hover {
             color: #ffffff;
@@ -100,11 +129,13 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
 
     movesLayout = new QGridLayout(scrollContent);
     movesLayout->setAlignment(Qt::AlignTop);
-    movesLayout->setSpacing(10);
 
     movesLayout->setColumnStretch(0, 1);
     movesLayout->setColumnStretch(1, 2);
     movesLayout->setColumnStretch(2, 2);
+
+    movesLayout->setSpacing(0);
+    movesLayout->setContentsMargins(0, 0, 0, 0);
 
     scrollContent->setLayout(movesLayout);
     scrollArea->setWidget(scrollContent);
@@ -140,8 +171,6 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     vLay->addLayout(hLay);
     vLay->addWidget(statusLabel);
 
-    vLay->addSpacing(10);
-
     mainLayout->addWidget(resultBox);
 
     clearMoveDisplay();
@@ -150,18 +179,9 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     btnUndo = new QPushButton("Visszavonás");
     btnGiveUp = new QPushButton("Feladás");
 
-    QString buttonStyle = R"(
-        QPushButton {
-            background-color: #B48866; color: white; border: none; padding: 10px;
-            font-size: 14px; font-weight: bold; border-radius: 4px;
-        }
-        QPushButton:hover { background-color: #906C51; }
-        QPushButton:pressed { background-color: #644B38; }
-    )";
-
-    btnNewGame->setStyleSheet(buttonStyle);
-    btnUndo->setStyleSheet(buttonStyle);
-    btnGiveUp->setStyleSheet(buttonStyle);
+    btnNewGame->setStyleSheet(mainButtonStyle);
+    btnUndo->setStyleSheet(mainButtonStyle);
+    btnGiveUp->setStyleSheet(mainButtonStyle);
 
     mainLayout->addWidget(btnNewGame);
     mainLayout->addWidget(btnUndo);
@@ -177,55 +197,51 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     connect(btnUndo, &QPushButton::clicked, this, &InfoView::undoRequested);
     connect(btnGiveUp, &QPushButton::clicked, this, &InfoView::giveUpRequested);
     connect(btnSettings, &QPushButton::clicked, this, &InfoView::openSettings);
+
+    updateInfoPanel();
 }
 
 void InfoView::addMoveToDisplay(int moveNumber, int movePly, const QString& move, Color color) {
 
-    QString btnStyle = R"(
-        QPushButton {
-            background-color: transparent;
-            color: #cccccc;
-            font-size: 14px;
-            font-weight: bold;
-            border: none;
-            border-radius: 4px;
-            padding: 2px 5px;
-        }
-        QPushButton:hover {
-            background-color: #4f4b47;
-            color: #ffffff;
-        }
-        QPushButton:pressed {
-            background-color: #B48866;
-            color: white;
-        }
-    )";
+    QFont labelFont;
+    labelFont.setWeight(QFont::Bold);
 
-    if (color == WHITE) {
-        currentRow++;
-    }
+    QFont btnFont;
+    btnFont.setWeight(QFont::Bold);
+
+    QFont resizedLabelFont = resizeFontSize(labelFont);
+    QFont resizedBtnFont = resizeFontSize(btnFont);
 
     int currentCol = color == WHITE ? 1 : 2;
 
     if (color == WHITE) {
+
+        if (currentRow % 2 == 0) {
+            QFrame* rowBg = new QFrame();
+            rowBg->setStyleSheet("background-color: rgba(255, 255, 255, 0.05); border-radius: 4px;");
+            movesLayout->addWidget(rowBg, currentRow, 0, 1, 3);
+        }
+
         QLabel* numLabel = new QLabel(QString::number(moveNumber) + ".");
         numLabel->setStyleSheet(numStyle);
         numLabel->setAlignment(Qt::AlignCenter);
         movesLayout->addWidget(numLabel, currentRow, 0);
+        numLabel->setFont(resizedLabelFont);
+        numLabel->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
     }
 
-    QPushButton* moveBtn = new QPushButton(move);
-    moveBtn->setStyleSheet(btnStyle);
-    moveBtn->setCursor(Qt::PointingHandCursor);
-
-    moveBtn->setProperty("ply", movePly);
+    QPushButton* moveBtn = createMoveButton(move, movePly);
 
     connect(moveBtn, &QPushButton::clicked, this, [this, moveBtn]() {
         int targetPly = moveBtn->property("ply").toInt();
         emit reviewRequested(targetPly);
     });
 
-    movesLayout->addWidget(moveBtn, currentRow, currentCol);
+    movesLayout->addWidget(moveBtn, currentRow, currentCol, Qt::AlignCenter);
+
+    if (color == BLACK) {
+        currentRow++;
+    }
 
     buttonAmount++;
 }
@@ -235,12 +251,11 @@ void InfoView::removeLastButFromDisplay() {
         return;
 
     int lastIndex = movesLayout->count() - 1;
-
     int row, col, rowSpan, colSpan;
     movesLayout->getItemPosition(lastIndex, &row, &col, &rowSpan, &colSpan);
 
     QLayoutItem* item = movesLayout->takeAt(lastIndex);
-    if (item != nullptr) {
+    if (item) {
         if (QWidget* widget = item->widget()) {
             widget->deleteLater();
         }
@@ -248,44 +263,70 @@ void InfoView::removeLastButFromDisplay() {
     }
 
     if (col == 1) {
-        int numIndex = movesLayout->count() - 1;
-        QLayoutItem* numItem = movesLayout->takeAt(numIndex);
+        while (movesLayout->count() > 0) {
+            int nextIndex = movesLayout->count() - 1;
+            int r, c, rs, cs;
+            movesLayout->getItemPosition(nextIndex, &r, &c, &rs, &cs);
 
-        if (numItem != nullptr) {
-            if (QWidget* widget = numItem->widget()) {
-                widget->deleteLater();
+            if (r == row) {
+                QLayoutItem* nextItem = movesLayout->takeAt(nextIndex);
+                if (nextItem) {
+                    if (QWidget* w = nextItem->widget()) {
+                        w->deleteLater();
+                    }
+                    delete nextItem;
+                }
+            } else {
+                break;
             }
-            delete numItem;
         }
+
         currentRow--;
     }
 
     buttonAmount--;
 }
 
-void InfoView::updateResultDisplay() {
+void InfoView::updateInfoPanel() {
 
-    if (gameRes == GameResult::GAME_DID_NOT_END)
-        return;
-
-    int panelWidth = this->width();
-
-    int sSize = qMax(14, panelWidth / 12);
-    int iSize = qMax(24, panelWidth / 7);
-
-    QPixmap wP(":/resources/resources/white_king.png");
-    QPixmap bP(":/resources/resources/black_king.png");
-
-    whiteKing->setPixmap(wP.scaled(iSize, iSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-    blackKing->setPixmap(bP.scaled(iSize, iSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-
+    int scoreLabelSize = qMax(14, panelCurrentWidth / 12);
     QFont f = scoreLabel->font();
-    f.setPixelSize(sSize);
-    scoreLabel->setFont(f);
+    f.setPixelSize(scoreLabelSize);
 
-    QFont sf = statusLabel->font();
-    sf.setPixelSize(qMax(10, panelWidth / 22));
-    statusLabel->setFont(sf);
+    for (int i = 0; i < movesLayout->count(); ++i) {
+        if (QLayoutItem* item = movesLayout->itemAt(i)) {
+            if (QWidget* widget = item->widget()) {
+                QFont bf = resizeFontSize(widget->font());
+                widget->setFont(bf);
+
+                if (QPushButton* btn = qobject_cast<QPushButton*>(widget)) {
+                    btn->setMinimumWidth(getCurrentFontMinWidth());
+                }
+            }
+        }
+    }
+
+    QFont mainButsFont = scoreLabel->font();
+    QFont resizedMainButFont = resizeFontSize(mainButsFont);
+
+    btnGiveUp->setFont(resizedMainButFont);
+    btnNewGame->setFont(resizedMainButFont);
+    btnUndo->setFont(resizedMainButFont);
+
+    if (gameRes != GameResult::GAME_DID_NOT_END) {
+
+        int iSize = qMax(24, panelCurrentWidth / 7);
+
+        QPixmap wP(":/resources/resources/white_king.png");
+        QPixmap bP(":/resources/resources/black_king.png");
+
+        whiteKing->setPixmap(wP.scaled(iSize, iSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        blackKing->setPixmap(bP.scaled(iSize, iSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+
+        QFont sf = statusLabel->font();
+        sf.setPixelSize(qMax(10, panelCurrentWidth / 22));
+        statusLabel->setFont(sf);
+    }
 }
 
 void InfoView::writeGameResultToDisplay(GameResult gr) {
@@ -313,12 +354,13 @@ void InfoView::writeGameResultToDisplay(GameResult gr) {
     }
 
     resultBox->setVisible(true);
-    updateResultDisplay();
+    updateInfoPanel();
 }
 
 void InfoView::resizeEvent(QResizeEvent* event) {
     QWidget::resizeEvent(event);
-    updateResultDisplay();
+    panelCurrentWidth = this->width();
+    updateInfoPanel();
 }
 
 void InfoView::clearMoveDisplay()

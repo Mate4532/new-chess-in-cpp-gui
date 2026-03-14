@@ -12,6 +12,8 @@ class InfoView : public QWidget
     Q_OBJECT
 public:
     static constexpr int MIN_WIDTH = 250;
+    QFont resizeFontSize(QFont f);
+    int getCurrentFontMinWidth();
     explicit InfoView(AllSettings& allS, QWidget *parent = nullptr);
 
 protected:
@@ -35,6 +37,8 @@ private:
     AllSettings& currentAllS;
     void openSettings();
 
+    int panelCurrentWidth;
+
     QWidget* resultBox;
     QLabel* whiteKing;
     QLabel* blackKing;
@@ -52,9 +56,37 @@ private:
     QPushButton* btnUndo;
     QPushButton* btnGiveUp;
 
-    QString numStyle = "color: #cccccc; font-size: 14px; font-weight: bold;";
+    QPushButton* createMoveButton(const QString& move, int movePly);
 
-    void updateResultDisplay();
+    void updateInfoPanel();
+
+    QString numStyle = "color: #cccccc; padding: 10px";
+    QString moveBtnStyle = R"(
+        QPushButton {
+            background-color: transparent;
+            color: #cccccc;
+            font-weight: bold;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 5px;
+        }
+        QPushButton:hover {
+            background-color: #4f4b47;
+            color: #ffffff;
+        }
+        QPushButton:pressed {
+            background-color: #B48866;
+            color: white;
+        }
+    )";
+    QString mainButtonStyle = R"(
+        QPushButton {
+            background-color: #B48866; color: white; border: none; padding: 10px;
+            font-weight: bold; border-radius: 4px;
+        }
+        QPushButton:hover { background-color: #906C51; }
+        QPushButton:pressed { background-color: #644B38; }
+    )";
 };
 
 #endif

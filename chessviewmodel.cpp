@@ -255,7 +255,8 @@ void ChessViewModel::undoLastMove() {
     if (!isGameRunning)
         return;
 
-    visualHistory.pop_back();
+    if (!visualHistory.empty())
+        visualHistory.pop_back();
     reviewingPly = -1;
 
     if (!isGameRunning)
