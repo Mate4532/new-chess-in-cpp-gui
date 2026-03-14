@@ -292,6 +292,7 @@ void InfoView::updateInfoPanel() {
     int scoreLabelSize = qMax(14, panelCurrentWidth / 12);
     QFont f = scoreLabel->font();
     f.setPixelSize(scoreLabelSize);
+    scoreLabel->setFont(f);
 
     for (int i = 0; i < movesLayout->count(); ++i) {
         if (QLayoutItem* item = movesLayout->itemAt(i)) {
