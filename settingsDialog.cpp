@@ -121,7 +121,7 @@ QWidget* SettingsDialog::createRobotTab() {
     layout->setSpacing(10);
     layout->setContentsMargins(30, 30, 30, 30);
 
-    QStringList levels = {"Kezdő (Easy)", "Haladó (Medium)", "Nehéz (Hard)", "Mester (Impossible)"};
+    QStringList levels = {"Kezdő", "Haladó", "Nehéz", "Mester"};
 
     RobotSettings rs = allS.robotSettings;
 

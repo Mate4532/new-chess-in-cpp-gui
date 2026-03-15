@@ -151,17 +151,13 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
 
     bool foundInTT = tt.Probe(hash, ply, depth, alpha, beta, ttScore, ttMove);
 
-    if (ply > 0 && foundInTT) {
+    if (foundInTT) {
         return ttScore;
     }
 
     bool inCheck = board.isSquareAttacked(
         board.getKingSquare(board.getSideToMove()),
-        (Color)(board.getSideToMove() ^ 1));
-
-
-    if (inCheck)
-        depth++;
+        (Color)(board.getSideToMove() ^ 1));    
 
     if (depth <= 0)
         return quiescence(alpha, beta, ply);
@@ -192,6 +188,27 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
 
     MoveList moves;
     MoveGenerator::GenerateMoves(board, moves);
+
+    int legalEvasions = 0;
+    if (inCheck) {
+
+        if (isPvNode || depth <= 2){
+            depth++;
+        }
+
+        else {
+            for (const Move& m : moves) {
+                if (board.MakeMove(m, true)) {
+                    legalEvasions++;
+                    board.UndoMove(m, true);
+                    if (legalEvasions > 1) break;
+                }
+            }
+            if (legalEvasions == 1) {
+                depth++;
+            }
+        }
+    }
 
     int important_move = 0;
     Move currentKillers[2] = { Move(), Move() };
@@ -388,8 +405,10 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         else {
             score = -negamax(depth - 1 - reduction, -alpha - 1, -alpha, ply + 1, m, isCapture, true);
 
-            if (score > alpha && score < beta) {
-                score = -negamax(depth - 1, -beta, -alpha, ply + 1, m, isCapture, true);
+            if (score > alpha) {
+                if (reduction > 0 || score < beta) {
+                    score = -negamax(depth - 1, -beta, -alpha, ply + 1, m, isCapture, true);
+                }
             }
         }
 
@@ -459,6 +478,7 @@ Move Searcher::IterativeDeepening() {
     repetitionTable.Push(board.getHash(), false);
     AgeHistory();
     ClearKillers();
+    tt.NewWrite();
 
     nnue_state[0].dirtyPiece.dirtyNum = 0;
     nnue_state[0].accumulator.computedAccumulation = 0;
