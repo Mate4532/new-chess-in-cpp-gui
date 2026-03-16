@@ -250,7 +250,7 @@ void ChessViewModel::onRobotMoveFinished() {
     afterMoveBeenMade(robotMove);
 }
 
-void ChessViewModel::undoLastMove() {
+void ChessViewModel::undoMove() {
 
     if (!isGameRunning)
         return;
@@ -259,15 +259,14 @@ void ChessViewModel::undoLastMove() {
         visualHistory.pop_back();
     reviewingPly = -1;
 
-    if (!isGameRunning)
-        return;
-
     if (isRobotUnderSearch())
         stopRobotSearch();
 
-    bm.undoLastMove();
+    int plyToUndo = bm.isEnemyRobot() ? 2 : 1;
+
+    bm.undoMove(plyToUndo);
     emit boardChanged();
-    emit moveUndone();
+    emit moveUndone(plyToUndo);
 
     if (bm.isRobotToMove())
         makeRobotMove();

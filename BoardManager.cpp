@@ -171,19 +171,6 @@ void BoardManager::undoMove(int plyToUndo) {
     }
 }
 
-void BoardManager::undoLastMove() {
-
-    Color us = board.getSideToMove();
-    Color enemy = (Color)(us ^ 1);
-    int plyToUndo = isRobot(enemy) ? 2 : 1;
-
-    for (int i = 0; i < plyToUndo; ++i) {
-        if (board.getPly() > 0) {
-            board.UndoMove(board.getLastMove());
-        }
-    }
-}
-
 Move BoardManager::MakeRobotMove() {
     Move robot_move;
     std::cout << (board.getSideToMove() == WHITE ? (whiteRobot->getName() + " (feher) ") : (blackRobot->getName() + " (fekete) ")) <<"gondolkodik..." << std::endl;

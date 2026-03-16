@@ -30,7 +30,7 @@ public:
     void startRobotGameLoop();
     void onRobotMoveFinished();
 
-    void undoLastMove();
+    void undoMove();
     std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const;
     void refreshView();
 
@@ -48,7 +48,7 @@ signals:
     void gameEnded(GameResult gr);
     void boardChanged();
     void moveMade(int moveNumber, int movePly, const QString& move, Color c);
-    void moveUndone();
+    void moveUndone(int amount);
     void clearInfoDisplay();
     void flipBoardToRequest(bool isFlipped);
 

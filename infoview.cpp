@@ -252,46 +252,48 @@ void InfoView::addMoveToDisplay(int moveNumber, int movePly, const QString& move
     buttonAmount++;
 }
 
-void InfoView::removeLastButFromDisplay() {
+void InfoView::removeLastButFromDisplay(int butAmount) {
     if (buttonAmount < 1)
         return;
 
-    int lastIndex = movesLayout->count() - 1;
-    int row, col, rowSpan, colSpan;
-    movesLayout->getItemPosition(lastIndex, &row, &col, &rowSpan, &colSpan);
+    for (int i = 0; i < butAmount; ++i) {
+        int lastIndex = movesLayout->count() - 1;
+        int row, col, rowSpan, colSpan;
+        movesLayout->getItemPosition(lastIndex, &row, &col, &rowSpan, &colSpan);
 
-    QLayoutItem* item = movesLayout->takeAt(lastIndex);
-    if (item) {
-        if (QWidget* widget = item->widget()) {
-            widget->deleteLater();
+        QLayoutItem* item = movesLayout->takeAt(lastIndex);
+        if (item) {
+            if (QWidget* widget = item->widget()) {
+                widget->deleteLater();
+            }
+            delete item;
         }
-        delete item;
-    }
 
-    if (col == 1) {
-        while (movesLayout->count() > 0) {
-            int nextIndex = movesLayout->count() - 1;
-            int r, c, rs, cs;
-            movesLayout->getItemPosition(nextIndex, &r, &c, &rs, &cs);
+        if (col == 1) {
+            while (movesLayout->count() > 0) {
+                int nextIndex = movesLayout->count() - 1;
+                int r, c, rs, cs;
+                movesLayout->getItemPosition(nextIndex, &r, &c, &rs, &cs);
 
-            if (r == row) {
-                QLayoutItem* nextItem = movesLayout->takeAt(nextIndex);
-                if (nextItem) {
-                    if (QWidget* w = nextItem->widget()) {
-                        w->deleteLater();
+                if (r == row) {
+                    QLayoutItem* nextItem = movesLayout->takeAt(nextIndex);
+                    if (nextItem) {
+                        if (QWidget* w = nextItem->widget()) {
+                            w->deleteLater();
+                        }
+                        delete nextItem;
                     }
-                    delete nextItem;
+                } else {
+                    break;
                 }
-            } else {
-                break;
             }
         }
-    }
-    else{
-        currentRow--;
-    }
+        else{
+            currentRow--;
+        }
 
-    buttonAmount--;
+        buttonAmount--;
+    }
 }
 
 void InfoView::updateInfoPanel() {

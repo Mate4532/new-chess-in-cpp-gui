@@ -60,6 +60,7 @@ public:
     inline int getFullMoveNumber() { return board.getFullMoveNumber(); }
     inline Color getSideToMove() { return board.getSideToMove(); }
     inline bool isRobot(Color c) const { return (c == WHITE && is_white_robot) || (c == BLACK && is_black_robot);}
+    inline bool isEnemyRobot() const { return (isRobot((Color)(board.getSideToMove() ^ 1)));}
     inline bool isRobotToMove() const { return (is_white_robot && board.getSideToMove() == WHITE) || (is_black_robot && board.getSideToMove() == BLACK); }
     inline std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const { return board.getBoardMatrix(); }
 };

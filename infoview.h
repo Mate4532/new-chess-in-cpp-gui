@@ -21,7 +21,7 @@ protected:
 
 signals:
     void newGameRequested();
-    void undoRequested();
+    void undoRequested(int amount = 1);
     void giveUpRequested();
     void reviewRequested(int targetPly);
 
@@ -29,7 +29,7 @@ signals:
 
 public slots:
     void addMoveToDisplay(int moveNumber, int movePly, const QString& move, Color color);
-    void removeLastButFromDisplay();
+    void removeLastButFromDisplay(int butAmount);
     void writeGameResultToDisplay(GameResult gr);
     void clearMoveDisplay();
 
