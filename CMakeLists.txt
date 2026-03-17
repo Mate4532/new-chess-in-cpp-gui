@@ -26,45 +26,15 @@ find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Concurrent)
 
 set(PROJECT_SOURCES
         main.cpp
-        mainwindow.cpp
-        mainwindow.h
-        mainwindow.ui
+	mainwindow.ui
 )
 
 if(Qt6_FOUND)
     qt_add_executable(new-chess-in-cpp-gui
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
+        assets/openings.txt Board/Attacks.cpp Board/Attacks.h Board/Board.cpp Board/Board.h Board/BoardManager.cpp Board/BoardManager.h Board/BoardState.h Board/filemanager.cpp Board/filemanager.h Board/ISearcher.h Board/Move.h Board/MoveGenerator.cpp Board/MoveGenerator.h Board/MoveList.h Board/openingloader.cpp Board/openingloader.h Board/RepetitionTable.cpp Board/RepetitionTable.h Board/resultmanager.cpp Board/resultmanager.h Board/UCIParsing.cpp Board/UCIParsing.h Board/Utils.h Board/Zobrist.cpp Board/Zobrist.h botvsbotresults/botvsbot.txt GUI/chesspieceitem.cpp GUI/chesspieceitem.h GUI/chessscene.cpp GUI/chessscene.h GUI/chessview.cpp GUI/chessview.h GUI/chessviewmodel.cpp GUI/chessviewmodel.h GUI/infoview.cpp GUI/infoview.h GUI/mainwindow.cpp GUI/mainwindow.h GUI/Settings.h GUI/settingsDialog.cpp GUI/settingsDialog.h improvedSearcher/Evaluation.cpp improvedSearcher/Evaluation.cpp.dYJrXf improvedSearcher/Evaluation.h improvedSearcher/LMR.cpp improvedSearcher/LMR.h improvedSearcher/MoveOrdering.cpp improvedSearcher/MoveOrdering.h improvedSearcher/PrecomputedEvaluationData.cpp improvedSearcher/PrecomputedEvaluationData.h improvedSearcher/Searcher.cpp improvedSearcher/Searcher.h improvedSearcher/TranspositionTable.cpp improvedSearcher/TranspositionTable.h nnue-probe-master/src/misc.cpp nnue-probe-master/src/misc.h nnue-probe-master/src/nnue.cpp nnue-probe-master/src/nnue.h nnue-probe-master/LICENSE nnue-probe-master/README.md oldsearcher/OldEvaluation.cpp oldsearcher/OldEvaluation.h oldsearcher/OldLMR.cpp oldsearcher/OldLMR.h oldsearcher/OldMoveOrdering.cpp oldsearcher/OldMoveOrdering.h oldsearcher/OldPrecomputedEvaluationData.cpp oldsearcher/OldPrecomputedEvaluationData.h oldsearcher/oldsearcher.cpp oldsearcher/OldSearcher.h oldsearcher/OldTranspositionTable.cpp oldsearcher/OldTranspositionTable.h resources/black_bishop.png resources/black_king.png resources/black_knight.png resources/black_pawn.png resources/black_queen.png resources/black_rook.png resources/chessboard.png resources/chessboard_flipped.png resources/white_bishop.png resources/white_king.png resources/white_knight.png resources/white_pawn.png resources/white_queen.png resources/white_rook.png main.cpp
         resources.qrc
-        chessview.h chessview.cpp
-        infoview.h infoview.cpp
-        chessscene.h chessscene.cpp
-        chesspieceitem.h chesspieceitem.cpp
-        Attacks.cpp Attacks.h
-        Board.cpp Board.h
-        BoardManager.cpp BoardManager.h
-        BoardState.h
-        MoveGenerator.cpp MoveGenerator.h
-        RepetitionTable.cpp RepetitionTable.h
-        UCIParsing.cpp UCIParsing.h
-        Utils.h
-        Zobrist.cpp Zobrist.h
-        chessviewmodel.h chessviewmodel.cpp
-        settingsDialog.h settingsDialog.cpp
-        Settings.h
-        ISearcher.h
-        openingloader.h openingloader.cpp
-        assets/openings.txt
-        resultmanager.h resultmanager.cpp
-        filemanager.h filemanager.cpp
-        oldSearcher/OldSearcher.cpp oldsearcher/OldSearcher.h
-        improvedSearcher/Evaluation.cpp improvedSearcher/Evaluation.h improvedSearcher/LMR.cpp improvedSearcher/LMR.h improvedSearcher/MoveOrdering.cpp improvedSearcher/MoveOrdering.h improvedSearcher/Searcher.cpp improvedSearcher/Searcher.h improvedSearcher/TranspositionTable.cpp improvedSearcher/TranspositionTable.h
-        oldSearcher/OldEvaluation.cpp oldSearcher/OldEvaluation.h oldSearcher/OldLMR.cpp oldSearcher/OldLMR.h oldSearcher/OldMoveOrdering.cpp oldSearcher/OldMoveOrdering.h oldSearcher/OldTranspositionTable.cpp oldSearcher/OldTranspositionTable.h
-        Move.h MoveList.h
-        oldSearcher/OldPrecomputedEvaluationData.cpp oldSearcher/OldPrecomputedEvaluationData.h
-        improvedSearcher/PrecomputedEvaluationData.cpp improvedSearcher/PrecomputedEvaluationData.h
-        nnue-probe-master/src/nnue.cpp nnue-probe-master/src/nnue.h
-        nnue-probe-master/src/misc.cpp nnue-probe-master/src/misc.h
     )
 endif()
 
@@ -82,6 +52,8 @@ target_include_directories(new-chess-in-cpp-gui PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/oldSearcher
     ${CMAKE_CURRENT_SOURCE_DIR}/improvedSearcher
+    ${CMAKE_CURRENT_SOURCE_DIR}/GUI
+    ${CMAKE_CURRENT_SOURCE_DIR}/Board
 )
 
 include(GNUInstallDirs)

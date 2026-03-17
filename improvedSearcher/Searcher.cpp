@@ -151,7 +151,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
 
     bool foundInTT = tt.Probe(hash, ply, depth, alpha, beta, ttScore, ttMove);
 
-    if (foundInTT) {
+    if (foundInTT && ply > 0) {
         return ttScore;
     }
 
@@ -314,6 +314,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
             }
 
             else if (flags & QUEENSIDE_CASTLE) {
+                nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
                 nnue_state[ply + 1].dirtyPiece.pc[0]   = Evaluation::GetNnuePieceNum(KING, player);
                 nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
                 nnue_state[ply + 1].dirtyPiece.to[0]   = mTo;

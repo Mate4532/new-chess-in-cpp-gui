@@ -57,7 +57,7 @@ static inline int ScoreMove(
     Color us = board.getSideToMove();
     Color enemy = (Color)(us ^ 1);
 
-    if (m.isValid() && ttMove.isValid() && m.getMoveData() == ttMove.getMoveData())
+    if (m == ttMove)
         return 10'000'000;
 
     if (m.getFlags() & CAPTURE_FLAG) {
@@ -80,7 +80,7 @@ static inline int ScoreMove(
     }
 
     if (m.getFlags() & PROMOTION_FLAG) {
-        if ((m.getFlags() & 0b0011) == PROMOTION_TYPE_QUEEN)
+        if (m.getFlags() == PROMOTION_TYPE_QUEEN)
             return 4'000'000;
         return 3'000'000;
     }
