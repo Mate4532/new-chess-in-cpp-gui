@@ -159,9 +159,6 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         board.getKingSquare(board.getSideToMove()),
         (Color)(board.getSideToMove() ^ 1));    
 
-    if (depth <= 0)
-        return quiescence(alpha, beta, ply);
-
     int staticEval = 0;
     if (!inCheck) {
         staticEval = Evaluation::EvaluatePos(board, ply, nnue_state);
@@ -191,26 +188,14 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
 
     int legalEvasions = 0;
     if (inCheck) {
-
         if (isPvNode || depth <= 2){
             depth++;
         }
-
-        else {
-            for (const Move& m : moves) {
-                if (board.MakeMove(m, true)) {
-                    legalEvasions++;
-                    board.UndoMove(m, true);
-                    if (legalEvasions > 1) break;
-                }
-            }
-            if (legalEvasions == 1) {
-                depth++;
-            }
-        }
     }
 
-    int important_move = 0;
+    if (depth <= 0)
+        return quiescence(alpha, beta, ply);
+
     Move currentKillers[2] = { Move(), Move() };
 
     if (ply < MAX_KILLER_HISTORY) {
@@ -218,7 +203,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         currentKillers[1] = killerMoves[ply][1];
     }
 
-    important_move = MoveOrdering::SortMoves(
+    MoveOrdering::SortMoves(
         board,
         moves,
         ttMove,
@@ -497,8 +482,13 @@ Move Searcher::IterativeDeepening() {
         int delta = 50;
 
         if (depth >= 5) {
-            alpha = std::max(-MATE_SCORE, score - delta);
-            beta = std::min(MATE_SCORE, score + delta);
+            if (std::abs(lastScore) >= MATE_SCORE_BOUND) {
+                alpha = -MATE_SCORE;
+                beta = MATE_SCORE;
+            } else {
+                alpha = std::max(-MATE_SCORE, score - delta);
+                beta = std::min(MATE_SCORE, score + delta);
+            }
         }
 
         score = negamax(depth, alpha, beta, 0);
