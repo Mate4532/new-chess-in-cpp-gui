@@ -12,12 +12,8 @@
 {
     setWindowTitle("Beállítások");
 
-    if (parent && parent->window()) {
-        resize(std::max(parent->window()->width() / 2, 400),
-               std::max(parent->window()->height() / 2, 350));
-    } else {
-        resize(450, 350);
-    }
+    setMinimumSize(450, 350);
+    resize(450, 350);
 
     setStyleSheet(R"(
     QDialog { background-color: #312E2B; color: #eee; font-family: 'Segoe UI', sans-serif; }

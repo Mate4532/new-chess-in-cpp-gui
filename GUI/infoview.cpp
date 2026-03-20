@@ -33,7 +33,7 @@ QPushButton* InfoView::createMoveButton(const QString& move, int movePly) {
     moveBtn->setProperty("ply", movePly);
     moveBtn->setFont(resizedBtnFont);
     moveBtn->setMinimumWidth(getCurrentFontMinWidth());
-    moveBtn->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+    moveBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
     return moveBtn;
 }
@@ -136,9 +136,9 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     movesLayout = new QGridLayout(scrollContent);
     movesLayout->setAlignment(Qt::AlignTop);
 
-    movesLayout->setColumnStretch(0, 1);
-    movesLayout->setColumnStretch(1, 2);
-    movesLayout->setColumnStretch(2, 2);
+    movesLayout->setColumnStretch(0, 2);
+    movesLayout->setColumnStretch(1, 5);
+    movesLayout->setColumnStretch(2, 5);
 
     movesLayout->setSpacing(0);
     movesLayout->setContentsMargins(0, 0, 0, 0);
@@ -220,19 +220,9 @@ void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color) {
 
     int currentCol = color == WHITE ? 1 : 2;
 
-    bool needsNumber = false;
     QLayoutItem* item = movesLayout->itemAtPosition(currentRow, 0);
 
-    if (item == nullptr) {
-        needsNumber = true;
-    } else {
-        QLabel* existingLabel = qobject_cast<QLabel*>(item->widget());
-        if (existingLabel && (existingLabel->text().isEmpty() || existingLabel->text() == "")) {
-            movesLayout->removeWidget(existingLabel);
-            existingLabel->deleteLater();
-            needsNumber = true;
-        }
-    }
+    bool needsNumber = item == nullptr;
 
     if (needsNumber) {
 
@@ -248,7 +238,7 @@ void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color) {
         numLabel->setAlignment(Qt::AlignCenter);
         movesLayout->addWidget(numLabel, currentRow, 0);
         numLabel->setFont(resizedLabelFont);
-        numLabel->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
+        numLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     }
 
     QPushButton* moveBtn = createMoveButton(move, movePly);
@@ -396,10 +386,6 @@ void InfoView::clearMoveDisplay()
         delete item->widget();
         delete item;
     }
-
-    movesLayout->addWidget(new QLabel(""), 0, 0);
-    movesLayout->addWidget(new QLabel(""), 0, 1);
-    movesLayout->addWidget(new QLabel(""), 0, 2);
 
     resultBox->setVisible(false);
 
