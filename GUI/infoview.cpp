@@ -172,7 +172,7 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     statusLabel->setAlignment(Qt::AlignCenter);
     statusLabel->setStyleSheet("color: #888;");
 
-    vLay->setAlignment(Qt::AlignBottom);
+    vLay->setAlignment(Qt::AlignVCenter);
 
     vLay->addLayout(hLay);
     vLay->addWidget(statusLabel);
@@ -207,7 +207,7 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     updateInfoPanel();
 }
 
-void InfoView::addMoveToDisplay(int moveNumber, int movePly, const QString& move, Color color) {
+void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color) {
 
     QFont labelFont;
     labelFont.setWeight(QFont::Bold);
@@ -220,7 +220,21 @@ void InfoView::addMoveToDisplay(int moveNumber, int movePly, const QString& move
 
     int currentCol = color == WHITE ? 1 : 2;
 
-    if (color == WHITE) {
+    bool needsNumber = false;
+    QLayoutItem* item = movesLayout->itemAtPosition(currentRow, 0);
+
+    if (item == nullptr) {
+        needsNumber = true;
+    } else {
+        QLabel* existingLabel = qobject_cast<QLabel*>(item->widget());
+        if (existingLabel && (existingLabel->text().isEmpty() || existingLabel->text() == "")) {
+            movesLayout->removeWidget(existingLabel);
+            existingLabel->deleteLater();
+            needsNumber = true;
+        }
+    }
+
+    if (needsNumber) {
 
         if (currentRow % 2 == 0) {
             QFrame* rowBg = new QFrame();
@@ -228,7 +242,8 @@ void InfoView::addMoveToDisplay(int moveNumber, int movePly, const QString& move
             movesLayout->addWidget(rowBg, currentRow, 0, 1, 3);
         }
 
-        QLabel* numLabel = new QLabel(QString::number(moveNumber) + ".");
+        int rowNumber = movePly / 2 + 1;
+        QLabel* numLabel = new QLabel(QString::number(rowNumber) + ".");
         numLabel->setStyleSheet(numStyle);
         numLabel->setAlignment(Qt::AlignCenter);
         movesLayout->addWidget(numLabel, currentRow, 0);
@@ -326,12 +341,13 @@ void InfoView::updateInfoPanel() {
     if (gameRes != GameResult::GAME_DID_NOT_END) {
 
         int iSize = qMax(24, panelCurrentWidth / 7);
+        QSize iconSize(iSize, iSize);
 
-        QPixmap wP(":/resources/resources/white_king.png");
-        QPixmap bP(":/resources/resources/black_king.png");
+        QIcon wIcon(":/resources/resources/white_king.png");
+        QIcon bIcon(":/resources/resources/black_king.png");
 
-        whiteKing->setPixmap(wP.scaled(iSize, iSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-        blackKing->setPixmap(bP.scaled(iSize, iSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        whiteKing->setPixmap(wIcon.pixmap(iconSize));
+        blackKing->setPixmap(bIcon.pixmap(iconSize));
 
         QFont sf = statusLabel->font();
         sf.setPixelSize(qMax(10, panelCurrentWidth / 22));

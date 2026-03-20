@@ -547,5 +547,28 @@ SearcherType Searcher::getType() const {
 }
 
 std::string Searcher::getName() const {
-    return "Old searcher";
+    return "Régi robot";
+}
+
+Difficulty Searcher::getDifficulty() const {
+    return currentDiff;
+}
+
+std::string Searcher::getDifficultyString() const {
+    switch (currentDiff) {
+    case Difficulty::EASY:
+        return "Kezdő";
+
+    case Difficulty::MEDIUM:
+        return "Haladó";
+
+    case Difficulty::HARD:
+        return "Nehéz";
+
+    case Difficulty::IMPOSSIBLE:
+        return "Mester";
+
+    default:
+        break;
+    }
 }

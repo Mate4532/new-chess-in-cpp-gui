@@ -386,12 +386,25 @@ void BoardManager::prepareImprovedBotVsOldBot() {
     }
 
     if (blackRobot == nullptr || blackRobot->getType() != OLD_SEARCHER) {
-        blackRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+        blackRobot = createBot(SearcherType::OLD_SEARCHER);
     }
 }
 
 void BoardManager::SwapRobots() {
     std::swap(whiteRobot, blackRobot);
+}
+
+std::string BoardManager::getRobotNameWithDifficulty(Color searcherColor) {
+    if (searcherColor == WHITE) {
+        if (whiteRobot != nullptr) {
+            return whiteRobot->getName() + " (" + whiteRobot->getDifficultyString() + ")";
+        }
+    } else if (searcherColor == BLACK) {
+        if (blackRobot != nullptr) {
+            return blackRobot->getName() + " (" + blackRobot->getDifficultyString() + ")";
+        }
+    }
+    return "";
 }
 
 void BoardManager::setDifficulty(Color c, Difficulty d) {
@@ -412,5 +425,4 @@ void BoardManager::stopRobotCalculation() {
 void BoardManager::ClearBoard() {
     board.ClearBoard();
 }
-
 

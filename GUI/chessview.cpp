@@ -1,4 +1,5 @@
 #include "chessview.h"
+#include "chessscene.h"
 
 #include <QPainter>
 
@@ -9,6 +10,8 @@ ChessView::ChessView(QWidget* parent) : QGraphicsView(parent),
     setMinimumWidth(WHOLE_CHESSBOARD_HEIGHT_PX / 2);
     setRenderHint(QPainter::SmoothPixmapTransform);
     setRenderHint(QPainter::Antialiasing);
+
+    this->setFrameShape(QFrame::NoFrame);
 }
 
 void ChessView::resizeEvent(QResizeEvent* event)
@@ -17,6 +20,9 @@ void ChessView::resizeEvent(QResizeEvent* event)
 
     if (scene()) {
         fitInView(scene()->sceneRect(), Qt::KeepAspectRatio);
+        double currentZoomX = this->transform().m11();
+        int physicalOffset = qRound(ChessScene::CHESSBOARD_OFFSET_LEFT_PX * currentZoomX);
+        emit visualOffsetChanged(physicalOffset);
     }
 
 }
@@ -29,7 +35,7 @@ QRectF ChessView::boardRect() const
     double x = (viewSize.width() - side) / 2.0;
     double y = (viewSize.height() - side) / 2.0;
 
-    return QRectF(x, y, side, side);
+    return QRectF(x, y , side, side);
 }
 
 void ChessView::drawBackground(QPainter* painter, const QRectF& rect)

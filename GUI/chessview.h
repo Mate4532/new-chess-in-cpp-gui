@@ -15,6 +15,9 @@ public:
 
     void resizeEvent(QResizeEvent* event) override;
 
+signals:
+    void visualOffsetChanged(int physicalPixels);
+
 public slots:
     void flipBoardTo(bool isFlipped);
 

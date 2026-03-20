@@ -56,6 +56,8 @@ public:
 
     void ClearBoard();
 
+    std::string getRobotNameWithDifficulty(Color searcherColor);
+
     inline int getPly() { return board.getPly(); }
     inline int getFullMoveNumber() { return board.getFullMoveNumber(); }
     inline Color getSideToMove() { return board.getSideToMove(); }

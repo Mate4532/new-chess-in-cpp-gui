@@ -28,7 +28,7 @@ signals:
     void settingsChanged(AllSettings& oldS, AllSettings& newS);
 
 public slots:
-    void addMoveToDisplay(int moveNumber, int movePly, const QString& move, Color color);
+    void addMoveToDisplay(int movePly, const QString& move, Color color);
     void removeLastButFromDisplay(int butAmount);
     void writeGameResultToDisplay(GameResult gr);
     void clearMoveDisplay();

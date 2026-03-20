@@ -171,8 +171,8 @@ QWidget* SettingsDialog::createRobotTab() {
         } else {
             checkWhiteRobot->setEnabled(true);
             checkBlackRobot->setEnabled(true);
-            checkWhiteRobot->setChecked(rs.isWhiteRobot);
-            checkBlackRobot->setChecked(rs.isBlackRobot);
+            checkWhiteRobot->setChecked(false);
+            checkBlackRobot->setChecked(false);
             comboWhiteDiff->setEnabled(checkWhiteRobot->isChecked());
             comboBlackDiff->setEnabled(checkBlackRobot->isChecked());
         }

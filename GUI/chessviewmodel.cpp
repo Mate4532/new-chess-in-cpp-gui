@@ -4,7 +4,6 @@
 ChessViewModel::ChessViewModel(BoardManager& b, QObject* parent)
     : QObject(parent), bm(b)
 {
-    connect(&robotWatcher, &QFutureWatcher<Move>::finished, this, &ChessViewModel::onRobotMoveFinished);
 }
 
 void ChessViewModel::startGame() {
@@ -29,7 +28,6 @@ void ChessViewModel::startGame() {
 }
 
 void ChessViewModel::loadNewGame() {
-
     endGame();
 
     isBeginnerPos = true;
@@ -58,23 +56,28 @@ bool ChessViewModel::isMovePromotion(int fromX, int fromY, int toX, int toY) con
     return bm.isMovePromotion(fromX, fromY, toX, toY);
 }
 
-
 bool ChessViewModel::isRobotUnderSearch() const {
     return isUnderSearch;
 }
 
 void ChessViewModel::stopRobotSearch() {
+    if (!isUnderSearch) return;
 
-    if (!isRobotUnderSearch())
-        return;
-
+    isUnderSearch = false;
     bm.stopRobotCalculation();
-    robotWatcher.waitForFinished();
+
+    if (robotThread->isRunning()){
+        robotThread->wait();
+    }
 }
 
 void ChessViewModel::currentPlayerGaveUp() {
-    if (!isGameRunning)
-        return;
+    if (!isGameRunning) return;
+
+    if (currentSettings.robotSettings.isBotVsBot) {
+        isInBotSimulation = false;
+    }
+
     endGame();
 }
 
@@ -108,13 +111,15 @@ void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType
 
 void ChessViewModel::afterMoveBeenMade(Move m) {
 
-    visualHistory.push_back(bm.getBoardMatrix());
-    reviewingPly = -1;
+    if (!isInBotSimulation) {
+        visualHistory.push_back(bm.getBoardMatrix());
+        reviewingPly = -1;
+    }
 
     emit boardChanged();
 
     Color moveColor = (Color)(bm.getSideToMove() ^ 1);
-    emit moveMade(bm.getFullMoveNumber(), bm.getPly(), QString::fromStdString(m.toHumanReadable()), moveColor);
+    emit moveMade(bm.getPly(), QString::fromStdString(m.toHumanReadable()), moveColor);
 
     if (bm.didGameEnd())
         endGame();
@@ -142,27 +147,53 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
     bool robotConfigChanged = (newRs != oldRs);
     bool boardConfigChanged = (newBs != oldBs);
 
-    if (robotConfigChanged) {
+    bool botVsBotChanged = newRs.isBotVsBot != oldRs.isBotVsBot;
+    bool botBsBotSearchTimeChanged = newRs.botVsBotSearchTimeMs != oldRs.botVsBotSearchTimeMs;
+    bool whiteRobotChanged = newRs.isWhiteRobot != oldRs.isWhiteRobot || newRs.whiteRobotDifficulty != oldRs.whiteRobotDifficulty;
+    bool blackRobotChanged = newRs.isBlackRobot != oldRs.isBlackRobot || newRs.blackRobotDifficulty != oldRs.blackRobotDifficulty;
+
+    bool botVsBotGotTurnedOn = newRs.isBotVsBot && !oldRs.isBotVsBot;
+    bool botVsBotGotTurnedOff = !newRs.isBotVsBot && oldRs.isBotVsBot;
+
+    bool mustStartNewGame = botVsBotChanged || whiteRobotChanged || blackRobotChanged;
+
+    if (mustStartNewGame) {
         endGame();
     }
 
     if (robotConfigChanged) {
 
-        if (newRs.isBotVsBot) {
+        if (botVsBotChanged && oldRs.isBotVsBot) {
+            isInBotSimulation = false;
+        }
+
+        bool isWhiteRobot = newRs.isWhiteRobot;
+        bool isBlackRobot = newRs.isBlackRobot;
+
+        if (botVsBotGotTurnedOn) {
             bm.setRobot(WHITE); bm.setDifficulty(WHITE, Difficulty::IMPOSSIBLE);
             bm.setRobot(BLACK); bm.setDifficulty(BLACK, Difficulty::IMPOSSIBLE);
 
+            bm.prepareImprovedBotVsOldBot();
             bm.setSearchTime(newRs.botVsBotSearchTimeMs);
         }
 
-        else {
+        else if (whiteRobotChanged || blackRobotChanged || botVsBotGotTurnedOff) {
 
-            newRs.isWhiteRobot ? bm.setRobot(WHITE) : bm.setPlayer(WHITE);
+            isWhiteRobot? bm.setRobot(WHITE) : bm.setPlayer(WHITE);
             bm.setDifficulty(WHITE, newRs.whiteRobotDifficulty);
 
-            newRs.isBlackRobot ? bm.setRobot(BLACK) : bm.setPlayer(BLACK);
+            isBlackRobot ? bm.setRobot(BLACK) : bm.setPlayer(BLACK);
             bm.setDifficulty(BLACK, newRs.blackRobotDifficulty);
+
+            bm.setupBotsForNormalGame(currentSettings.robotSettings);
         }
+
+        if (botBsBotSearchTimeChanged) {
+            bm.setSearchTime(newRs.botVsBotSearchTimeMs);
+        }
+
+        updatePlayerPanels();
     }
 
     if (boardConfigChanged) {
@@ -172,7 +203,7 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
         emit boardChanged();
     }
 
-    if (robotConfigChanged) {
+    if (mustStartNewGame) {
         loadNewGame();
     }
 }
@@ -183,76 +214,112 @@ void ChessViewModel::refreshView() {
 }
 
 void ChessViewModel::makeRobotMove() {
-    if (isRobotUnderSearch() || !isGameRunning) return;
+    if (isUnderSearch || !isGameRunning) return;
 
-    if (isBeginnerPos)
-        isBeginnerPos = false;
-
-    cachedMatrix = bm.getBoardMatrix();
     isUnderSearch = true;
+    cachedMatrix = bm.getBoardMatrix();
 
-    QFuture<Move> future = QtConcurrent::run(&BoardManager::MakeRobotMove, &bm);
+    robotThread = QThread::create([this]() {
+        Move m = bm.MakeRobotMove();
+        QMetaObject::invokeMethod(this, [this, m]() {
+            this->onRobotMoveFinished(m);
+        }, Qt::QueuedConnection);
+    });
 
-    robotWatcher.setFuture(future);
+    connect(robotThread, &QThread::finished, robotThread, &QObject::deleteLater);
+    robotThread->start();
 }
 
 void ChessViewModel::startRobotGameLoop() {
-
     if (isRobotUnderSearch()) stopRobotSearch();
 
     bm.prepareImprovedBotVsOldBot();
     bm.setSearchTime(currentSettings.robotSettings.botVsBotSearchTimeMs);
-    isGameRunning = false;
-    stopBotSimulation = false;
 
-    for (int i = 0; i < ROBOT_GAMES / 2; ++i) {
+    simI = 0;
+    simJ = 0;
+    isInBotSimulation = true;
 
-        if (stopBotSimulation) break;
+    disconnect(this, &ChessViewModel::gameEnded, this, &ChessViewModel::advanceSimulation);
+    connect(this, &ChessViewModel::gameEnded, this, &ChessViewModel::advanceSimulation);
 
-        std::string fen = bm.getRandomOpening();
-
-        for (int j = 0; j < 2; ++j) {
-
-            if (stopBotSimulation) break;
-
-            bm.ClearSearchers();
-            bm.ClearBoard();
-            bm.loadFEN(fen);
-            isGameRunning = true;
-
-            emit boardChanged();
-
-            makeRobotMove();
-
-            QEventLoop loop;
-
-            connect(this, &ChessViewModel::gameEnded, &loop, &QEventLoop::quit);
-
-            loop.exec();
-
-            bm.writeGameResult();
-            bm.SwapRobots();
-
-        }
-    }
-
-    qDebug() << "Minden szimulacio lefutott.";
-    isGameRunning = false;
+    QTimer::singleShot(100, this, &ChessViewModel::runNextSimGame);
 }
 
-void ChessViewModel::onRobotMoveFinished() {
+void ChessViewModel::runNextSimGame() {
+    if (!isInBotSimulation || simI >= ROBOT_GAMES / 2 || !currentSettings.robotSettings.isBotVsBot) {
+        qDebug() << "Szimuláció véget ért.";
+        isInBotSimulation = false;
+        isGameRunning = false;
+        return;
+    }
 
-    cachedMatrix.clear();
+    disconnect(this, &ChessViewModel::gameEnded, this, &ChessViewModel::advanceSimulation);
+
+    if (simJ == 0) {
+        currentSimFen = QString::fromStdString(bm.getRandomOpening());
+    }
+
+    bm.loadNewGame();
+    clearInfoDisplay();
+    bm.loadFEN(currentSimFen.toStdString());
+    isGameRunning = true;
+
+    emit boardChanged();
+    emit clearInfoDisplay();
+
+    connect(this, &ChessViewModel::gameEnded, this, &ChessViewModel::advanceSimulation);
+
+    QTimer::singleShot(100, this, &ChessViewModel::makeRobotMove);
+}
+
+void ChessViewModel::advanceSimulation() {
+    if (!isInBotSimulation || !currentSettings.robotSettings.isBotVsBot) return;
+
+    bm.writeGameResult();
+    swapRobots();
+
+    simJ++;
+    if (simJ >= 2) {
+        simJ = 0;
+        simI++;
+    }
+
+    QTimer::singleShot(200, this, &ChessViewModel::runNextSimGame);
+}
+
+void ChessViewModel::swapRobots() {
+    bm.SwapRobots();
+    updatePlayerPanels();
+}
+
+void ChessViewModel::updatePlayerPanels() {
+
+    bool isWhiteRobot = currentSettings.robotSettings.isWhiteRobot;
+    bool isBlackRobot = currentSettings.robotSettings.isBlackRobot;
+
+    QString whitePlayerName = isWhiteRobot ? QString::fromStdString(bm.getRobotNameWithDifficulty(WHITE)) : "Fehér játékos";
+    QString whitePlayerIcontPath = isWhiteRobot ? ":/resources/resources/white_robot.png" : ":/resources/resources/white_pawn.png";
+
+    QString blackPlayerName = isBlackRobot ? QString::fromStdString(bm.getRobotNameWithDifficulty(BLACK)) : "Fekete játékos";
+    QString blackPlayerIcontPath = isBlackRobot ? ":/resources/resources/black_robot.png" : ":/resources/resources/black_pawn.png";
+
+    emit playerPanelsUpdateRequest(whitePlayerName, whitePlayerIcontPath, WHITE);
+    emit playerPanelsUpdateRequest(blackPlayerName, blackPlayerIcontPath, BLACK);
+}
+
+void ChessViewModel::onRobotMoveFinished(Move robotMove) {
+    if (!isUnderSearch) return;
     isUnderSearch = false;
 
-    Move robotMove = robotWatcher.result();
-
-    afterMoveBeenMade(robotMove);
+    if (robotMove.isValid() && isGameRunning) {
+        afterMoveBeenMade(robotMove);
+    }
 }
 
 void ChessViewModel::undoMove() {
 
-    if (!isGameRunning)
+    if (!isGameRunning || isInBotSimulation)
         return;
 
     if (!visualHistory.empty())
@@ -273,12 +340,10 @@ void ChessViewModel::undoMove() {
 }
 
 std::vector<std::vector<std::pair<PieceType, Color>>> ChessViewModel::getBoardMatrix() const {
-
     if (reviewingPly >= 0 && reviewingPly < visualHistory.size()) {
         return visualHistory[reviewingPly];
     }
-
-    if (isRobotUnderSearch()) {
+    if (isUnderSearch) {
         return cachedMatrix;
     }
     return bm.getBoardMatrix();

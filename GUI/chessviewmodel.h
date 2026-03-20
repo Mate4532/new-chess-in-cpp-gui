@@ -28,7 +28,7 @@ public:
     void movePiece(int fromX, int fromY, int toX, int toY, PieceType promotionPiece = PieceType::PIECE_NONE);
     void makeRobotMove();
     void startRobotGameLoop();
-    void onRobotMoveFinished();
+    void onRobotMoveFinished(Move m);
 
     void undoMove();
     std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const;
@@ -44,14 +44,18 @@ public slots:
     void updateSettings(AllSettings& oldS, AllSettings& newS);
     void reviewHistory(int targetPly);
 
+private slots:
+    void advanceSimulation();
+    void runNextSimGame();
+
 signals:
     void gameEnded(GameResult gr);
     void boardChanged();
-    void moveMade(int moveNumber, int movePly, const QString& move, Color c);
+    void moveMade(int movePly, const QString& move, Color c);
     void moveUndone(int amount);
     void clearInfoDisplay();
     void flipBoardToRequest(bool isFlipped);
-
+    void playerPanelsUpdateRequest(QString playerName, QString playerIconPath, Color playerColor);
 
 private:
     BoardManager& bm;
@@ -59,12 +63,17 @@ private:
     bool isUnderSearch = false;
     bool isBeginnerPos = true;
     bool isBoardFlipped = false;
-    bool stopBotSimulation = false;
+    bool isInBotSimulation = false;
 
     void afterMoveBeenMade(Move m);
+    void swapRobots();
 
-    QFutureWatcher<Move> robotWatcher;
+    void updatePlayerPanels();
 
+    QThread* robotThread = nullptr;
+    int simI = 0;
+    int simJ = 0;
+    QString currentSimFen;
     std::vector<std::vector<std::pair<PieceType, Color>>> cachedMatrix;
 
     std::vector<std::vector<std::vector<std::pair<PieceType, Color>>>> visualHistory;

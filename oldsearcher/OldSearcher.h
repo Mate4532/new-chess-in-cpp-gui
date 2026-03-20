@@ -15,6 +15,8 @@ private:
     static constexpr int MAXIMUM_DEPTH = 128;
     static constexpr int TT_SIZE_MB = 128;
 
+    Difficulty currentDiff = Difficulty::IMPOSSIBLE;
+
     Board& board;
     OldTT::TranspositionTable tt;
     bool isSearching;
@@ -74,6 +76,8 @@ public:
 
     SearcherType getType() const;
     std::string getName() const;
+    Difficulty getDifficulty() const;
+    std::string getDifficultyString() const;
 };
 
 }

@@ -665,6 +665,9 @@ void Searcher::ClearSearcher() {
 }
 
 void Searcher::setDifficulty(Difficulty diff) {
+
+    currentDiff = diff;
+
     switch (diff) {
     case Difficulty::EASY:
         max_depth = 3;
@@ -692,5 +695,27 @@ SearcherType Searcher::getType() const {
 }
 
 std::string Searcher::getName() const {
-    return "Improved searcher";
+    return "Új robot";
+}
+
+Difficulty Searcher::getDifficulty() const {
+    return currentDiff;
+}
+std::string Searcher::getDifficultyString() const {
+    switch (currentDiff) {
+    case Difficulty::EASY:
+        return "Kezdő";
+
+    case Difficulty::MEDIUM:
+        return "Haladó";
+
+    case Difficulty::HARD:
+        return "Nehéz";
+
+    case Difficulty::IMPOSSIBLE:
+        return "Mester";
+
+    default:
+        break;
+    }
 }
