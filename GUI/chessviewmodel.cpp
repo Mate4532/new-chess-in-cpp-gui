@@ -121,10 +121,9 @@ void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType
 
 void ChessViewModel::afterMoveBeenMade(Move m) {
 
-    if (!isInBotSimulation) {
-        visualHistory.push_back(bm.getBoardMatrix());
+    visualHistory.push_back(bm.getBoardMatrix());
+    if (!isInBotSimulation)
         reviewingPly = -1;
-    }
 
     emit boardChanged();
 
