@@ -382,8 +382,17 @@ void InfoView::clearMoveDisplay()
 {
     QLayoutItem* item;
     while ((item = movesLayout->takeAt(0)) != nullptr) {
-        delete item->widget();
+        if (QWidget* w = item->widget()) {
+            w->hide();
+            w->deleteLater();
+        }
         delete item;
+    }
+
+    movesLayout->invalidate();
+
+    if (QWidget* contentWidget = movesLayout->parentWidget()) {
+        contentWidget->adjustSize();
     }
 
     resultBox->setVisible(false);

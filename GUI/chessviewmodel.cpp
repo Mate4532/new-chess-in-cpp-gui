@@ -78,7 +78,17 @@ void ChessViewModel::currentPlayerGaveUp() {
         isInBotSimulation = false;
     }
 
-    endGame();
+    Color loserColor = bm.getSideToMove();
+
+    GameResult forcedResult = (loserColor == WHITE) ? GameResult::BLACK_WON : GameResult::WHITE_WON;
+
+    if (isRobotUnderSearch()) {
+        stopRobotSearch();
+    }
+
+    isGameRunning = false;
+
+    emit gameEnded(forcedResult);
 }
 
 void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType promotionPiece) {
@@ -336,6 +346,7 @@ void ChessViewModel::undoMove() {
 
     for (int i = 0; i < plyToUndo; ++i)
         emit removeLastButFromInfoDisplayRequest();
+
     Color playerWhoMadeTheMove = (Color)(bm.getSideToMove() ^ 1);
 
     int currentPly = bm.getPly();

@@ -16,7 +16,5 @@
         <file>resources/white_rook.png</file>
         <file>resources/black_robot.png</file>
         <file>resources/white_robot.png</file>
-        <file>resources/black_player.png</file>
-        <file>resources/white_player.png</file>
     </qresource>
 </RCC>
