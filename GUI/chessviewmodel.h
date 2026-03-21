@@ -34,6 +34,8 @@ public:
     std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const;
     void refreshView();
 
+    void loadFEN(std::string fen);
+
     bool isMovePromotion(int fromX, int fromY, int toX, int toY) const;
     bool isRobotUnderSearch() const;
     inline bool getIsBoardFlipped() const { return isBoardFlipped; }
@@ -58,6 +60,7 @@ signals:
     void newGameStarted();
     void flipBoardToRequest(bool isFlipped);
     void playerPanelsUpdateRequest(QString playerName, QString playerIconPath, Color playerColor);
+    void loadPlayerPanelPieceDiffAtNewPos(std::vector<std::pair<PieceType, Color>> pieces);
 
 private:
     BoardManager& bm;

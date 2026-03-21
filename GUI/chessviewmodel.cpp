@@ -260,6 +260,13 @@ void ChessViewModel::startRobotGameLoop() {
     QTimer::singleShot(100, this, &ChessViewModel::runNextSimGame);
 }
 
+void ChessViewModel::loadFEN(std::string fen) {
+    bm.loadFEN(fen);
+
+    std::vector<std::pair<PieceType, Color>> allPieces = bm.getPiecesOnBoard();
+    emit loadPlayerPanelPieceDiffAtNewPos(allPieces);
+}
+
 void ChessViewModel::runNextSimGame() {
     if (!isInBotSimulation || simI >= ROBOT_GAMES / 2 || !currentSettings.robotSettings.isBotVsBot) {
         qDebug() << "Szimuláció véget ért.";
@@ -275,7 +282,7 @@ void ChessViewModel::runNextSimGame() {
     }
 
     loadNewGame();
-    bm.loadFEN(currentSimFen.toStdString());
+    loadFEN(currentSimFen.toStdString());
     isGameRunning = true;
 
     emit boardChanged();
@@ -381,7 +388,7 @@ std::vector<std::vector<std::pair<PieceType, Color>>> ChessViewModel::getBoardMa
 
 void ChessViewModel::reviewHistory(int targetPly) {
     if (targetPly >= 0 && targetPly < visualHistory.size()) {
-        if (bm.getPly() == targetPly)
+        if (targetPly == visualHistory.size() - 1)
             reviewingPly = -1;
         else
             reviewingPly = targetPly;

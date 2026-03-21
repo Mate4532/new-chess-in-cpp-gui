@@ -426,3 +426,20 @@ void BoardManager::ClearBoard() {
     board.ClearBoard();
 }
 
+std::vector<std::pair<PieceType, Color>> BoardManager::getPiecesOnBoard() {
+    std::vector<std::pair<PieceType, Color>> allPieces;
+
+    auto pieces = board.getBoardMatrix();
+    for (const auto& rowPieces : pieces) {
+        for (const auto& piece : rowPieces) {
+
+            if (piece.first == PieceType::PIECE_NONE)
+                continue;
+
+            allPieces.push_back(piece);
+        }
+    }
+
+    return allPieces;
+}
+

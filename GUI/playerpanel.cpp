@@ -149,15 +149,14 @@ void PlayerPanel::updatePanel() {
     orderPieces(orderedPieces);
 
     int currentX = 0;
-    int pieceSide = 25;
 
     for (int i = 0; i < orderedPieces.size(); ++i) {
         QLabel* pieceLabel = new QLabel(piecesContainer);
         QString iconPath = QString::fromStdString(getIconPathForPiece(orderedPieces[i]));
 
         QPixmap pix(iconPath);
-        pieceLabel->setPixmap(pix.scaled(pieceSide, pieceSide, Qt::KeepAspectRatio, Qt::SmoothTransformation));
-        pieceLabel->setFixedSize(pieceSide, pieceSide);
+        pieceLabel->setPixmap(pix.scaled(playerPanelPieceSide, playerPanelPieceSide, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        pieceLabel->setFixedSize(playerPanelPieceSide, playerPanelPieceSide);
 
         pieceLabel->move(currentX, 0);
         pieceLabel->show();
@@ -165,17 +164,17 @@ void PlayerPanel::updatePanel() {
 
         if (i < orderedPieces.size() - 1) {
             if (orderedPieces[i] == orderedPieces[i+1]) {
-                currentX += 15;
+                currentX += samePiecesDistanePx[orderedPieces[i]];
             }
             else {
-                currentX += (pieceSide + 5);
+                currentX += diffPiecesDistanePx[orderedPieces[i]];
             }
         } else {
-            currentX += pieceSide;
+            currentX += diffPiecesDistanePx[orderedPieces[i]];
         }
     }
 
-    piecesContainer->setFixedSize(currentX, pieceSide);
+    piecesContainer->setFixedSize(currentX, playerPanelPieceSide);
 }
 
 void PlayerPanel::addPieceToPanel(PieceType piece) {

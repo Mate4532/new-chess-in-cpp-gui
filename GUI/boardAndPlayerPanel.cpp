@@ -1,4 +1,5 @@
 #include "boardAndPlayerPanel.h"
+#include <iostream>
 
 BoardAndPlayerPanel::BoardAndPlayerPanel(PlayerPanel* whitePlayer, PlayerPanel* blackPlayer, ChessView* cv, QWidget* parent)
     : QWidget(parent)
@@ -125,6 +126,44 @@ void BoardAndPlayerPanel::removePiecesFromPanel(Color playerColor, PieceType pie
         if (playerColor == WHITE) whitePlayer->removePieceFromPanel(piece);
         else blackPlayer->removePieceFromPanel(piece);
         updatePlayerPanelsMaterialScore();
+}
+
+void BoardAndPlayerPanel::loadPlayerPanelsCapturedDiff(std::vector<std::pair<PieceType, Color>> pieces) {
+
+    std::cout << "--- BEJOVO BUK LISTA KEZDETE ---" << std::endl;
+    std::cout << "Vektor merete: " << pieces.size() << std::endl;
+
+    for (int i = 0; i < pieces.size(); ++i) {
+        PieceType pt = pieces[i].first;
+        Color c = pieces[i].second;
+
+        std::cout << "Mezo " << i
+                  << " -> Szin: " << (int)c
+                  << " (0=W, 1=B) | Tipus: " << (int)pt
+                  << " (0=P, 1=N... 7=NONE)" << std::endl;
+    }
+    std::cout << "--- BEJOVO BUK LISTA VEGE ---" << std::endl;
+
+    int piecesArray[2][6] = {{0}};
+
+    for (auto piece : pieces) {
+
+        PieceType pieceType = piece.first;
+        Color pieceColor = piece.second;
+
+        piecesArray[pieceColor][pieceType]++;
+    }
+
+    for (int playerColor = WHITE; playerColor <= BLACK; ++playerColor) {
+        for (int pieceType = PAWN; pieceType <= KING; ++pieceType) {
+            int count = basePieceCounts[pieceType] - piecesArray[playerColor][pieceType];
+            Color capturingPlayer = (Color)(playerColor ^ 1);
+
+            for (int i = 0; i < count; ++i) {
+                addPieceToPlayerPanel(capturingPlayer, (PieceType)pieceType);
+            }
+        }
+    }
 }
 
 void BoardAndPlayerPanel:: clearPanels() {

@@ -101,7 +101,7 @@
         rs.blackRobotDifficulty = (Difficulty)comboBlackDiff->currentIndex();
 
         rs.isBotVsBot = checkBotVsBot->isChecked();
-        rs.botVsBotSearchTimeMs = lineSearchTime->text().toInt();
+        rs.botVsBotSearchTimeMs = std::max(10, lineSearchTime->text().toInt());
 
         allS.boardSettings.isBoardFlipped = checkBoardFlipped->isChecked();
 

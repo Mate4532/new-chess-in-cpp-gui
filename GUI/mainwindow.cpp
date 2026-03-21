@@ -51,6 +51,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(chessViewModel, &ChessViewModel::moveWasCapture, bapp, &BoardAndPlayerPanel::addPieceToPlayerPanel);
     connect(chessViewModel, &ChessViewModel::newGameStarted, bapp, &BoardAndPlayerPanel::clearPanels);
     connect(chessViewModel, &ChessViewModel::removePieceFromPlayerPanel, bapp, &BoardAndPlayerPanel::removePiecesFromPanel);
+    connect(chessViewModel, &ChessViewModel::loadPlayerPanelPieceDiffAtNewPos, bapp, &BoardAndPlayerPanel::loadPlayerPanelsCapturedDiff);
 
     connect(infoContainer, &InfoView::reviewRequested, chessViewModel, &ChessViewModel::reviewHistory);
     connect(infoContainer, &InfoView::settingsChanged, chessViewModel, &ChessViewModel::updateSettings);

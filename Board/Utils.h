@@ -161,3 +161,5 @@ enum class Difficulty {
     HARD,
     IMPOSSIBLE
 };
+
+const int basePieceCounts[PieceType::PIECE_TYPE_COUNT] = { 8, 2, 2, 2, 1, 1 };
