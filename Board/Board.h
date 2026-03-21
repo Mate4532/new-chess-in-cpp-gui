@@ -103,7 +103,10 @@ public:
     inline Square getEnPassantSquare() const {
         return (Square)boardStateHistory[m_ply].en_passant_sq;
     }
-    inline PieceType getCapturePieceType() const{
+    inline PieceType getCapturePieceType(int ply) const{
+        return (PieceType)boardStateHistory[ply].captured_piece_type;
+    }
+    inline PieceType getLastCapturePieceType() const{
         return (PieceType)boardStateHistory[m_ply].captured_piece_type;
     }
     inline uint8_t getHalfMoveClock(int i = -1) const {

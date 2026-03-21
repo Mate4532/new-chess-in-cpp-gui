@@ -29,7 +29,7 @@ signals:
 
 public slots:
     void addMoveToDisplay(int movePly, const QString& move, Color color);
-    void removeLastButFromDisplay(int butAmount);
+    void removeLastButFromDisplay();
     void writeGameResultToDisplay(GameResult gr);
     void clearMoveDisplay();
 

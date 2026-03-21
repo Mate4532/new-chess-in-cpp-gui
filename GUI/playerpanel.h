@@ -7,20 +7,37 @@
 
 class PlayerPanel : public QHBoxLayout{
 private:
+    Color playerColor;
     QString playerName;
     QString playerIconPath;
 
     QLabel* playerLabel;
     QLabel* playerIconLabel;
+    QLabel* materialScoreLabel;
+    QWidget* piecesContainer;
+
+    std::vector<QLabel*> takenPiecesLabels;
+    std::vector<PieceType> orderedPieces;
+
+    void orderPieces(std::vector<PieceType>& pieces);
+    std::string getIconPathForPiece(PieceType piece);
+    void deletePieceLabels();
+
+    int getPieceValue(PieceType p);
+    int getPieceOrder(PieceType p);
 
 public:
-    PlayerPanel(QString playerName, QString playerIcon, QWidget* parent = nullptr);
+    PlayerPanel(Color playerColor, QString playerName, QString playerIcon, QWidget* parent = nullptr);
     void setPlayerName(QString playerName);
     void setPlayerIcon(QString iconPath);
-    void setPlayerToRobot(QString robotName);
-    void updatePanel();
     void setLeftMargin(int pixels);
-    void deleteItems();
+    void updateMaterialScore(int scoreDiff);
+    void updatePanel();
+    void addPieceToPanel(PieceType piece);
+    void removePieceFromPanel(PieceType);
+    void clearPanel();
+
+    int getMaterialScore();
 };
 
 #endif // PLAYERPANEL_H

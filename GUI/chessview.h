@@ -9,6 +9,8 @@ class ChessView : public QGraphicsView {
 public:
     static constexpr double WHOLE_CHESSBOARD_WIDTH_PX = 1358;
     static constexpr double WHOLE_CHESSBOARD_HEIGHT_PX = 1358;
+    static constexpr double MIN_WIDTH = WHOLE_CHESSBOARD_WIDTH_PX / 2;
+    static constexpr double MIN_HEIGHT = WHOLE_CHESSBOARD_HEIGHT_PX / 2;
     static constexpr const char* BACKGROUND_PATH = ":/resources/resources/chessboard.png";
     static constexpr const char* BACKGROUND_PATH_FLIPPED = ":/resources/resources/chessboard_flipped.png";
     explicit ChessView(QWidget* parent = nullptr);

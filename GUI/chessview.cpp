@@ -12,6 +12,7 @@ ChessView::ChessView(QWidget* parent) : QGraphicsView(parent),
     setRenderHint(QPainter::Antialiasing);
 
     this->setFrameShape(QFrame::NoFrame);
+    this->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 }
 
 void ChessView::resizeEvent(QResizeEvent* event)

@@ -52,8 +52,10 @@ signals:
     void gameEnded(GameResult gr);
     void boardChanged();
     void moveMade(int movePly, const QString& move, Color c);
-    void moveUndone(int amount);
-    void clearInfoDisplay();
+    void removeLastButFromInfoDisplayRequest();
+    void removePieceFromPlayerPanel(Color playerColor, PieceType piece);
+    void moveWasCapture(Color capturingColor, PieceType piece);
+    void newGameStarted();
     void flipBoardToRequest(bool isFlipped);
     void playerPanelsUpdateRequest(QString playerName, QString playerIconPath, Color playerColor);
 

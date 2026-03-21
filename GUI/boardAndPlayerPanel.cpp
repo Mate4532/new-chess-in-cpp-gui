@@ -10,6 +10,8 @@ BoardAndPlayerPanel::BoardAndPlayerPanel(PlayerPanel* whitePlayer, PlayerPanel* 
     mainLay = new QVBoxLayout(this);
     mainLay->setContentsMargins(10, 10, 10, 10);
 
+    mainLay->setAlignment(Qt::AlignCenter);
+
     mainLay->addLayout(blackPlayer);
     mainLay->addWidget(chessView);
     mainLay->addLayout(whitePlayer);
@@ -40,6 +42,42 @@ void BoardAndPlayerPanel::setPlayer(const QString& newName, Color playerColor) {
     }
 }
 
+int BoardAndPlayerPanel::updateSize(int availableWidth, int availableHeight) {
+    int marginsH = mainLay->contentsMargins().left() + mainLay->contentsMargins().right();
+    int marginsV = mainLay->contentsMargins().top() + mainLay->contentsMargins().bottom();
+    int spacings = mainLay->spacing() * 2;
+
+    int pHeight = blackPlayer->sizeHint().height() + whitePlayer->sizeHint().height();
+    if (pHeight < 20) pHeight = 100;
+
+    int maxBoardW = availableWidth - marginsH;
+    int maxBoardH = availableHeight - marginsV - spacings - pHeight;
+
+    int side = qMax(100, qMin(maxBoardW, maxBoardH));
+
+    chessView->setMaximumSize(side, side);
+
+    int finalWidth = side + marginsH;
+    int finalHeight = side + marginsV + spacings + pHeight;
+
+    this->setMaximumSize(finalWidth, finalHeight);
+
+    return finalWidth;
+}
+
+QSize BoardAndPlayerPanel::getMinimumOptimalSize() {
+    int minBoardSide = ChessView::MIN_WIDTH;
+
+    QMargins m = mainLay->contentsMargins();
+    int pHeight = blackPlayer->sizeHint().height() + whitePlayer->sizeHint().height();
+    int spacing = mainLay->spacing() * 2;
+
+    int minW = minBoardSide + m.left() + m.right();
+    int minH = minBoardSide + pHeight + m.top() + m.bottom() + spacing;
+
+    return QSize(minW, minH);
+}
+
 void BoardAndPlayerPanel::flipPlayerPanels(bool isFlipped) {
     mainLay->removeItem(blackPlayer);
     mainLay->removeItem(whitePlayer);
@@ -64,4 +102,32 @@ void BoardAndPlayerPanel::playerPanelChanged(QString playerName, QString playerI
         blackPlayer->setPlayerName(playerName);
         blackPlayer->setPlayerIcon(playerIconPath);
     }
+}
+
+void BoardAndPlayerPanel::updatePlayerPanelsMaterialScore() {
+
+    int whiteSum = whitePlayer->getMaterialScore();
+    int blackSum = blackPlayer->getMaterialScore();
+
+    int scoreDiff = whiteSum - blackSum;
+
+    whitePlayer->updateMaterialScore(scoreDiff);
+    blackPlayer->updateMaterialScore(scoreDiff);
+
+}
+
+void BoardAndPlayerPanel::addPieceToPlayerPanel(Color playerColor, PieceType piece) {
+    playerColor == WHITE ? whitePlayer->addPieceToPanel(piece) : blackPlayer->addPieceToPanel(piece);
+    updatePlayerPanelsMaterialScore();
+}
+
+void BoardAndPlayerPanel::removePiecesFromPanel(Color playerColor, PieceType piece) {
+        if (playerColor == WHITE) whitePlayer->removePieceFromPanel(piece);
+        else blackPlayer->removePieceFromPanel(piece);
+        updatePlayerPanelsMaterialScore();
+}
+
+void BoardAndPlayerPanel:: clearPanels() {
+    whitePlayer->clearPanel();
+    blackPlayer->clearPanel();
 }

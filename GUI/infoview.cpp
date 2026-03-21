@@ -257,48 +257,47 @@ void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color) {
     buttonAmount++;
 }
 
-void InfoView::removeLastButFromDisplay(int butAmount) {
+void InfoView::removeLastButFromDisplay() {
+
     if (buttonAmount < 1)
         return;
 
-    for (int i = 0; i < butAmount; ++i) {
-        int lastIndex = movesLayout->count() - 1;
-        int row, col, rowSpan, colSpan;
-        movesLayout->getItemPosition(lastIndex, &row, &col, &rowSpan, &colSpan);
+    int lastIndex = movesLayout->count() - 1;
+    int row, col, rowSpan, colSpan;
+    movesLayout->getItemPosition(lastIndex, &row, &col, &rowSpan, &colSpan);
 
-        QLayoutItem* item = movesLayout->takeAt(lastIndex);
-        if (item) {
-            if (QWidget* widget = item->widget()) {
-                widget->deleteLater();
-            }
-            delete item;
+    QLayoutItem* item = movesLayout->takeAt(lastIndex);
+    if (item) {
+        if (QWidget* widget = item->widget()) {
+            widget->deleteLater();
         }
-
-        if (col == 1) {
-            while (movesLayout->count() > 0) {
-                int nextIndex = movesLayout->count() - 1;
-                int r, c, rs, cs;
-                movesLayout->getItemPosition(nextIndex, &r, &c, &rs, &cs);
-
-                if (r == row) {
-                    QLayoutItem* nextItem = movesLayout->takeAt(nextIndex);
-                    if (nextItem) {
-                        if (QWidget* w = nextItem->widget()) {
-                            w->deleteLater();
-                        }
-                        delete nextItem;
-                    }
-                } else {
-                    break;
-                }
-            }
-        }
-        else{
-            currentRow--;
-        }
-
-        buttonAmount--;
+        delete item;
     }
+
+    if (col == 1) {
+        while (movesLayout->count() > 0) {
+            int nextIndex = movesLayout->count() - 1;
+            int r, c, rs, cs;
+            movesLayout->getItemPosition(nextIndex, &r, &c, &rs, &cs);
+
+            if (r == row) {
+                QLayoutItem* nextItem = movesLayout->takeAt(nextIndex);
+                if (nextItem) {
+                    if (QWidget* w = nextItem->widget()) {
+                        w->deleteLater();
+                    }
+                    delete nextItem;
+                }
+            } else {
+                break;
+            }
+        }
+    }
+    else{
+        currentRow--;
+    }
+
+    buttonAmount--;
 }
 
 void InfoView::updateInfoPanel() {

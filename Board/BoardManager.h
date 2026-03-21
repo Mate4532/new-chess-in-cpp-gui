@@ -61,6 +61,9 @@ public:
     inline int getPly() { return board.getPly(); }
     inline int getFullMoveNumber() { return board.getFullMoveNumber(); }
     inline Color getSideToMove() { return board.getSideToMove(); }
+    inline bool wasMoveCapture(Move m) { return m.getFlags() & MoveFlag::CAPTURE_FLAG; }
+    inline PieceType getCapturedPieceTypeAt(int ply) { return board.getCapturePieceType(ply); }
+    inline PieceType getLastCapturedPieceType() { return board.getLastCapturePieceType(); }
     inline bool isRobot(Color c) const { return (c == WHITE && is_white_robot) || (c == BLACK && is_black_robot);}
     inline bool isEnemyRobot() const { return (isRobot((Color)(board.getSideToMove() ^ 1)));}
     inline bool isRobotToMove() const { return (is_white_robot && board.getSideToMove() == WHITE) || (is_black_robot && board.getSideToMove() == BLACK); }

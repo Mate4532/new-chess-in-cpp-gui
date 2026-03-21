@@ -718,4 +718,6 @@ std::string Searcher::getDifficultyString() const {
     default:
         break;
     }
+
+    return "";
 }

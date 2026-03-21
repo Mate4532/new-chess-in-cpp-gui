@@ -38,7 +38,7 @@ void ChessViewModel::loadNewGame() {
     reviewingPly = -1;
 
     emit boardChanged();
-    emit clearInfoDisplay();
+    emit newGameStarted();
 }
 
 void ChessViewModel::endGame() {
@@ -118,8 +118,13 @@ void ChessViewModel::afterMoveBeenMade(Move m) {
 
     emit boardChanged();
 
-    Color moveColor = (Color)(bm.getSideToMove() ^ 1);
-    emit moveMade(bm.getPly(), QString::fromStdString(m.toHumanReadable()), moveColor);
+    Color currentPlayer = bm.getSideToMove();
+    Color lastMovedColor = (Color)(currentPlayer ^ 1);
+    emit moveMade(bm.getPly(), QString::fromStdString(m.toHumanReadable()), lastMovedColor);
+
+    if (bm.wasMoveCapture(m)){
+        emit moveWasCapture(lastMovedColor, bm.getLastCapturedPieceType());
+    }
 
     if (bm.didGameEnd())
         endGame();
@@ -260,13 +265,11 @@ void ChessViewModel::runNextSimGame() {
         currentSimFen = QString::fromStdString(bm.getRandomOpening());
     }
 
-    bm.loadNewGame();
-    clearInfoDisplay();
+    loadNewGame();
     bm.loadFEN(currentSimFen.toStdString());
     isGameRunning = true;
 
     emit boardChanged();
-    emit clearInfoDisplay();
 
     connect(this, &ChessViewModel::gameEnded, this, &ChessViewModel::advanceSimulation);
 
@@ -331,9 +334,26 @@ void ChessViewModel::undoMove() {
 
     int plyToUndo = bm.isEnemyRobot() ? 2 : 1;
 
+    for (int i = 0; i < plyToUndo; ++i)
+        emit removeLastButFromInfoDisplayRequest();
+    Color playerWhoMadeTheMove = (Color)(bm.getSideToMove() ^ 1);
+
+    int currentPly = bm.getPly();
+
+    for (int i = 0; i < plyToUndo; ++i) {
+
+        int capturePly = currentPly - i;
+        PieceType capturePieceType = bm.getCapturedPieceTypeAt(capturePly);
+
+        if (capturePieceType != PieceType::PIECE_NONE) {
+            emit removePieceFromPlayerPanel(playerWhoMadeTheMove, capturePieceType);
+        }
+
+        playerWhoMadeTheMove = (Color)(playerWhoMadeTheMove ^ 1);
+    }
+
     bm.undoMove(plyToUndo);
     emit boardChanged();
-    emit moveUndone(plyToUndo);
 
     if (bm.isRobotToMove())
         makeRobotMove();
