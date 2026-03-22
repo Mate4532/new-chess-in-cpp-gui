@@ -49,10 +49,9 @@ MainWindow::MainWindow(QWidget* parent)
     connect(chessViewModel, &ChessViewModel::flipBoardToRequest, bapp, &BoardAndPlayerPanel::flipPlayerPanels);
     connect(chessViewModel, &ChessViewModel::playerPanelsUpdateRequest, bapp, &BoardAndPlayerPanel::playerPanelChanged);
     connect(chessViewModel, &ChessViewModel::moveWasCapture, bapp, &BoardAndPlayerPanel::addPieceToPlayerPanel);
-    connect(chessViewModel, &ChessViewModel::moveWasPromotion, bapp, &BoardAndPlayerPanel::updatePanelsPromotionScore);
     connect(chessViewModel, &ChessViewModel::newGameStarted, bapp, &BoardAndPlayerPanel::clearPanels);
     connect(chessViewModel, &ChessViewModel::removePieceFromPlayerPanel, bapp, &BoardAndPlayerPanel::removePiecesFromPanel);
-    connect(chessViewModel, &ChessViewModel::loadPlayerPanelPieceDiffAtNewPos, bapp, &BoardAndPlayerPanel::loadPlayerPanelsCapturedDiff);
+    connect(chessViewModel, &ChessViewModel::updateMaterialScoreAtPlayerPanel, bapp, &BoardAndPlayerPanel::updateMaterialScore);
 
     connect(infoContainer, &InfoView::reviewRequested, chessViewModel, &ChessViewModel::reviewHistory);
     connect(infoContainer, &InfoView::settingsChanged, chessViewModel, &ChessViewModel::updateSettings);

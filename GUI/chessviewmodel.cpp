@@ -139,8 +139,8 @@ void ChessViewModel::afterMoveBeenMade(Move m) {
         emit moveWasCapture(lastMovedColor, bm.getLastCapturedPieceType());
     }
 
-    if (bm.wasMovePromotion(m)) {
-        emit moveWasPromotion(lastMovedColor, bm.getPromotionPiece(m));
+    if (bm.wasMoveCapture(m) || bm.wasMovePromotion(m)) {
+        emit updateMaterialScoreAtPlayerPanel(bm.getPiecesOnBoard());
     }
 
     if (bm.didGameEnd())
@@ -261,7 +261,7 @@ void ChessViewModel::loadFEN(std::string fen) {
     bm.loadFEN(fen);
 
     std::vector<std::pair<PieceType, Color>> allPieces = bm.getPiecesOnBoard();
-    emit loadPlayerPanelPieceDiffAtNewPos(allPieces);
+    emit updateMaterialScoreAtPlayerPanel(allPieces);
 }
 
 void ChessViewModel::startRobotGameLoop() {
@@ -385,6 +385,7 @@ void ChessViewModel::undoMove() {
 
     bm.undoMove(plyToUndo);
     emit boardChanged();
+    emit updateMaterialScoreAtPlayerPanel(bm.getPiecesOnBoard());
 
     if (bm.isRobotToMove())
         makeRobotMove();

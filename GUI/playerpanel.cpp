@@ -184,13 +184,6 @@ void PlayerPanel::addPieceToPanel(PieceType piece) {
     updatePanel();
 }
 
-void PlayerPanel::calculateStartingPosPieceSum(std::vector<PieceType> pieces) {
-    for (PieceType piece : pieces) {
-        startingPosPieceSum += getPieceValue(piece);
-    }
-    updatePanel();
-}
-
 void PlayerPanel::removePieceFromPanel(PieceType piece) {
     if (piece == PieceType::PIECE_NONE) return;
 
@@ -202,33 +195,19 @@ void PlayerPanel::removePieceFromPanel(PieceType piece) {
     updatePanel();
 }
 
-void PlayerPanel::updatePromotionScore(PieceType promotionPiece) {
-    promotionPieces.push_back(promotionPiece);
-    updatePanel();
-}
-
 void PlayerPanel::clearPanel() {
     deletePieceLabels();
     orderedTakenPieces.clear();
-    promotionPieces.clear();
     materialScoreLabel->setText("");
-
-    startingPosPieceSum = 0;
 }
 
-int PlayerPanel::getMaterialScore() {
+int PlayerPanel::getMaterialScore(std::vector<PieceType> pieces) {
 
     int sum = 0;
 
-    for (PieceType p : orderedTakenPieces) {
-        sum += getPieceValue(p);
+    for (PieceType piece : pieces) {
+        sum += getPieceValue(piece);
     }
 
-    for (PieceType p : promotionPieces) {
-        sum += getPieceValue(p);
-    }
-
-    int promotionPawnCount = promotionPieces.size() * getPieceValue(PAWN);
-
-    return sum + startingPosPieceSum - promotionPawnCount;
+    return sum;
 }

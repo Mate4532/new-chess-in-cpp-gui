@@ -18,11 +18,9 @@ private:
 public slots:
     void flipPlayerPanels(bool isFlipped);
     void playerPanelChanged(QString playerName, QString playerIconPath, Color playerColor);
-    void updatePlayerPanelsMaterialScore();
     void addPieceToPlayerPanel(Color playerColor, PieceType piece);
     void removePiecesFromPanel(Color playerColor, PieceType piece);
-    void updatePanelsPromotionScore(Color promotingColor, PieceType promotionPiece);
-    void loadPlayerPanelsCapturedDiff(std::vector<std::pair<PieceType, Color>> pieces);
+    void updateMaterialScore(std::vector<std::pair<PieceType, Color>> pieces);
     void clearPanels();
 
 public:

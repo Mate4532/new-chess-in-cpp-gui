@@ -19,10 +19,6 @@ private:
     std::vector<QLabel*> takenPiecesLabels;
     std::vector<PieceType> orderedTakenPieces;
 
-    std::vector<PieceType> promotionPieces;
-
-    int startingPosPieceSum = 0;
-
     void orderPieces(std::vector<PieceType>& pieces);
     std::string getIconPathForPiece(PieceType piece);
     void deletePieceLabels();
@@ -43,12 +39,10 @@ public:
     void updateMaterialScore(int scoreDiff);
     void updatePanel();
     void addPieceToPanel(PieceType piece);
-    void calculateStartingPosPieceSum(std::vector<PieceType> pieces);
     void removePieceFromPanel(PieceType piece);
-    void updatePromotionScore(PieceType promotionPiece);
     void clearPanel();
 
-    int getMaterialScore();
+    int getMaterialScore(std::vector<PieceType> pieces);
 };
 
 #endif // PLAYERPANEL_H

@@ -105,34 +105,15 @@ void BoardAndPlayerPanel::playerPanelChanged(QString playerName, QString playerI
     }
 }
 
-void BoardAndPlayerPanel::updatePlayerPanelsMaterialScore() {
-
-    int whiteSum = whitePlayer->getMaterialScore();
-    int blackSum = blackPlayer->getMaterialScore();
-
-    int scoreDiff = whiteSum - blackSum;
-
-    whitePlayer->updateMaterialScore(scoreDiff);
-    blackPlayer->updateMaterialScore(scoreDiff);
-
-}
-
 void BoardAndPlayerPanel::addPieceToPlayerPanel(Color playerColor, PieceType piece) {
     playerColor == WHITE ? whitePlayer->addPieceToPanel(piece) : blackPlayer->addPieceToPanel(piece);
-    updatePlayerPanelsMaterialScore();
 }
 
 void BoardAndPlayerPanel::removePiecesFromPanel(Color playerColor, PieceType piece) {
     playerColor == WHITE ? whitePlayer->removePieceFromPanel(piece) : blackPlayer->removePieceFromPanel(piece);
-    updatePlayerPanelsMaterialScore();
 }
 
-void BoardAndPlayerPanel::updatePanelsPromotionScore(Color promotingColor, PieceType promotionPiece) {
-    promotingColor == WHITE ? whitePlayer->updatePromotionScore(promotionPiece) : blackPlayer->updatePromotionScore(promotionPiece);
-    updatePlayerPanelsMaterialScore();
-}
-
-void BoardAndPlayerPanel::loadPlayerPanelsCapturedDiff(std::vector<std::pair<PieceType, Color>> pieces) {
+void BoardAndPlayerPanel::updateMaterialScore(std::vector<std::pair<PieceType, Color>> pieces) {
 
     int piecesArray[2][6] = {{0}};
 
@@ -157,10 +138,13 @@ void BoardAndPlayerPanel::loadPlayerPanelsCapturedDiff(std::vector<std::pair<Pie
         }
     }
 
-    whitePlayer->calculateStartingPosPieceSum(whiteStartingPieces);
-    blackPlayer->calculateStartingPosPieceSum(blackStartingPieces);
+    int whiteSum = whitePlayer->getMaterialScore(whiteStartingPieces);
+    int blackSum = blackPlayer->getMaterialScore(blackStartingPieces);
 
-    updatePlayerPanelsMaterialScore();
+    int scoreDiff = whiteSum - blackSum;
+
+    whitePlayer->updateMaterialScore(scoreDiff);
+    blackPlayer->updateMaterialScore(scoreDiff);
 }
 
 void BoardAndPlayerPanel:: clearPanels() {

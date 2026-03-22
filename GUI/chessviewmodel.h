@@ -58,11 +58,10 @@ signals:
     void removeLastButFromInfoDisplayRequest();
     void removePieceFromPlayerPanel(Color playerColor, PieceType piece);
     void moveWasCapture(Color capturingColor, PieceType piece);
-    void moveWasPromotion(Color promotingColor, PieceType promotionPiece);
     void newGameStarted();
     void flipBoardToRequest(bool isFlipped);
     void playerPanelsUpdateRequest(QString playerName, QString playerIconPath, Color playerColor);
-    void loadPlayerPanelPieceDiffAtNewPos(std::vector<std::pair<PieceType, Color>> pieces);
+    void updateMaterialScoreAtPlayerPanel(std::vector<std::pair<PieceType, Color>> pieces);
 
 private:
     BoardManager& bm;
