@@ -7,17 +7,21 @@ ChessViewModel::ChessViewModel(BoardManager& b, QObject* parent)
 }
 
 void ChessViewModel::startGame() {
-    if (isGameRunning)
+
+    if (isInBotSimulation) {
+        stopRobotGameLoop();
+    }
+
+    if (isGameRunning) {
         endGame();
+    }
 
     if (currentSettings.robotSettings.isBotVsBot) {
         startRobotGameLoop();
         return;
     }
 
-    else {
-        bm.setupBotsForNormalGame(currentSettings.robotSettings);
-    }
+    bm.setupBotsForNormalGame(currentSettings.robotSettings);
 
     loadNewGame();
     isGameRunning = true;
@@ -244,11 +248,24 @@ void ChessViewModel::makeRobotMove() {
     robotThread->start();
 }
 
+void ChessViewModel::stopRobotGameLoop() {
+    isInBotSimulation = false;
+    disconnect(this, &ChessViewModel::gameEnded, this, &ChessViewModel::advanceSimulation);
+}
+
+void ChessViewModel::loadFEN(std::string fen) {
+    bm.loadFEN(fen);
+
+    std::vector<std::pair<PieceType, Color>> allPieces = bm.getPiecesOnBoard();
+    emit loadPlayerPanelPieceDiffAtNewPos(allPieces);
+}
+
 void ChessViewModel::startRobotGameLoop() {
     if (isRobotUnderSearch()) stopRobotSearch();
 
     bm.prepareImprovedBotVsOldBot();
     bm.setSearchTime(currentSettings.robotSettings.botVsBotSearchTimeMs);
+    updatePlayerPanels();
 
     simI = 0;
     simJ = 0;
@@ -258,13 +275,6 @@ void ChessViewModel::startRobotGameLoop() {
     connect(this, &ChessViewModel::gameEnded, this, &ChessViewModel::advanceSimulation);
 
     QTimer::singleShot(100, this, &ChessViewModel::runNextSimGame);
-}
-
-void ChessViewModel::loadFEN(std::string fen) {
-    bm.loadFEN(fen);
-
-    std::vector<std::pair<PieceType, Color>> allPieces = bm.getPiecesOnBoard();
-    emit loadPlayerPanelPieceDiffAtNewPos(allPieces);
 }
 
 void ChessViewModel::runNextSimGame() {

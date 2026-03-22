@@ -130,20 +130,6 @@ void BoardAndPlayerPanel::removePiecesFromPanel(Color playerColor, PieceType pie
 
 void BoardAndPlayerPanel::loadPlayerPanelsCapturedDiff(std::vector<std::pair<PieceType, Color>> pieces) {
 
-    std::cout << "--- BEJOVO BUK LISTA KEZDETE ---" << std::endl;
-    std::cout << "Vektor merete: " << pieces.size() << std::endl;
-
-    for (int i = 0; i < pieces.size(); ++i) {
-        PieceType pt = pieces[i].first;
-        Color c = pieces[i].second;
-
-        std::cout << "Mezo " << i
-                  << " -> Szin: " << (int)c
-                  << " (0=W, 1=B) | Tipus: " << (int)pt
-                  << " (0=P, 1=N... 7=NONE)" << std::endl;
-    }
-    std::cout << "--- BEJOVO BUK LISTA VEGE ---" << std::endl;
-
     int piecesArray[2][6] = {{0}};
 
     for (auto piece : pieces) {

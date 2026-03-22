@@ -27,6 +27,7 @@ public:
 
     void movePiece(int fromX, int fromY, int toX, int toY, PieceType promotionPiece = PieceType::PIECE_NONE);
     void makeRobotMove();
+    void stopRobotGameLoop();
     void startRobotGameLoop();
     void onRobotMoveFinished(Move m);
 
