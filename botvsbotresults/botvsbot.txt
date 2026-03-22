@@ -1,3 +1,3 @@
-old_searcher_win: 78
-improved_searcher_win: 163
+old_searcher_win: 105
+improved_searcher_win: 229
 draw: 16

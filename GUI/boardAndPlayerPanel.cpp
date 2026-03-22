@@ -123,9 +123,13 @@ void BoardAndPlayerPanel::addPieceToPlayerPanel(Color playerColor, PieceType pie
 }
 
 void BoardAndPlayerPanel::removePiecesFromPanel(Color playerColor, PieceType piece) {
-        if (playerColor == WHITE) whitePlayer->removePieceFromPanel(piece);
-        else blackPlayer->removePieceFromPanel(piece);
-        updatePlayerPanelsMaterialScore();
+    playerColor == WHITE ? whitePlayer->removePieceFromPanel(piece) : blackPlayer->removePieceFromPanel(piece);
+    updatePlayerPanelsMaterialScore();
+}
+
+void BoardAndPlayerPanel::updatePanelsPromotionScore(Color promotingColor, PieceType promotionPiece) {
+    promotingColor == WHITE ? whitePlayer->updatePromotionScore(promotionPiece) : blackPlayer->updatePromotionScore(promotionPiece);
+    updatePlayerPanelsMaterialScore();
 }
 
 void BoardAndPlayerPanel::loadPlayerPanelsCapturedDiff(std::vector<std::pair<PieceType, Color>> pieces) {
@@ -140,16 +144,23 @@ void BoardAndPlayerPanel::loadPlayerPanelsCapturedDiff(std::vector<std::pair<Pie
         piecesArray[pieceColor][pieceType]++;
     }
 
-    for (int playerColor = WHITE; playerColor <= BLACK; ++playerColor) {
-        for (int pieceType = PAWN; pieceType <= KING; ++pieceType) {
-            int count = basePieceCounts[pieceType] - piecesArray[playerColor][pieceType];
-            Color capturingPlayer = (Color)(playerColor ^ 1);
+    std::vector<PieceType> whiteStartingPieces;
+    std::vector<PieceType> blackStartingPieces;
 
-            for (int i = 0; i < count; ++i) {
-                addPieceToPlayerPanel(capturingPlayer, (PieceType)pieceType);
-            }
+    for (int pieceType = PAWN; pieceType <= KING; ++pieceType) {
+
+        for (int i = 0; i < piecesArray[WHITE][pieceType]; ++i) {
+            whiteStartingPieces.push_back(static_cast<PieceType>(pieceType));
+        }
+        for (int i = 0; i < piecesArray[BLACK][pieceType]; ++i) {
+            blackStartingPieces.push_back(static_cast<PieceType>(pieceType));
         }
     }
+
+    whitePlayer->calculateStartingPosPieceSum(whiteStartingPieces);
+    blackPlayer->calculateStartingPosPieceSum(blackStartingPieces);
+
+    updatePlayerPanelsMaterialScore();
 }
 
 void BoardAndPlayerPanel:: clearPanels() {

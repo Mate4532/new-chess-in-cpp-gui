@@ -23,7 +23,6 @@ private:
 
 public:
     static void GenerateMoves(const Board& board, MoveList& moveList, bool genereate_only_captures = false);
-    static PieceType GetPromotionPiece(MoveFlag promotion_piece);
 
     static constexpr int WHITE_ENPASSANT_PIECE_OFFSET = 8;
     static constexpr int BLACK_ENPASSANT_PIECE_OFFSET = -8;

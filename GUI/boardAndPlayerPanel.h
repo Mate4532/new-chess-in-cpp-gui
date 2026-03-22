@@ -21,6 +21,7 @@ public slots:
     void updatePlayerPanelsMaterialScore();
     void addPieceToPlayerPanel(Color playerColor, PieceType piece);
     void removePiecesFromPanel(Color playerColor, PieceType piece);
+    void updatePanelsPromotionScore(Color promotingColor, PieceType promotionPiece);
     void loadPlayerPanelsCapturedDiff(std::vector<std::pair<PieceType, Color>> pieces);
     void clearPanels();
 

@@ -58,6 +58,7 @@ signals:
     void removeLastButFromInfoDisplayRequest();
     void removePieceFromPlayerPanel(Color playerColor, PieceType piece);
     void moveWasCapture(Color capturingColor, PieceType piece);
+    void moveWasPromotion(Color promotingColor, PieceType promotionPiece);
     void newGameStarted();
     void flipBoardToRequest(bool isFlipped);
     void playerPanelsUpdateRequest(QString playerName, QString playerIconPath, Color playerColor);

@@ -139,6 +139,10 @@ void ChessViewModel::afterMoveBeenMade(Move m) {
         emit moveWasCapture(lastMovedColor, bm.getLastCapturedPieceType());
     }
 
+    if (bm.wasMovePromotion(m)) {
+        emit moveWasPromotion(lastMovedColor, bm.getPromotionPiece(m));
+    }
+
     if (bm.didGameEnd())
         endGame();
 

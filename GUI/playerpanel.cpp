@@ -146,13 +146,13 @@ void PlayerPanel::updateMaterialScore(int scoreDiff) {
 void PlayerPanel::updatePanel() {
 
     deletePieceLabels();
-    orderPieces(orderedPieces);
+    orderPieces(orderedTakenPieces);
 
     int currentX = 0;
 
-    for (int i = 0; i < orderedPieces.size(); ++i) {
+    for (int i = 0; i < orderedTakenPieces.size(); ++i) {
         QLabel* pieceLabel = new QLabel(piecesContainer);
-        QString iconPath = QString::fromStdString(getIconPathForPiece(orderedPieces[i]));
+        QString iconPath = QString::fromStdString(getIconPathForPiece(orderedTakenPieces[i]));
 
         QPixmap pix(iconPath);
         pieceLabel->setPixmap(pix.scaled(playerPanelPieceSide, playerPanelPieceSide, Qt::KeepAspectRatio, Qt::SmoothTransformation));
@@ -162,15 +162,15 @@ void PlayerPanel::updatePanel() {
         pieceLabel->show();
         takenPiecesLabels.push_back(pieceLabel);
 
-        if (i < orderedPieces.size() - 1) {
-            if (orderedPieces[i] == orderedPieces[i+1]) {
-                currentX += samePiecesDistanePx[orderedPieces[i]];
+        if (i < orderedTakenPieces.size() - 1) {
+            if (orderedTakenPieces[i] == orderedTakenPieces[i+1]) {
+                currentX += samePiecesDistanePx[orderedTakenPieces[i]];
             }
             else {
-                currentX += diffPiecesDistanePx[orderedPieces[i]];
+                currentX += diffPiecesDistanePx[orderedTakenPieces[i]];
             }
         } else {
-            currentX += diffPiecesDistanePx[orderedPieces[i]];
+            currentX += diffPiecesDistanePx[orderedTakenPieces[i]];
         }
     }
 
@@ -180,34 +180,55 @@ void PlayerPanel::updatePanel() {
 void PlayerPanel::addPieceToPanel(PieceType piece) {
     if (piece == PieceType::PIECE_NONE) return;
 
-    orderedPieces.push_back(piece);
+    orderedTakenPieces.push_back(piece);
+    updatePanel();
+}
+
+void PlayerPanel::calculateStartingPosPieceSum(std::vector<PieceType> pieces) {
+    for (PieceType piece : pieces) {
+        startingPosPieceSum += getPieceValue(piece);
+    }
     updatePanel();
 }
 
 void PlayerPanel::removePieceFromPanel(PieceType piece) {
     if (piece == PieceType::PIECE_NONE) return;
 
-    auto it = std::find(orderedPieces.begin(), orderedPieces.end(), piece);
-    if (it != orderedPieces.end()) {
-        orderedPieces.erase(it);
+    auto it = std::find(orderedTakenPieces.begin(), orderedTakenPieces.end(), piece);
+    if (it != orderedTakenPieces.end()) {
+        orderedTakenPieces.erase(it);
     }
 
     updatePanel();
 }
 
+void PlayerPanel::updatePromotionScore(PieceType promotionPiece) {
+    promotionPieces.push_back(promotionPiece);
+    updatePanel();
+}
+
 void PlayerPanel::clearPanel() {
     deletePieceLabels();
-    orderedPieces.clear();
+    orderedTakenPieces.clear();
+    promotionPieces.clear();
     materialScoreLabel->setText("");
+
+    startingPosPieceSum = 0;
 }
 
 int PlayerPanel::getMaterialScore() {
 
     int sum = 0;
 
-    for (PieceType p : orderedPieces) {
+    for (PieceType p : orderedTakenPieces) {
         sum += getPieceValue(p);
     }
 
-    return sum;
+    for (PieceType p : promotionPieces) {
+        sum += getPieceValue(p);
+    }
+
+    int promotionPawnCount = promotionPieces.size() * getPieceValue(PAWN);
+
+    return sum + startingPosPieceSum - promotionPawnCount;
 }

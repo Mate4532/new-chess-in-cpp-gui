@@ -933,3 +933,34 @@ uint64_t Board::MultiThreadedPerft(int depth) {
 
     return global_node_count;
 }
+
+PieceType Board::GetPromotionPiece(Move m) {
+    MoveFlag mf = m.getFlags();
+
+    MoveFlag cleanPromotionFlag = static_cast<MoveFlag>(mf & ~CAPTURE_FLAG);
+
+    return GetPromotionPiece(cleanPromotionFlag);
+}
+
+PieceType Board::GetPromotionPiece(MoveFlag promotion_piece) {
+    switch (promotion_piece) {
+    case PROMOTION_TYPE_KNIGHT:
+        return KNIGHT;
+        break;
+
+    case PROMOTION_TYPE_BISHOP:
+        return BISHOP;
+        break;
+
+    case PROMOTION_TYPE_ROOK:
+        return ROOK;
+        break;
+
+    case PROMOTION_TYPE_QUEEN:
+        return QUEEN;
+
+    default:
+        return PIECE_NONE;
+        break;
+    }
+}

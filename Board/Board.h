@@ -147,4 +147,7 @@ public:
     std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const;
 
     void ClearBoard();
+
+    static PieceType GetPromotionPiece(Move m);
+    static PieceType GetPromotionPiece(MoveFlag promotion_piece);
 };

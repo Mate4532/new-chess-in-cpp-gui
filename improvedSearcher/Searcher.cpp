@@ -77,7 +77,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         }
         else if (isCapture) {
             if (isPromo) {
-                PieceType promoPiece = MoveGenerator::GetPromotionPiece(flags);
+                PieceType promoPiece = Board::GetPromotionPiece(flags);
                 PieceType capPiece = board.getPieceAt(mTo, enemy);
 
                 nnue_state[ply + 1].dirtyPiece.dirtyNum = 3;
@@ -258,7 +258,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
                 nnue_state[ply + 1].dirtyPiece.to[1]   = 64;
 
                 if (isPromo) {
-                    PieceType promoPiece = MoveGenerator::GetPromotionPiece(flags);
+                    PieceType promoPiece = Board::GetPromotionPiece(flags);
                     nnue_state[ply + 1].dirtyPiece.dirtyNum = 3;
 
                     nnue_state[ply + 1].dirtyPiece.pc[2]   = Evaluation::GetNnuePieceNum(promoPiece, player);
@@ -279,7 +279,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
             nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
             nnue_state[ply + 1].dirtyPiece.to[0]   = 64;
 
-            PieceType promoPiece = MoveGenerator::GetPromotionPiece(flags);
+            PieceType promoPiece = Board::GetPromotionPiece(flags);
             nnue_state[ply + 1].dirtyPiece.pc[1]   = Evaluation::GetNnuePieceNum(promoPiece, player);
             nnue_state[ply + 1].dirtyPiece.from[1] = 64;
             nnue_state[ply + 1].dirtyPiece.to[1]   = mTo;

@@ -2,29 +2,6 @@
 #include "Board.h"
 #include "Move.h"
 
-PieceType MoveGenerator::GetPromotionPiece(MoveFlag promotion_piece) {
-    switch (promotion_piece) {
-    case PROMOTION_TYPE_KNIGHT:
-        return KNIGHT;
-        break;
-
-    case PROMOTION_TYPE_BISHOP:
-        return BISHOP;
-        break;
-
-    case PROMOTION_TYPE_ROOK:
-        return ROOK;
-        break;
-
-    case PROMOTION_TYPE_QUEEN:
-        return QUEEN;
-
-    default:
-        return PIECE_NONE;
-        break;
-    }
-}
-
 void MoveGenerator::GenerateMoves(const Board& board, MoveList& moveList, bool generate_only_captures) {
 
     Color player = board.getSideToMove();

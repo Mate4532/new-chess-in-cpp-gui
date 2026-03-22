@@ -62,6 +62,8 @@ public:
     inline int getFullMoveNumber() { return board.getFullMoveNumber(); }
     inline Color getSideToMove() { return board.getSideToMove(); }
     inline bool wasMoveCapture(Move m) { return m.getFlags() & MoveFlag::CAPTURE_FLAG; }
+    inline bool wasMovePromotion(Move m) { return m.getFlags() & MoveFlag::PROMOTION_FLAG; }
+    inline PieceType getPromotionPiece(Move m) { return Board::GetPromotionPiece(m); }
     inline PieceType getCapturedPieceTypeAt(int ply) { return board.getCapturePieceType(ply); }
     inline PieceType getLastCapturedPieceType() { return board.getLastCapturePieceType(); }
     inline bool isRobot(Color c) const { return (c == WHITE && is_white_robot) || (c == BLACK && is_black_robot);}
