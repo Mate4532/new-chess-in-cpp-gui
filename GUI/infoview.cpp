@@ -7,7 +7,7 @@
 #include <QTimer>
 #include <QScrollArea>
 #include <QScrollBar>
-#include <iostream>
+#include <QElapsedTimer>
 
 QFont InfoView::resizeFontSize(QFont f) {
     QFont mbf = f;
@@ -199,7 +199,19 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     mainLayout->setStretch(4, 0);
     mainLayout->setStretch(5, 0);
 
-    connect(btnNewGame, &QPushButton::clicked, this, &InfoView::newGameRequested);
+    connect(btnNewGame, &QPushButton::clicked, this, [this]() {
+        static QElapsedTimer timer;
+
+        bool isBotVsBot = currentAllS.robotSettings.isBotVsBot;
+        bool cantClick = timer.isValid() && !timer.hasExpired(500);
+
+        if (isBotVsBot && cantClick) {
+            return;
+        }
+
+        timer.restart();
+        emit newGameRequested();
+    });
     connect(btnUndo, &QPushButton::clicked, this, &InfoView::undoRequested);
     connect(btnGiveUp, &QPushButton::clicked, this, &InfoView::giveUpRequested);
     connect(btnSettings, &QPushButton::clicked, this, &InfoView::openSettings);

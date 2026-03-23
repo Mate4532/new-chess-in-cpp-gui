@@ -32,12 +32,15 @@ private:
 
     BoardState boardStateHistory[1024] = {};
     uint16_t m_ply = 0;
+    uint16_t committedPly = 0;
 
     Color m_side_to_move = WHITE;
 
 	RepetitionTable repetition_history;
     std::vector<Move> move_history;
     std::vector<std::vector<std::vector<std::pair<PieceType, Color>>>> pieceHistory;
+
+    GameResult gr = GameResult::GAME_DID_NOT_END;
 
     static uint64_t pawn_attacks_table[2][64];
     static uint64_t knight_attacks_table[64];
@@ -123,17 +126,10 @@ public:
         return repetition_history.getHashes();
 	}
     inline uint16_t getPly() const {
-        return m_ply;
+        return committedPly;
     }
     inline const Move& getLastMove() {
 		return move_history[move_history.size() - 1];
-    }
-    std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrixAt(int ply) const {
-
-        if (ply >= 0 && ply < pieceHistory.size()) {
-            return pieceHistory[ply];
-        }
-        return getBoardMatrix();
     }
     bool HasNonPawnMaterial(Color color) const;
     uint64_t getAttacksTo(Square sq, uint64_t occupied) const;
@@ -152,8 +148,11 @@ public:
     uint64_t Perft(int depth);
     uint64_t MultiThreadedPerft(int depth);
     void PrintBoard(bool is_white_player = true, bool is_black_player = true) const;
-    std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const;
-    void getPieceCounts(int piecesOut[2][6]);
+    std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix(int ply = -1) const;
+    void getPieceCounts(int piecesOut[2][6], int ply = -1);
+
+    void currentPlayerGaveUp();
+    GameResult getGameResult();
 
     void ClearBoard();
 

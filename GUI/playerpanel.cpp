@@ -1,7 +1,27 @@
 #include "playerpanel.h"
 #include <QLabel>
 
+const std::unordered_map<PieceType, QString> PlayerPanel::whitePieceMap = {
+    {PieceType::PAWN, ":/resources/resources/white_pawn.png"},
+    {PieceType::ROOK, ":/resources/resources/white_rook.png"},
+    {PieceType::KNIGHT, ":/resources/resources/white_knight.png"},
+    {PieceType::BISHOP, ":/resources/resources/white_bishop.png"},
+    {PieceType::QUEEN, ":/resources/resources/white_queen.png"},
+    {PieceType::KING, ":/resources/resources/white_king.png"},
+    };
+
+const std::unordered_map<PieceType, QString> PlayerPanel::blackPieceMap = {
+    {PieceType::PAWN, ":/resources/resources/black_pawn.png"},
+    {PieceType::ROOK, ":/resources/resources/black_rook.png"},
+    {PieceType::KNIGHT, ":/resources/resources/black_knight.png"},
+    {PieceType::BISHOP, ":/resources/resources/black_bishop.png"},
+    {PieceType::QUEEN, ":/resources/resources/black_queen.png"},
+    {PieceType::KING, ":/resources/resources/black_king.png"},
+    };
+
 PlayerPanel::PlayerPanel(Color playerColor, QString playerName, QString iconPath, QWidget* parent) : QHBoxLayout(parent) {
+
+    preloadPixmaps();
 
     this->playerColor = playerColor;
     this->setSpacing(0);
@@ -152,9 +172,19 @@ void PlayerPanel::updatePanel() {
 
     for (int i = 0; i < orderedTakenPieces.size(); ++i) {
         QLabel* pieceLabel = new QLabel(piecesContainer);
+
         QString iconPath = QString::fromStdString(getIconPathForPiece(orderedTakenPieces[i]));
 
-        QPixmap pix(iconPath);
+        QPixmap pix;
+
+        auto it = loadedPixmaps.find(iconPath);
+        if (it != loadedPixmaps.end()) {
+            pix = it->second;
+        } else {
+            pix = QPixmap(iconPath);
+            qWarning() << "Cache miss for:" << iconPath;
+        }
+
         pieceLabel->setPixmap(pix.scaled(playerPanelPieceSide, playerPanelPieceSide, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         pieceLabel->setFixedSize(playerPanelPieceSide, playerPanelPieceSide);
 
@@ -210,3 +240,26 @@ int PlayerPanel::getMaterialScore() {
 
     return sum;
 }
+
+
+void PlayerPanel::preloadPixmaps()
+{
+    auto loadMap = [&](const std::unordered_map<PieceType, QString>& map) {
+        for (const auto& [type, res] : map) {
+            if (loadedPixmaps.find(res) == loadedPixmaps.end()) {
+                QPixmap pix(res);
+                if (!pix.isNull()) {
+                    loadedPixmaps.emplace(res, pix);
+                } else {
+                    qWarning() << "Failed to preload pixmap:" << res;
+                }
+            }
+        }
+    };
+
+    Color enemyPieceColor = playerColor == WHITE ? BLACK : WHITE;
+
+    if (enemyPieceColor == WHITE) loadMap(whitePieceMap);
+    else loadMap(blackPieceMap);
+}
+

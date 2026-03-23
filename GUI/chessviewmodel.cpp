@@ -76,21 +76,12 @@ void ChessViewModel::stopRobotSearch() {
 void ChessViewModel::currentPlayerGaveUp() {
     if (!isGameRunning) return;
 
-    if (currentSettings.robotSettings.isBotVsBot) {
+    if (isInBotSimulation) {
         stopRobotGameLoop();
     }
 
-    Color loserColor = bm.getSideToMove();
-
-    GameResult forcedResult = (loserColor == WHITE) ? GameResult::BLACK_WON : GameResult::WHITE_WON;
-
-    if (isRobotUnderSearch()) {
-        stopRobotSearch();
-    }
-
-    isGameRunning = false;
-
-    emit gameEnded(forcedResult);
+    bm.currentPlayerGaveUp();
+    endGame();
 }
 
 void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType promotionPiece) {
@@ -225,7 +216,7 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
     }
 
     if (mustStartNewGame) {
-        loadNewGame();
+        loadBeginnerFEN();
     }
 }
 
@@ -282,7 +273,7 @@ void ChessViewModel::startRobotGameLoop() {
     disconnect(this, &ChessViewModel::gameEnded, this, &ChessViewModel::advanceSimulation);
     connect(this, &ChessViewModel::gameEnded, this, &ChessViewModel::advanceSimulation);
 
-    QTimer::singleShot(100, this, &ChessViewModel::runNextSimGame);
+    runNextSimGame();
 }
 
 void ChessViewModel::runNextSimGame() {
@@ -391,7 +382,7 @@ void ChessViewModel::undoMove() {
 std::vector<std::vector<std::pair<PieceType, Color>>> ChessViewModel::getBoardMatrix() const {
 
     if (reviewingPly >= 0) {
-        return bm.getBoardMatrixAt(reviewingPly);
+        return bm.getBoardMatrix(reviewingPly);
     }
     if (isUnderSearch) {
         return cachedMatrix;
@@ -409,6 +400,10 @@ void ChessViewModel::reviewHistory(int targetPly) {
         else
             reviewingPly = targetPly;
         emit boardChanged();
+
+        int pieces[2][6];
+        bm.getPieceCounts(pieces, reviewingPly);
+        emit syncPiecesWithPanelsRequest(pieces);
     }
 }
 

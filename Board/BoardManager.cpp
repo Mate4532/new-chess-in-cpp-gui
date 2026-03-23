@@ -220,15 +220,7 @@ bool BoardManager::didGameEnd() {
 }
 
 GameResult BoardManager::getGameResult(){
-    if (board.IsDraw())
-        return GameResult::DRAW;
-
-    if (board.IsCheckMate()) {
-        Color lastPlayerMoved = (Color)(board.getSideToMove() ^ 1);
-        return (lastPlayerMoved == WHITE ? GameResult::WHITE_WON : GameResult::BLACK_WON);
-    }
-
-    return GameResult::GAME_DID_NOT_END;
+    return board.getGameResult();
 }
 
 void BoardManager::writeGameResult() {
@@ -423,12 +415,5 @@ void BoardManager::setSearchTime(int t) {
 void BoardManager::stopRobotCalculation() {
     if (whiteRobot != nullptr && whiteRobot->isUnderSearch()) whiteRobot->stopSearch();
     if (blackRobot != nullptr && blackRobot->isUnderSearch()) blackRobot->stopSearch();
-}
-void BoardManager::getPieceCounts(int piecesOut[2][6]) {
-    board.getPieceCounts(piecesOut);
-}
-
-std::vector<std::vector<std::pair<PieceType, Color>>> BoardManager::getBoardMatrixAt(int ply) {
-    return board.getBoardMatrixAt(ply);
 }
 

@@ -29,6 +29,8 @@ private:
     int diffPiecesDistanePx[5] = {23, 23, 23, 23, 25};
     int samePiecesDistanePx[5] = {10, 12, 8, 10, 15};
 
+    void preloadPixmaps();
+
 public:
     PlayerPanel(Color playerColor, QString playerName, QString playerIcon, QWidget* parent = nullptr);
     void setPlayerName(QString playerName);
@@ -42,6 +44,10 @@ public:
     int getMaterialScore();
     static int getPieceValue(PieceType p);
     static int getPieceOrder(PieceType p);
+
+    std::unordered_map<QString, QPixmap> loadedPixmaps;
+    static const std::unordered_map<PieceType, QString> whitePieceMap;
+    static const std::unordered_map<PieceType, QString> blackPieceMap;
 };
 
 #endif // PLAYERPANEL_H

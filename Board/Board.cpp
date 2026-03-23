@@ -634,6 +634,7 @@ bool Board::MakeMove(Move move, bool in_search) {
     bool reset = (piece == PAWN) || (flags & CAPTURE_FLAG);
 
     if (!in_search) {
+        committedPly++;
         repetition_history.Push(newHash, reset);
         move_history.push_back(move);
         pieceHistory.push_back(getBoardMatrix());
@@ -710,6 +711,7 @@ void Board::UndoMove(Move move, bool in_search) {
     }
 
     if (!in_search) {
+        committedPly--;
         repetition_history.TryPop();
         move_history.pop_back();
         pieceHistory.pop_back();
@@ -835,8 +837,12 @@ void Board::PrintBoard(bool is_white_player, bool is_black_player) const {
     }
 }
 
-std::vector<std::vector<std::pair<PieceType, Color>>> Board::getBoardMatrix() const
-{
+std::vector<std::vector<std::pair<PieceType, Color>>> Board::getBoardMatrix(int ply) const {
+
+    if (ply >= 0 && ply < pieceHistory.size()) {
+        return pieceHistory[ply];
+    }
+
     std::vector<std::vector<std::pair<PieceType, Color>>> boardMatrix;
 
     for (int rank = 7; rank >= 0; rank--)
@@ -882,11 +888,11 @@ std::vector<std::vector<std::pair<PieceType, Color>>> Board::getBoardMatrix() co
     return boardMatrix;
 }
 
-void Board::getPieceCounts(int piecesOut[2][6]) {
+void Board::getPieceCounts(int piecesOut[2][6], int ply) {
     for(int i = 0; i < 2; ++i)
         for(int  j= 0; j < 6; ++j) piecesOut[i][j] = 0;
 
-    auto pieces = getBoardMatrix();
+    auto pieces = getBoardMatrix(ply);
     for (const auto& rowPieces : pieces) {
         for (const auto& piece : rowPieces) {
             if (piece.first == PieceType::PIECE_NONE) continue;
@@ -895,8 +901,35 @@ void Board::getPieceCounts(int piecesOut[2][6]) {
     }
 }
 
+void Board::currentPlayerGaveUp() {
+    if (gr != GameResult::GAME_DID_NOT_END)
+        return;
+
+    Color lastPlayerMoved = (Color)(m_side_to_move ^ 1);
+    gr = lastPlayerMoved == WHITE ? GameResult::WHITE_WON : GameResult::BLACK_WON;
+}
+
+GameResult Board::getGameResult() {
+    if (gr != GameResult::GAME_DID_NOT_END)
+        return gr;
+
+    if (IsDraw())
+        return GameResult::DRAW;
+
+    if (IsCheckMate()) {
+        Color lastPlayerMoved = (Color)(m_side_to_move ^ 1);
+        return (lastPlayerMoved == WHITE ? GameResult::WHITE_WON : GameResult::BLACK_WON);
+    }
+
+    return GameResult::GAME_DID_NOT_END;
+
+}
+
 void Board::ClearBoard() {
-    m_ply = 0;
+    committedPly = m_ply = 0;
+
+    gr = GameResult::GAME_DID_NOT_END;
+
     repetition_history.Clear();
     move_history.clear();
     pieceHistory.clear();
