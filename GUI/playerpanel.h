@@ -21,7 +21,7 @@ private:
     std::vector<PieceType> orderedTakenPieces;
 
     void orderPieces(std::vector<PieceType>& pieces);
-    std::string getIconPathForPiece(PieceType piece);
+    QString getIconPathForPiece(PieceType piece);
     void deletePieceLabels();
 
     int playerPanelPieceSide = 25;

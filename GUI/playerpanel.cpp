@@ -21,9 +21,10 @@ const std::unordered_map<PieceType, QString> PlayerPanel::blackPieceMap = {
 
 PlayerPanel::PlayerPanel(Color playerColor, QString playerName, QString iconPath, QWidget* parent) : QHBoxLayout(parent) {
 
+    this->playerColor = playerColor;
+
     preloadPixmaps();
 
-    this->playerColor = playerColor;
     this->setSpacing(0);
     this->setContentsMargins(0, 0, 0, 0);
 
@@ -114,30 +115,14 @@ void PlayerPanel::orderPieces(std::vector<PieceType>& pieces) {
     });
 }
 
-std::string PlayerPanel::getIconPathForPiece(PieceType piece) {
-    std::string capturedPieceIconPath = "";
-
-    switch (piece) {
-    case PieceType::PAWN:
-        return capturedPieceIconPath = playerColor == WHITE ? ":/resources/resources/black_pawn.png" : ":/resources/resources/white_pawn.png";
-
-    case PieceType::KNIGHT:
-        return capturedPieceIconPath = playerColor == WHITE ? ":/resources/resources/black_knight.png" : ":/resources/resources/white_knight.png";
-
-    case PieceType::BISHOP:
-        return capturedPieceIconPath = playerColor == WHITE ? ":/resources/resources/black_bishop.png" : ":/resources/resources/white_bishop.png";
-
-    case PieceType::ROOK:
-        return capturedPieceIconPath = playerColor == WHITE ? ":/resources/resources/black_rook.png" : ":/resources/resources/white_rook.png";
-
-    case PieceType::QUEEN:
-        return capturedPieceIconPath = playerColor == WHITE ? ":/resources/resources/black_queen.png" : ":/resources/resources/white_queen.png";
-
-    case PieceType::KING:
-        return capturedPieceIconPath = playerColor == WHITE ? ":/resources/resources/black_king.png" : ":/resources/resources/white_king.png";
-
-    default:
-        break;
+QString PlayerPanel::getIconPathForPiece(PieceType piece) {
+    if (playerColor == WHITE) {
+        auto it = blackPieceMap.find(piece);
+        if (it != blackPieceMap.end()) return it->second;
+    }
+    else {
+        auto it = whitePieceMap.find(piece);
+        if (it != whitePieceMap.end()) return it->second;
     }
 
     return "";
@@ -173,7 +158,7 @@ void PlayerPanel::updatePanel() {
     for (int i = 0; i < orderedTakenPieces.size(); ++i) {
         QLabel* pieceLabel = new QLabel(piecesContainer);
 
-        QString iconPath = QString::fromStdString(getIconPathForPiece(orderedTakenPieces[i]));
+        QString iconPath = getIconPathForPiece(orderedTakenPieces[i]);
 
         QPixmap pix;
 

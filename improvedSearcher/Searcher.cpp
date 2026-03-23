@@ -157,12 +157,9 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
 
     bool inCheck = board.isSquareAttacked(
         board.getKingSquare(board.getSideToMove()),
-        (Color)(board.getSideToMove() ^ 1));    
+        (Color)(board.getSideToMove() ^ 1));
 
-    int staticEval = 0;
-    if (!inCheck) {
-        staticEval = Evaluation::EvaluatePos(board, ply, nnue_state);
-    }
+    int staticEval = Evaluation::EvaluatePos(board, ply, nnue_state);
 
     if (depth <= 4 && !inCheck && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
         int evalMargin = 120 * depth;
@@ -175,6 +172,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         if (staticEval >= beta - 50 && board.HasNonPawnMaterial(board.getSideToMove())) {
             int R = 3 + (depth / 6);
             nnue_state[ply + 1] = nnue_state[ply];
+            nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
             board.MakeNullMove();
             int score = -negamax(depth - 1 - R, -beta, -beta + 1, ply + 1, Move(), false, false);
             board.UndoNullMove();
@@ -188,7 +186,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
 
     int legalEvasions = 0;
     if (inCheck) {
-        if (isPvNode || depth <= 2){
+        if (isPvNode || depth <= 4){
             depth++;
         }
     }
@@ -340,7 +338,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
             }
         }
 
-        if (movesSearched > 1 && !isAdvancedPawnPush && depth <= 4 && !inCheck && !givesCheck && quiet && abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
+        if (!isPvNode && movesSearched > 1 && !isAdvancedPawnPush && depth <= 4 && !inCheck && !givesCheck && quiet && abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
 
             int futilityMargin = 150 * depth;
 
@@ -355,7 +353,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
             }
         }
 
-        if (movesSearched > 1 && !inCheck && !givesCheck && quiet && !isAdvancedPawnPush && depth <= 5 && abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
+        if (!isPvNode && movesSearched > 1 && !inCheck && !givesCheck && quiet && !isAdvancedPawnPush && depth <= 5 && abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
             int lmp_threshold = 3 + (2 * depth * depth);
 
             if (movesSearched >= lmp_threshold) {

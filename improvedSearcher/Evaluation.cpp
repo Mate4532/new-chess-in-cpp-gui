@@ -57,23 +57,29 @@ int Evaluation::EvaluatePos(const Board& board, int ply, NNUEdata* nnue_state) {
 
     squares[0] = board.getKingSquare(WHITE);
     pieces[0] = 1;
+
     squares[1] = board.getKingSquare(BLACK);
     pieces[1] = 7;
 
-    for (int sq = 0; sq < 64; sq++) {
-        PieceType pieceType = PIECE_NONE;
-        Color color;
+    for (int c = WHITE; c <= BLACK; ++c) {
+        Color color = (Color)c;
 
-        for (int c = WHITE; c <= BLACK; ++c) {
-            color = (Color)c;
-            pieceType = board.getPieceAt((Square)sq, color);
-            if (pieceType != PIECE_NONE) break;
-        }
+        for (int p = PAWN; p < KING; ++p) {
+            PieceType pt = (PieceType)p;
 
-        if (pieceType != PIECE_NONE && pieceType != KING) {
-            pieces[index] = GetNnuePieceNum(pieceType, color);
-            squares[index] = sq;
-            index++;
+            uint64_t bb = board.getPieceBitboard(color, pt);
+
+            if (bb) {
+                int nnue_piece_code = GetNnuePieceNum(pt, color);
+
+                while (bb) {
+                    int sq = PopBit(bb);
+
+                    pieces[index] = nnue_piece_code;
+                    squares[index] = sq;
+                    index++;
+                }
+            }
         }
     }
 
