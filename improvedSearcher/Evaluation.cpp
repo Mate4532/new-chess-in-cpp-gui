@@ -51,8 +51,8 @@ int Evaluation::EvaluatePos(const Board& board, int ply, NNUEdata* nnue_state) {
     nnue_data_pointers[1] = (ply >= 1) ? &nnue_state[ply - 1] : nullptr;
     nnue_data_pointers[2] = (ply >= 2) ? &nnue_state[ply - 2] : nullptr;
 
-    int pieces[33];
-    int squares[33];
+    int pieces[65];
+    int squares[65];
     int index = 2;
 
     squares[0] = board.getKingSquare(WHITE);

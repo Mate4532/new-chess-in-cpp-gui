@@ -35,13 +35,9 @@ void ChessViewModel::loadNewGame() {
     endGame();
 
     isBeginnerPos = true;
-    bm.loadNewGame();
+    bm.resetForNewGame();
+    loadBeginnerFEN();
 
-    visualHistory.clear();
-    visualHistory.push_back(bm.getBoardMatrix());
-    reviewingPly = -1;
-
-    emit boardChanged();
     emit newGameStarted();
 }
 
@@ -79,7 +75,7 @@ void ChessViewModel::currentPlayerGaveUp() {
     if (!isGameRunning) return;
 
     if (currentSettings.robotSettings.isBotVsBot) {
-        isInBotSimulation = false;
+        stopRobotGameLoop();
     }
 
     Color loserColor = bm.getSideToMove();
@@ -98,7 +94,7 @@ void ChessViewModel::currentPlayerGaveUp() {
 void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType promotionPiece) {
 
     if (reviewingPly != -1) {
-        reviewingPly = -1;
+        reviewEnded();
         emit boardChanged();
         return;
     }
@@ -127,20 +123,35 @@ void ChessViewModel::afterMoveBeenMade(Move m) {
 
     visualHistory.push_back(bm.getBoardMatrix());
     if (!isInBotSimulation)
-        reviewingPly = -1;
+        reviewEnded();
 
     emit boardChanged();
 
     Color currentPlayer = bm.getSideToMove();
     Color lastMovedColor = (Color)(currentPlayer ^ 1);
-    emit moveMade(bm.getPly(), QString::fromStdString(m.toHumanReadable()), lastMovedColor);
 
-    if (bm.wasMoveCapture(m)){
-        emit moveWasCapture(lastMovedColor, bm.getLastCapturedPieceType());
-    }
+    int pieces[2][6];
 
     if (bm.wasMoveCapture(m) || bm.wasMovePromotion(m)) {
-        emit updateMaterialScoreAtPlayerPanel(bm.getPiecesOnBoard());
+        bm.getPieceCounts(pieces);
+        emit updateMaterialScoreAtPlayerPanel(pieces);
+
+        if (bm.wasMoveCapture(m)){
+
+            PieceType lastCapturedPiece = bm.getLastCapturedPieceType();
+
+            if (basePieceCounts[lastCapturedPiece] > pieces[currentPlayer][lastCapturedPiece])
+                emit addCapturedPieceToPlayerPanel(lastMovedColor, lastCapturedPiece);
+        }
+
+        if (bm.wasMovePromotion(m)) {
+
+            PieceType promotionPiece = bm.getPromotionPiece(m);
+
+            if (basePieceCounts[promotionPiece] == pieces[currentPlayer][promotionPiece])
+                emit removePieceFromPlayerPanel(currentPlayer, promotionPiece);
+        }
+
     }
 
     if (bm.didGameEnd())
@@ -148,6 +159,11 @@ void ChessViewModel::afterMoveBeenMade(Move m) {
 
     if (isGameRunning && bm.isRobotToMove())
         makeRobotMove();
+
+    int ply = bm.getPly();
+
+    emit moveMade(ply, QString::fromStdString(m.toHumanReadable()), lastMovedColor);
+    emit moveBeenMade(ply);
 }
 
 void ChessViewModel::loadSettings(AllSettings& allS) {
@@ -215,7 +231,7 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
             bm.setSearchTime(newRs.botVsBotSearchTimeMs);
         }
 
-        updatePlayerPanels();
+        updatePlayerPanelsIconAndLabel();
     }
 
     if (boardConfigChanged) {
@@ -257,11 +273,20 @@ void ChessViewModel::stopRobotGameLoop() {
     disconnect(this, &ChessViewModel::gameEnded, this, &ChessViewModel::advanceSimulation);
 }
 
+void ChessViewModel::loadBeginnerFEN() {
+    bm.loadBeginnerFEN();
+
+    emit newGameStarted();
+    clearReviewingHistories();
+    emit boardChanged();
+}
+
 void ChessViewModel::loadFEN(std::string fen) {
     bm.loadFEN(fen);
 
-    std::vector<std::pair<PieceType, Color>> allPieces = bm.getPiecesOnBoard();
-    emit updateMaterialScoreAtPlayerPanel(allPieces);
+    emit newGameStarted();
+    clearReviewingHistories();
+    emit boardChanged();
 }
 
 void ChessViewModel::startRobotGameLoop() {
@@ -269,7 +294,7 @@ void ChessViewModel::startRobotGameLoop() {
 
     bm.prepareImprovedBotVsOldBot();
     bm.setSearchTime(currentSettings.robotSettings.botVsBotSearchTimeMs);
-    updatePlayerPanels();
+    updatePlayerPanelsIconAndLabel();
 
     simI = 0;
     simJ = 0;
@@ -323,10 +348,10 @@ void ChessViewModel::advanceSimulation() {
 
 void ChessViewModel::swapRobots() {
     bm.SwapRobots();
-    updatePlayerPanels();
+    updatePlayerPanelsIconAndLabel();
 }
 
-void ChessViewModel::updatePlayerPanels() {
+void ChessViewModel::updatePlayerPanelsIconAndLabel() {
 
     bool isWhiteRobot = currentSettings.robotSettings.isWhiteRobot;
     bool isBlackRobot = currentSettings.robotSettings.isBlackRobot;
@@ -340,6 +365,13 @@ void ChessViewModel::updatePlayerPanels() {
     emit playerPanelsUpdateRequest(whitePlayerName, whitePlayerIcontPath, WHITE);
     emit playerPanelsUpdateRequest(blackPlayerName, blackPlayerIcontPath, BLACK);
 }
+
+void ChessViewModel::updatePlayerPanelsPieceAndScoreAtNewPos() {
+    int allPieces[2][6];
+    bm.getPieceCounts(allPieces);
+    emit updatePlayerPanelsPieceAndScoreAtNewPosRequest(allPieces);
+}
+
 
 void ChessViewModel::onRobotMoveFinished(Move robotMove) {
     if (!isUnderSearch) return;
@@ -355,37 +387,29 @@ void ChessViewModel::undoMove() {
     if (!isGameRunning || isInBotSimulation)
         return;
 
-    if (!visualHistory.empty())
-        visualHistory.pop_back();
-    reviewingPly = -1;
+    reviewEnded();
 
     if (isRobotUnderSearch())
         stopRobotSearch();
 
     int plyToUndo = bm.isEnemyRobot() ? 2 : 1;
 
-    for (int i = 0; i < plyToUndo; ++i)
-        emit removeLastButFromInfoDisplayRequest();
-
-    Color playerWhoMadeTheMove = (Color)(bm.getSideToMove() ^ 1);
-
-    int currentPly = bm.getPly();
-
     for (int i = 0; i < plyToUndo; ++i) {
 
-        int capturePly = currentPly - i;
-        PieceType capturePieceType = bm.getCapturedPieceTypeAt(capturePly);
-
-        if (capturePieceType != PieceType::PIECE_NONE) {
-            emit removePieceFromPlayerPanel(playerWhoMadeTheMove, capturePieceType);
+        if (visualHistory.size() > 1) {
+            visualHistory.pop_back();
         }
 
-        playerWhoMadeTheMove = (Color)(playerWhoMadeTheMove ^ 1);
+        emit removeLastButFromInfoDisplayRequest();
+        playerPanelUndoToLastPieceState();
     }
 
     bm.undoMove(plyToUndo);
     emit boardChanged();
-    emit updateMaterialScoreAtPlayerPanel(bm.getPiecesOnBoard());
+
+    int pieces[2][6];
+    bm.getPieceCounts(pieces);
+    emit updateMaterialScoreAtPlayerPanel(pieces);
 
     if (bm.isRobotToMove())
         makeRobotMove();
@@ -404,9 +428,22 @@ std::vector<std::vector<std::pair<PieceType, Color>>> ChessViewModel::getBoardMa
 void ChessViewModel::reviewHistory(int targetPly) {
     if (targetPly >= 0 && targetPly < visualHistory.size()) {
         if (targetPly == visualHistory.size() - 1)
-            reviewingPly = -1;
+            reviewEnded();
         else
             reviewingPly = targetPly;
         emit boardChanged();
+        emit reviewingAtPly(reviewingPly);
     }
+}
+
+void ChessViewModel::reviewEnded() {
+    reviewingPly = -1;
+    emit reviewingAtPly(reviewingPly);
+}
+
+void ChessViewModel::clearReviewingHistories() {
+    reviewEnded();
+    visualHistory.clear();
+    visualHistory.push_back(bm.getBoardMatrix());
+    updatePlayerPanelsPieceAndScoreAtNewPos();
 }

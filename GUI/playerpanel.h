@@ -17,14 +17,17 @@ private:
     QWidget* piecesContainer;
 
     std::vector<QLabel*> takenPiecesLabels;
+
     std::vector<PieceType> orderedTakenPieces;
+    std::vector<std::vector<PieceType>> orderedTakenPiecesHistory;
+
+    int currentScoreDiff = 0;
+    std::vector<int> materialScoreHistory;
+
 
     void orderPieces(std::vector<PieceType>& pieces);
     std::string getIconPathForPiece(PieceType piece);
     void deletePieceLabels();
-
-    int getPieceValue(PieceType p);
-    int getPieceOrder(PieceType p);
 
     int playerPanelPieceSide = 25;
 
@@ -39,10 +42,16 @@ public:
     void updateMaterialScore(int scoreDiff);
     void updatePanel();
     void addPieceToPanel(PieceType piece);
+    void addPiecesToPanelAtNewPos(int pieces[6]);
     void removePieceFromPanel(PieceType piece);
+    void moveBeenMade(int currentPly);
+    void reviewHistory(int ply);
+    void undoToLastMovePiecesState();
     void clearPanel();
 
-    int getMaterialScore(std::vector<PieceType> pieces);
+    int getMaterialScore();
+    static int getPieceValue(PieceType p);
+    static int getPieceOrder(PieceType p);
 };
 
 #endif // PLAYERPANEL_H

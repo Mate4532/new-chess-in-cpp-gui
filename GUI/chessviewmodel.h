@@ -35,6 +35,7 @@ public:
     std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const;
     void refreshView();
 
+    void loadBeginnerFEN();
     void loadFEN(std::string fen);
 
     bool isMovePromotion(int fromX, int fromY, int toX, int toY) const;
@@ -46,8 +47,6 @@ public:
 public slots:
     void updateSettings(AllSettings& oldS, AllSettings& newS);
     void reviewHistory(int targetPly);
-
-private slots:
     void advanceSimulation();
     void runNextSimGame();
 
@@ -55,13 +54,17 @@ signals:
     void gameEnded(GameResult gr);
     void boardChanged();
     void moveMade(int movePly, const QString& move, Color c);
+    void moveBeenMade(int currentPly);
     void removeLastButFromInfoDisplayRequest();
     void removePieceFromPlayerPanel(Color playerColor, PieceType piece);
-    void moveWasCapture(Color capturingColor, PieceType piece);
+    void playerPanelUndoToLastPieceState();
+    void addCapturedPieceToPlayerPanel(Color capturingColor, PieceType piece);
     void newGameStarted();
     void flipBoardToRequest(bool isFlipped);
     void playerPanelsUpdateRequest(QString playerName, QString playerIconPath, Color playerColor);
-    void updateMaterialScoreAtPlayerPanel(std::vector<std::pair<PieceType, Color>> pieces);
+    void updatePlayerPanelsPieceAndScoreAtNewPosRequest(int pieces[2][6]);
+    void updateMaterialScoreAtPlayerPanel(int pieces[2][6]);
+    void reviewingAtPly(int ply);
 
 private:
     BoardManager& bm;
@@ -74,7 +77,8 @@ private:
     void afterMoveBeenMade(Move m);
     void swapRobots();
 
-    void updatePlayerPanels();
+    void updatePlayerPanelsIconAndLabel();
+    void updatePlayerPanelsPieceAndScoreAtNewPos();
 
     QThread* robotThread = nullptr;
     int simI = 0;
@@ -83,8 +87,10 @@ private:
     std::vector<std::vector<std::pair<PieceType, Color>>> cachedMatrix;
 
     std::vector<std::vector<std::vector<std::pair<PieceType, Color>>>> visualHistory;
-
     int reviewingPly = -1;
+    void reviewEnded();
+
+    void clearReviewingHistories();
 };
 
 #endif // CHESSVIEWMODEL_H

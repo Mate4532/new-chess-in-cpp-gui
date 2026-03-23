@@ -192,7 +192,7 @@ typedef int8_t weight_t;
 
 typedef struct {
   size_t size;
-  unsigned values[30];
+  unsigned values[64];
 } IndexList;
 
 INLINE int orient(int c, int s)
@@ -1313,7 +1313,7 @@ DLLExport int _CDECL nnue_evaluate_incremental(
 
 DLLExport int _CDECL nnue_evaluate_fen(const char* fen)
 {
-  int pieces[33],squares[33],player,castle,fifty,move_number;
+  int pieces[65],squares[65],player,castle,fifty,move_number;
   decode_fen((char*)fen,&player,&castle,&fifty,&move_number,pieces,squares);;
   return nnue_evaluate(player,pieces,squares);
 }

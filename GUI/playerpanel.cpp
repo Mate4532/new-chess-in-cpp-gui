@@ -132,6 +132,8 @@ void PlayerPanel::deletePieceLabels() {
 
 void PlayerPanel::updateMaterialScore(int scoreDiff) {
 
+    currentScoreDiff = scoreDiff;
+
     bool playerLeading = (playerColor == WHITE && scoreDiff > 0) ||
                       (playerColor == BLACK && scoreDiff < 0);
 
@@ -177,6 +179,25 @@ void PlayerPanel::updatePanel() {
     piecesContainer->setFixedSize(currentX, playerPanelPieceSide);
 }
 
+void PlayerPanel::addPiecesToPanelAtNewPos(int pieces[6]) {
+
+    clearPanel();
+
+    for (int type = PAWN; type < KING; ++type) {
+
+        int count = pieces[type];
+
+        for (int i = 0; i < count; ++i) {
+            orderedTakenPieces.push_back(static_cast<PieceType>(type));
+        }
+    }
+
+    materialScoreHistory.push_back(currentScoreDiff);
+    orderedTakenPiecesHistory.push_back(orderedTakenPieces);
+
+    updatePanel();
+}
+
 void PlayerPanel::addPieceToPanel(PieceType piece) {
     if (piece == PieceType::PIECE_NONE) return;
 
@@ -195,17 +216,58 @@ void PlayerPanel::removePieceFromPanel(PieceType piece) {
     updatePanel();
 }
 
+void PlayerPanel::moveBeenMade(int currentPly) {
+    if (orderedTakenPiecesHistory.size() > currentPly) {
+        orderedTakenPiecesHistory.resize(currentPly);
+        materialScoreHistory.resize(currentPly);
+    }
+
+    orderedTakenPiecesHistory.push_back(orderedTakenPieces);
+    materialScoreHistory.push_back(currentScoreDiff);
+}
+
+void PlayerPanel::reviewHistory(int ply) {
+    if (orderedTakenPiecesHistory.empty()) return;
+
+    if (ply == -1) {
+        orderedTakenPieces = orderedTakenPiecesHistory.back();
+        updateMaterialScore(materialScoreHistory.back());
+    }
+    else if (ply >= 0 && ply < orderedTakenPiecesHistory.size()) {
+        orderedTakenPieces = orderedTakenPiecesHistory[ply];
+        updateMaterialScore(materialScoreHistory[ply]);
+    }
+
+    updatePanel();
+}
+
+void PlayerPanel::undoToLastMovePiecesState() {
+    if (orderedTakenPiecesHistory.size() <= 1) return;
+
+    orderedTakenPiecesHistory.pop_back();
+    materialScoreHistory.pop_back();
+
+    orderedTakenPieces = orderedTakenPiecesHistory.back();
+    updateMaterialScore(materialScoreHistory.back());
+
+    updatePanel();
+}
+
 void PlayerPanel::clearPanel() {
     deletePieceLabels();
+
     orderedTakenPieces.clear();
+    orderedTakenPiecesHistory.clear();
+    materialScoreHistory.clear();
+
     materialScoreLabel->setText("");
 }
 
-int PlayerPanel::getMaterialScore(std::vector<PieceType> pieces) {
+int PlayerPanel::getMaterialScore() {
 
     int sum = 0;
 
-    for (PieceType piece : pieces) {
+    for (PieceType piece : orderedTakenPieces) {
         sum += getPieceValue(piece);
     }
 

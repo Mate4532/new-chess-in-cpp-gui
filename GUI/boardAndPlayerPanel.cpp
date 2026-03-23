@@ -1,5 +1,4 @@
 #include "boardAndPlayerPanel.h"
-#include <iostream>
 
 BoardAndPlayerPanel::BoardAndPlayerPanel(PlayerPanel* whitePlayer, PlayerPanel* blackPlayer, ChessView* cv, QWidget* parent)
     : QWidget(parent)
@@ -79,6 +78,11 @@ QSize BoardAndPlayerPanel::getMinimumOptimalSize() {
     return QSize(minW, minH);
 }
 
+void BoardAndPlayerPanel::moveMade(int currentPly) {
+    whitePlayer->moveBeenMade(currentPly);
+    blackPlayer->moveBeenMade(currentPly);
+}
+
 void BoardAndPlayerPanel::flipPlayerPanels(bool isFlipped) {
     mainLay->removeItem(blackPlayer);
     mainLay->removeItem(whitePlayer);
@@ -113,38 +117,96 @@ void BoardAndPlayerPanel::removePiecesFromPanel(Color playerColor, PieceType pie
     playerColor == WHITE ? whitePlayer->removePieceFromPanel(piece) : blackPlayer->removePieceFromPanel(piece);
 }
 
-void BoardAndPlayerPanel::updateMaterialScore(std::vector<std::pair<PieceType, Color>> pieces) {
+void BoardAndPlayerPanel::updateMaterialScoreAndCapturedPiecesAtNewPosLoaded(int pieces[2][6]) {
 
-    int piecesArray[2][6] = {{0}};
+    int displayPieces[2][6] = {{0}};
 
-    for (auto piece : pieces) {
+    for (int color = WHITE; color <= BLACK; ++color) {
+        int promotedPawnsCount = 0;
+        for (int type = KNIGHT; type <= QUEEN; ++type) {
+            if (pieces[color][type] > basePieceCounts[type]) {
+                promotedPawnsCount += (pieces[color][type] - basePieceCounts[type]);
+            }
+        }
 
-        PieceType pieceType = piece.first;
-        Color pieceColor = piece.second;
+        for (int type = PAWN; type <= KING; ++type) {
 
-        piecesArray[pieceColor][pieceType]++;
+            int capturedCount = 0;
+
+            if (type == PAWN) {
+                int calc = basePieceCounts[PAWN] - pieces[color][PAWN] - promotedPawnsCount;
+                capturedCount = std::max(0, calc);
+            }
+            else if (type != KING) {
+                int calc = basePieceCounts[type] - pieces[color][type];
+                capturedCount = std::max(0, calc);
+            }
+
+            Color opponent = (color == WHITE) ? BLACK : WHITE;
+            displayPieces[opponent][type] = capturedCount;
+        }
     }
 
-    std::vector<PieceType> whiteStartingPieces;
-    std::vector<PieceType> blackStartingPieces;
+    updateMaterialScoreBasedOnPieces(pieces);
 
-    for (int pieceType = PAWN; pieceType <= KING; ++pieceType) {
+    whitePlayer->addPiecesToPanelAtNewPos(displayPieces[WHITE]);
+    blackPlayer->addPiecesToPanelAtNewPos(displayPieces[BLACK]);
+}
 
-        for (int i = 0; i < piecesArray[WHITE][pieceType]; ++i) {
-            whiteStartingPieces.push_back(static_cast<PieceType>(pieceType));
-        }
-        for (int i = 0; i < piecesArray[BLACK][pieceType]; ++i) {
-            blackStartingPieces.push_back(static_cast<PieceType>(pieceType));
-        }
+
+int BoardAndPlayerPanel::getMaterialScore(std::vector<PieceType> pieces) {
+
+    int sum = 0;
+
+    for (PieceType piece : pieces) {
+        sum += PlayerPanel::getPieceValue(piece);
     }
 
-    int whiteSum = whitePlayer->getMaterialScore(whiteStartingPieces);
-    int blackSum = blackPlayer->getMaterialScore(blackStartingPieces);
+    return sum;
+}
+
+void BoardAndPlayerPanel::updateMaterialScoreDisplay() {
+    int whiteSum = whitePlayer->getMaterialScore();
+    int blackSum = blackPlayer->getMaterialScore();
 
     int scoreDiff = whiteSum - blackSum;
 
     whitePlayer->updateMaterialScore(scoreDiff);
     blackPlayer->updateMaterialScore(scoreDiff);
+}
+
+void BoardAndPlayerPanel::updateMaterialScoreBasedOnPieces(int pieces[2][6]) {
+
+    std::vector<PieceType> whitePieces;
+    std::vector<PieceType> blackPieces;
+
+    for (int pieceType = PAWN; pieceType <= KING; ++pieceType) {
+
+        for (int i = 0; i < pieces[WHITE][pieceType]; ++i) {
+            whitePieces.push_back(static_cast<PieceType>(pieceType));
+        }
+        for (int i = 0; i < pieces[BLACK][pieceType]; ++i) {
+            blackPieces.push_back(static_cast<PieceType>(pieceType));
+        }
+    }
+
+    int whiteSum = getMaterialScore(whitePieces);
+    int blackSum = getMaterialScore(blackPieces);
+
+    int scoreDiff = whiteSum - blackSum;
+
+    whitePlayer->updateMaterialScore(scoreDiff);
+    blackPlayer->updateMaterialScore(scoreDiff);
+}
+
+void BoardAndPlayerPanel::reviewHistory(int ply) {
+    whitePlayer->reviewHistory(ply);
+    blackPlayer->reviewHistory(ply);
+}
+
+void BoardAndPlayerPanel::undoToLastPlayerPanelPiecesState() {
+    whitePlayer->undoToLastMovePiecesState();
+    blackPlayer->undoToLastMovePiecesState();
 }
 
 void BoardAndPlayerPanel:: clearPanels() {

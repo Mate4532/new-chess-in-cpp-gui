@@ -27,7 +27,8 @@ public:
     std::unique_ptr<ISearcher> createBot(SearcherType st);
 
 	void goPerft(int perftDepth);
-    void loadNewGame();
+    void resetForNewGame();
+    void loadBeginnerFEN();
     void loadFEN(std::string randomFEN);
     std::string getRandomOpening();
     Move getBestMoveOnBoard() { return board.getSideToMove() == WHITE ? whiteRobot->GetBestMove() : blackRobot->GetBestMove(); }
@@ -71,5 +72,5 @@ public:
     inline bool isRobotToMove() const { return (is_white_robot && board.getSideToMove() == WHITE) || (is_black_robot && board.getSideToMove() == BLACK); }
     inline std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const { return board.getBoardMatrix(); }
 
-    std::vector<std::pair<PieceType, Color>> getPiecesOnBoard();
+    void getPieceCounts(int piecesOut[2][6]);
 };

@@ -59,11 +59,15 @@ void BoardManager::goPerft(int perftDepth) {
     board.PrintBoard();
 }
 
-void BoardManager::loadNewGame() {
+void BoardManager::resetForNewGame() {
     ClearSearchers();
     board.ClearBoard();
+}
+
+void BoardManager::loadBeginnerFEN() {
     board.loadNewGame();
 }
+
 
 void BoardManager::loadFEN(std::string randomFEN) {
     board.LoadFEN(randomFEN);
@@ -426,20 +430,16 @@ void BoardManager::ClearBoard() {
     board.ClearBoard();
 }
 
-std::vector<std::pair<PieceType, Color>> BoardManager::getPiecesOnBoard() {
-    std::vector<std::pair<PieceType, Color>> allPieces;
+void BoardManager::getPieceCounts(int piecesOut[2][6]) {
+    for(int i=0; i<2; ++i)
+        for(int j=0; j<6; ++j) piecesOut[i][j] = 0;
 
     auto pieces = board.getBoardMatrix();
     for (const auto& rowPieces : pieces) {
         for (const auto& piece : rowPieces) {
-
-            if (piece.first == PieceType::PIECE_NONE)
-                continue;
-
-            allPieces.push_back(piece);
+            if (piece.first == PieceType::PIECE_NONE) continue;
+            piecesOut[static_cast<int>(piece.second)][static_cast<int>(piece.first)]++;
         }
     }
-
-    return allPieces;
 }
 
