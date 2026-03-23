@@ -37,6 +37,7 @@ private:
 
 	RepetitionTable repetition_history;
     std::vector<Move> move_history;
+    std::vector<std::vector<std::vector<std::pair<PieceType, Color>>>> pieceHistory;
 
     static uint64_t pawn_attacks_table[2][64];
     static uint64_t knight_attacks_table[64];
@@ -123,9 +124,16 @@ public:
 	}
     inline uint16_t getPly() const {
         return m_ply;
-	}
+    }
     inline const Move& getLastMove() {
 		return move_history[move_history.size() - 1];
+    }
+    std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrixAt(int ply) const {
+
+        if (ply >= 0 && ply < pieceHistory.size()) {
+            return pieceHistory[ply];
+        }
+        return getBoardMatrix();
     }
     bool HasNonPawnMaterial(Color color) const;
     uint64_t getAttacksTo(Square sq, uint64_t occupied) const;
@@ -145,6 +153,7 @@ public:
     uint64_t MultiThreadedPerft(int depth);
     void PrintBoard(bool is_white_player = true, bool is_black_player = true) const;
     std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const;
+    void getPieceCounts(int piecesOut[2][6]);
 
     void ClearBoard();
 

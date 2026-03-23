@@ -27,7 +27,7 @@ void Board::InitializeBoard() {
     InitializeAttackTables();
     InitializeMagicTables();
 
-    LoadFEN(""); //r1bqkbnr/pp3ppp/3p4/2p1p3/2BnP3/2NP1N2/PPP2PPP/R1BQK2R b KQkq - 0 1 trükküs pozi
+    LoadFEN(newPosFen);
 }
 
 void Board::InitializeAttackTables() {
@@ -153,6 +153,9 @@ uint64_t Board::maskBishop(int sq) {
 }
 
 void Board::LoadFEN(std::string fen) {
+
+    ClearBoard();
+
     if (fen.empty()) {
         fen = newPosFen;
     }
@@ -161,10 +164,10 @@ void Board::LoadFEN(std::string fen) {
         m_side_occupancy[c] = 0ULL;
         for (int p = PAWN; p <= KING; p++) {
             m_bitboards[c][p] = 0ULL;
+            piece_count[c][p] = 0;
         }
     }
     m_all_occupancy = 0ULL;
-    m_ply = 0;
 
     std::stringstream ss(fen);
     std::string pieces, side, castling, enPassant, halfMove, fullMove;
@@ -234,8 +237,8 @@ void Board::LoadFEN(std::string fen) {
     boardStateHistory[m_ply] = state;
     boardStateHistory[m_ply].zobrist_hash = GenerateFullHash();
 
-    repetition_history.Clear();
-	repetition_history.Push(boardStateHistory[m_ply].zobrist_hash, true);
+    repetition_history.Push(boardStateHistory[m_ply].zobrist_hash, true);
+    pieceHistory.push_back(getBoardMatrix());
 }
 
 void Board::loadNewGame() {
@@ -632,7 +635,8 @@ bool Board::MakeMove(Move move, bool in_search) {
 
     if (!in_search) {
         repetition_history.Push(newHash, reset);
-		move_history.push_back(move);
+        move_history.push_back(move);
+        pieceHistory.push_back(getBoardMatrix());
     }
 
     Square kingSq = getKingSquare(player);
@@ -708,6 +712,7 @@ void Board::UndoMove(Move move, bool in_search) {
     if (!in_search) {
         repetition_history.TryPop();
         move_history.pop_back();
+        pieceHistory.pop_back();
     }
 
     m_all_occupancy = m_side_occupancy[WHITE] | m_side_occupancy[BLACK];
@@ -877,10 +882,24 @@ std::vector<std::vector<std::pair<PieceType, Color>>> Board::getBoardMatrix() co
     return boardMatrix;
 }
 
+void Board::getPieceCounts(int piecesOut[2][6]) {
+    for(int i = 0; i < 2; ++i)
+        for(int  j= 0; j < 6; ++j) piecesOut[i][j] = 0;
+
+    auto pieces = getBoardMatrix();
+    for (const auto& rowPieces : pieces) {
+        for (const auto& piece : rowPieces) {
+            if (piece.first == PieceType::PIECE_NONE) continue;
+            piecesOut[static_cast<int>(piece.second)][static_cast<int>(piece.first)]++;
+        }
+    }
+}
+
 void Board::ClearBoard() {
     m_ply = 0;
     repetition_history.Clear();
     move_history.clear();
+    pieceHistory.clear();
 }
 
 void perft_thread_worker(Board board_copy, std::vector<Move> moves_to_test, int depth) {

@@ -23,7 +23,7 @@ void ChessViewModel::startGame() {
 
     bm.setupBotsForNormalGame(currentSettings.robotSettings);
 
-    loadNewGame();
+    loadBeginnerFEN();
     isGameRunning = true;
 
     if (bm.isRobotToMove()) {
@@ -36,9 +36,11 @@ void ChessViewModel::loadNewGame() {
 
     isBeginnerPos = true;
     bm.resetForNewGame();
-    loadBeginnerFEN();
 
     emit newGameStarted();
+    reviewEnded();
+    updatePlayerPanelAtNewPos();
+    emit boardChanged();
 }
 
 void ChessViewModel::endGame() {
@@ -121,7 +123,6 @@ void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType
 
 void ChessViewModel::afterMoveBeenMade(Move m) {
 
-    visualHistory.push_back(bm.getBoardMatrix());
     if (!isInBotSimulation)
         reviewEnded();
 
@@ -134,24 +135,7 @@ void ChessViewModel::afterMoveBeenMade(Move m) {
 
     if (bm.wasMoveCapture(m) || bm.wasMovePromotion(m)) {
         bm.getPieceCounts(pieces);
-        emit updateMaterialScoreAtPlayerPanel(pieces);
-
-        if (bm.wasMoveCapture(m)){
-
-            PieceType lastCapturedPiece = bm.getLastCapturedPieceType();
-
-            if (basePieceCounts[lastCapturedPiece] > pieces[currentPlayer][lastCapturedPiece])
-                emit addCapturedPieceToPlayerPanel(lastMovedColor, lastCapturedPiece);
-        }
-
-        if (bm.wasMovePromotion(m)) {
-
-            PieceType promotionPiece = bm.getPromotionPiece(m);
-
-            if (basePieceCounts[promotionPiece] == pieces[currentPlayer][promotionPiece])
-                emit removePieceFromPlayerPanel(currentPlayer, promotionPiece);
-        }
-
+        syncPiecesWithPanelsRequest(pieces);
     }
 
     if (bm.didGameEnd())
@@ -163,7 +147,6 @@ void ChessViewModel::afterMoveBeenMade(Move m) {
     int ply = bm.getPly();
 
     emit moveMade(ply, QString::fromStdString(m.toHumanReadable()), lastMovedColor);
-    emit moveBeenMade(ply);
 }
 
 void ChessViewModel::loadSettings(AllSettings& allS) {
@@ -276,17 +259,13 @@ void ChessViewModel::stopRobotGameLoop() {
 void ChessViewModel::loadBeginnerFEN() {
     bm.loadBeginnerFEN();
 
-    emit newGameStarted();
-    clearReviewingHistories();
-    emit boardChanged();
+    loadNewGame();
 }
 
 void ChessViewModel::loadFEN(std::string fen) {
     bm.loadFEN(fen);
 
-    emit newGameStarted();
-    clearReviewingHistories();
-    emit boardChanged();
+    loadNewGame();
 }
 
 void ChessViewModel::startRobotGameLoop() {
@@ -366,10 +345,10 @@ void ChessViewModel::updatePlayerPanelsIconAndLabel() {
     emit playerPanelsUpdateRequest(blackPlayerName, blackPlayerIcontPath, BLACK);
 }
 
-void ChessViewModel::updatePlayerPanelsPieceAndScoreAtNewPos() {
+void ChessViewModel::updatePlayerPanelAtNewPos() {
     int allPieces[2][6];
     bm.getPieceCounts(allPieces);
-    emit updatePlayerPanelsPieceAndScoreAtNewPosRequest(allPieces);
+    emit syncPiecesWithPanelsRequest(allPieces);
 }
 
 
@@ -395,13 +374,7 @@ void ChessViewModel::undoMove() {
     int plyToUndo = bm.isEnemyRobot() ? 2 : 1;
 
     for (int i = 0; i < plyToUndo; ++i) {
-
-        if (visualHistory.size() > 1) {
-            visualHistory.pop_back();
-        }
-
         emit removeLastButFromInfoDisplayRequest();
-        playerPanelUndoToLastPieceState();
     }
 
     bm.undoMove(plyToUndo);
@@ -409,15 +382,16 @@ void ChessViewModel::undoMove() {
 
     int pieces[2][6];
     bm.getPieceCounts(pieces);
-    emit updateMaterialScoreAtPlayerPanel(pieces);
+    emit syncPiecesWithPanelsRequest(pieces);
 
     if (bm.isRobotToMove())
         makeRobotMove();
 }
 
 std::vector<std::vector<std::pair<PieceType, Color>>> ChessViewModel::getBoardMatrix() const {
-    if (reviewingPly >= 0 && reviewingPly < visualHistory.size()) {
-        return visualHistory[reviewingPly];
+
+    if (reviewingPly >= 0) {
+        return bm.getBoardMatrixAt(reviewingPly);
     }
     if (isUnderSearch) {
         return cachedMatrix;
@@ -426,24 +400,18 @@ std::vector<std::vector<std::pair<PieceType, Color>>> ChessViewModel::getBoardMa
 }
 
 void ChessViewModel::reviewHistory(int targetPly) {
-    if (targetPly >= 0 && targetPly < visualHistory.size()) {
-        if (targetPly == visualHistory.size() - 1)
+
+    int currentPly = bm.getPly();
+
+    if (targetPly >= 0 && targetPly <= currentPly) {
+        if (targetPly == currentPly)
             reviewEnded();
         else
             reviewingPly = targetPly;
         emit boardChanged();
-        emit reviewingAtPly(reviewingPly);
     }
 }
 
 void ChessViewModel::reviewEnded() {
     reviewingPly = -1;
-    emit reviewingAtPly(reviewingPly);
-}
-
-void ChessViewModel::clearReviewingHistories() {
-    reviewEnded();
-    visualHistory.clear();
-    visualHistory.push_back(bm.getBoardMatrix());
-    updatePlayerPanelsPieceAndScoreAtNewPos();
 }

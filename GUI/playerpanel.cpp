@@ -132,8 +132,6 @@ void PlayerPanel::deletePieceLabels() {
 
 void PlayerPanel::updateMaterialScore(int scoreDiff) {
 
-    currentScoreDiff = scoreDiff;
-
     bool playerLeading = (playerColor == WHITE && scoreDiff > 0) ||
                       (playerColor == BLACK && scoreDiff < 0);
 
@@ -179,7 +177,7 @@ void PlayerPanel::updatePanel() {
     piecesContainer->setFixedSize(currentX, playerPanelPieceSide);
 }
 
-void PlayerPanel::addPiecesToPanelAtNewPos(int pieces[6]) {
+void PlayerPanel::syncPiecesWithPanel(int pieces[6]) {
 
     clearPanel();
 
@@ -192,73 +190,12 @@ void PlayerPanel::addPiecesToPanelAtNewPos(int pieces[6]) {
         }
     }
 
-    materialScoreHistory.push_back(currentScoreDiff);
-    orderedTakenPiecesHistory.push_back(orderedTakenPieces);
-
-    updatePanel();
-}
-
-void PlayerPanel::addPieceToPanel(PieceType piece) {
-    if (piece == PieceType::PIECE_NONE) return;
-
-    orderedTakenPieces.push_back(piece);
-    updatePanel();
-}
-
-void PlayerPanel::removePieceFromPanel(PieceType piece) {
-    if (piece == PieceType::PIECE_NONE) return;
-
-    auto it = std::find(orderedTakenPieces.begin(), orderedTakenPieces.end(), piece);
-    if (it != orderedTakenPieces.end()) {
-        orderedTakenPieces.erase(it);
-    }
-
-    updatePanel();
-}
-
-void PlayerPanel::moveBeenMade(int currentPly) {
-    if (orderedTakenPiecesHistory.size() > currentPly) {
-        orderedTakenPiecesHistory.resize(currentPly);
-        materialScoreHistory.resize(currentPly);
-    }
-
-    orderedTakenPiecesHistory.push_back(orderedTakenPieces);
-    materialScoreHistory.push_back(currentScoreDiff);
-}
-
-void PlayerPanel::reviewHistory(int ply) {
-    if (orderedTakenPiecesHistory.empty()) return;
-
-    if (ply == -1) {
-        orderedTakenPieces = orderedTakenPiecesHistory.back();
-        updateMaterialScore(materialScoreHistory.back());
-    }
-    else if (ply >= 0 && ply < orderedTakenPiecesHistory.size()) {
-        orderedTakenPieces = orderedTakenPiecesHistory[ply];
-        updateMaterialScore(materialScoreHistory[ply]);
-    }
-
-    updatePanel();
-}
-
-void PlayerPanel::undoToLastMovePiecesState() {
-    if (orderedTakenPiecesHistory.size() <= 1) return;
-
-    orderedTakenPiecesHistory.pop_back();
-    materialScoreHistory.pop_back();
-
-    orderedTakenPieces = orderedTakenPiecesHistory.back();
-    updateMaterialScore(materialScoreHistory.back());
-
     updatePanel();
 }
 
 void PlayerPanel::clearPanel() {
     deletePieceLabels();
-
     orderedTakenPieces.clear();
-    orderedTakenPiecesHistory.clear();
-    materialScoreHistory.clear();
 
     materialScoreLabel->setText("");
 }

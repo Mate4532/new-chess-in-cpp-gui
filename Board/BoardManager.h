@@ -55,8 +55,6 @@ public:
     void setSearchTime(int t);
     void stopRobotCalculation();
 
-    void ClearBoard();
-
     std::string getRobotNameWithDifficulty(Color searcherColor);
 
     inline int getPly() { return board.getPly(); }
@@ -70,7 +68,9 @@ public:
     inline bool isRobot(Color c) const { return (c == WHITE && is_white_robot) || (c == BLACK && is_black_robot);}
     inline bool isEnemyRobot() const { return (isRobot((Color)(board.getSideToMove() ^ 1)));}
     inline bool isRobotToMove() const { return (is_white_robot && board.getSideToMove() == WHITE) || (is_black_robot && board.getSideToMove() == BLACK); }
-    inline std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const { return board.getBoardMatrix(); }
 
+    std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const { return board.getBoardMatrix(); }
     void getPieceCounts(int piecesOut[2][6]);
+    std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrixAt(int ply);
+
 };

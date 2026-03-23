@@ -78,11 +78,6 @@ QSize BoardAndPlayerPanel::getMinimumOptimalSize() {
     return QSize(minW, minH);
 }
 
-void BoardAndPlayerPanel::moveMade(int currentPly) {
-    whitePlayer->moveBeenMade(currentPly);
-    blackPlayer->moveBeenMade(currentPly);
-}
-
 void BoardAndPlayerPanel::flipPlayerPanels(bool isFlipped) {
     mainLay->removeItem(blackPlayer);
     mainLay->removeItem(whitePlayer);
@@ -109,15 +104,7 @@ void BoardAndPlayerPanel::playerPanelChanged(QString playerName, QString playerI
     }
 }
 
-void BoardAndPlayerPanel::addPieceToPlayerPanel(Color playerColor, PieceType piece) {
-    playerColor == WHITE ? whitePlayer->addPieceToPanel(piece) : blackPlayer->addPieceToPanel(piece);
-}
-
-void BoardAndPlayerPanel::removePiecesFromPanel(Color playerColor, PieceType piece) {
-    playerColor == WHITE ? whitePlayer->removePieceFromPanel(piece) : blackPlayer->removePieceFromPanel(piece);
-}
-
-void BoardAndPlayerPanel::updateMaterialScoreAndCapturedPiecesAtNewPosLoaded(int pieces[2][6]) {
+void BoardAndPlayerPanel::syncPiecesWithPanels(int pieces[2][6]) {
 
     int displayPieces[2][6] = {{0}};
 
@@ -147,10 +134,10 @@ void BoardAndPlayerPanel::updateMaterialScoreAndCapturedPiecesAtNewPosLoaded(int
         }
     }
 
-    updateMaterialScoreBasedOnPieces(pieces);
+    whitePlayer->syncPiecesWithPanel(displayPieces[WHITE]);
+    blackPlayer->syncPiecesWithPanel(displayPieces[BLACK]);
 
-    whitePlayer->addPiecesToPanelAtNewPos(displayPieces[WHITE]);
-    blackPlayer->addPiecesToPanelAtNewPos(displayPieces[BLACK]);
+    updateMaterialScoreBasedOnPieces(pieces);
 }
 
 
@@ -163,16 +150,6 @@ int BoardAndPlayerPanel::getMaterialScore(std::vector<PieceType> pieces) {
     }
 
     return sum;
-}
-
-void BoardAndPlayerPanel::updateMaterialScoreDisplay() {
-    int whiteSum = whitePlayer->getMaterialScore();
-    int blackSum = blackPlayer->getMaterialScore();
-
-    int scoreDiff = whiteSum - blackSum;
-
-    whitePlayer->updateMaterialScore(scoreDiff);
-    blackPlayer->updateMaterialScore(scoreDiff);
 }
 
 void BoardAndPlayerPanel::updateMaterialScoreBasedOnPieces(int pieces[2][6]) {
@@ -197,16 +174,6 @@ void BoardAndPlayerPanel::updateMaterialScoreBasedOnPieces(int pieces[2][6]) {
 
     whitePlayer->updateMaterialScore(scoreDiff);
     blackPlayer->updateMaterialScore(scoreDiff);
-}
-
-void BoardAndPlayerPanel::reviewHistory(int ply) {
-    whitePlayer->reviewHistory(ply);
-    blackPlayer->reviewHistory(ply);
-}
-
-void BoardAndPlayerPanel::undoToLastPlayerPanelPiecesState() {
-    whitePlayer->undoToLastMovePiecesState();
-    blackPlayer->undoToLastMovePiecesState();
 }
 
 void BoardAndPlayerPanel:: clearPanels() {

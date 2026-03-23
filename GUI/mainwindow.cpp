@@ -45,16 +45,10 @@ MainWindow::MainWindow(QWidget* parent)
     connect(chessViewModel, &ChessViewModel::newGameStarted, infoContainer, &InfoView::clearMoveDisplay);
     connect(chessViewModel, &ChessViewModel::removeLastButFromInfoDisplayRequest, infoContainer, &InfoView::removeLastButFromDisplay);
 
-    connect(chessViewModel, &ChessViewModel::moveBeenMade, bapp, &BoardAndPlayerPanel::moveMade);
     connect(chessViewModel, &ChessViewModel::flipBoardToRequest, chessView, &ChessView::flipBoardTo);
     connect(chessViewModel, &ChessViewModel::flipBoardToRequest, bapp, &BoardAndPlayerPanel::flipPlayerPanels);
     connect(chessViewModel, &ChessViewModel::playerPanelsUpdateRequest, bapp, &BoardAndPlayerPanel::playerPanelChanged);
-    connect(chessViewModel, &ChessViewModel::addCapturedPieceToPlayerPanel, bapp, &BoardAndPlayerPanel::addPieceToPlayerPanel);
-    connect(chessViewModel, &ChessViewModel::removePieceFromPlayerPanel, bapp, &BoardAndPlayerPanel::removePiecesFromPanel);
-    connect(chessViewModel, &ChessViewModel::updateMaterialScoreAtPlayerPanel, bapp, &BoardAndPlayerPanel::updateMaterialScoreBasedOnPieces);
-    connect(chessViewModel, &ChessViewModel::updatePlayerPanelsPieceAndScoreAtNewPosRequest, bapp, &BoardAndPlayerPanel::updateMaterialScoreAndCapturedPiecesAtNewPosLoaded);
-    connect(chessViewModel, &ChessViewModel::reviewingAtPly, bapp, &BoardAndPlayerPanel::reviewHistory);
-    connect(chessViewModel, &ChessViewModel::playerPanelUndoToLastPieceState, bapp, &BoardAndPlayerPanel::undoToLastPlayerPanelPiecesState);
+    connect(chessViewModel, &ChessViewModel::syncPiecesWithPanelsRequest, bapp, &BoardAndPlayerPanel::syncPiecesWithPanels);
 
     connect(infoContainer, &InfoView::reviewRequested, chessViewModel, &ChessViewModel::reviewHistory);
     connect(infoContainer, &InfoView::settingsChanged, chessViewModel, &ChessViewModel::updateSettings);

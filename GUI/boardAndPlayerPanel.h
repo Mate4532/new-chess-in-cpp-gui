@@ -16,17 +16,9 @@ private:
     ChessView* chessView;
 
 public slots:
-    void moveMade(int currentPly);
     void flipPlayerPanels(bool isFlipped);
     void playerPanelChanged(QString playerName, QString playerIconPath, Color playerColor);
-    void addPieceToPlayerPanel(Color playerColor, PieceType piece);
-    void removePiecesFromPanel(Color playerColor, PieceType piece);
-    void updateMaterialScoreDisplay();
-    void updateMaterialScoreAndCapturedPiecesAtNewPosLoaded(int pieces[2][6]);
-    void updateMaterialScoreBasedOnPieces(int pieces[2][6]);
-    void reviewHistory(int ply);
-    void undoToLastPlayerPanelPiecesState();
-    int getMaterialScore(std::vector<PieceType> pieces);
+    void syncPiecesWithPanels(int pieces[2][6]);
     void clearPanels();
 
 public:
@@ -34,6 +26,9 @@ public:
     void setPlayer(const QString& newName, Color playerColor);
     int updateSize(int availableWidth, int availableHeight) ;
     QSize getMinimumOptimalSize();
+
+    void updateMaterialScoreBasedOnPieces(int pieces[2][6]);
+    int getMaterialScore(std::vector<PieceType> pieces);
 };
 
 #endif // BOARDANDPLAYERPANEL_H

@@ -19,11 +19,6 @@ private:
     std::vector<QLabel*> takenPiecesLabels;
 
     std::vector<PieceType> orderedTakenPieces;
-    std::vector<std::vector<PieceType>> orderedTakenPiecesHistory;
-
-    int currentScoreDiff = 0;
-    std::vector<int> materialScoreHistory;
-
 
     void orderPieces(std::vector<PieceType>& pieces);
     std::string getIconPathForPiece(PieceType piece);
@@ -41,12 +36,7 @@ public:
     void setLeftMargin(int pixels);
     void updateMaterialScore(int scoreDiff);
     void updatePanel();
-    void addPieceToPanel(PieceType piece);
-    void addPiecesToPanelAtNewPos(int pieces[6]);
-    void removePieceFromPanel(PieceType piece);
-    void moveBeenMade(int currentPly);
-    void reviewHistory(int ply);
-    void undoToLastMovePiecesState();
+    void syncPiecesWithPanel(int pieces[6]);
     void clearPanel();
 
     int getMaterialScore();

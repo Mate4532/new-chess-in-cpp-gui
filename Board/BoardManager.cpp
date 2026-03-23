@@ -61,7 +61,6 @@ void BoardManager::goPerft(int perftDepth) {
 
 void BoardManager::resetForNewGame() {
     ClearSearchers();
-    board.ClearBoard();
 }
 
 void BoardManager::loadBeginnerFEN() {
@@ -425,21 +424,11 @@ void BoardManager::stopRobotCalculation() {
     if (whiteRobot != nullptr && whiteRobot->isUnderSearch()) whiteRobot->stopSearch();
     if (blackRobot != nullptr && blackRobot->isUnderSearch()) blackRobot->stopSearch();
 }
-
-void BoardManager::ClearBoard() {
-    board.ClearBoard();
+void BoardManager::getPieceCounts(int piecesOut[2][6]) {
+    board.getPieceCounts(piecesOut);
 }
 
-void BoardManager::getPieceCounts(int piecesOut[2][6]) {
-    for(int i=0; i<2; ++i)
-        for(int j=0; j<6; ++j) piecesOut[i][j] = 0;
-
-    auto pieces = board.getBoardMatrix();
-    for (const auto& rowPieces : pieces) {
-        for (const auto& piece : rowPieces) {
-            if (piece.first == PieceType::PIECE_NONE) continue;
-            piecesOut[static_cast<int>(piece.second)][static_cast<int>(piece.first)]++;
-        }
-    }
+std::vector<std::vector<std::pair<PieceType, Color>>> BoardManager::getBoardMatrixAt(int ply) {
+    return board.getBoardMatrixAt(ply);
 }
 

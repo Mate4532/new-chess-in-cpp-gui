@@ -54,17 +54,11 @@ signals:
     void gameEnded(GameResult gr);
     void boardChanged();
     void moveMade(int movePly, const QString& move, Color c);
-    void moveBeenMade(int currentPly);
     void removeLastButFromInfoDisplayRequest();
-    void removePieceFromPlayerPanel(Color playerColor, PieceType piece);
-    void playerPanelUndoToLastPieceState();
-    void addCapturedPieceToPlayerPanel(Color capturingColor, PieceType piece);
     void newGameStarted();
     void flipBoardToRequest(bool isFlipped);
     void playerPanelsUpdateRequest(QString playerName, QString playerIconPath, Color playerColor);
-    void updatePlayerPanelsPieceAndScoreAtNewPosRequest(int pieces[2][6]);
-    void updateMaterialScoreAtPlayerPanel(int pieces[2][6]);
-    void reviewingAtPly(int ply);
+    void syncPiecesWithPanelsRequest(int pieces[2][6]);
 
 private:
     BoardManager& bm;
@@ -78,7 +72,7 @@ private:
     void swapRobots();
 
     void updatePlayerPanelsIconAndLabel();
-    void updatePlayerPanelsPieceAndScoreAtNewPos();
+    void updatePlayerPanelAtNewPos();
 
     QThread* robotThread = nullptr;
     int simI = 0;
@@ -86,11 +80,8 @@ private:
     QString currentSimFen;
     std::vector<std::vector<std::pair<PieceType, Color>>> cachedMatrix;
 
-    std::vector<std::vector<std::vector<std::pair<PieceType, Color>>>> visualHistory;
     int reviewingPly = -1;
     void reviewEnded();
-
-    void clearReviewingHistories();
 };
 
 #endif // CHESSVIEWMODEL_H
