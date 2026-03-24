@@ -22,8 +22,8 @@ public:
 
     static constexpr double CHESSBOARD_OFFSET_LEFT_PX = 47;
     static constexpr double CHESSBOARD_OFFSET_DOWN_PX = 47;
-    static constexpr double CHESSBOARD_OFFSET_RIGHT_PX = 13;
-    static constexpr double CHESSBOARD_OFFSET_UP_PX = 13;
+    static constexpr double CHESSBOARD_OFFSET_RIGHT_PX = 15;
+    static constexpr double CHESSBOARD_OFFSET_UP_PX = 15;
     static constexpr double TILE_SIZE = std::min(ChessView::WHOLE_CHESSBOARD_WIDTH_PX - CHESSBOARD_OFFSET_LEFT_PX - CHESSBOARD_OFFSET_RIGHT_PX,
                                                  ChessView::WHOLE_CHESSBOARD_HEIGHT_PX - CHESSBOARD_OFFSET_UP_PX - CHESSBOARD_OFFSET_DOWN_PX) / 8;
     static constexpr double PIECE_SIZE_SQUARE_RATIO = 0.9;
@@ -34,6 +34,7 @@ public:
 
     bool scenePosToSquare(const QPointF& pos, int& file, int& visualRank) const;
     QPointF squareToScenePos(int file, int visualRank) const;
+    QRectF getSquareRect(int visualCol, int visualRow) const;
 
     void updateLayout();
 
@@ -56,6 +57,7 @@ private:
     static const std::unordered_map<PieceType, QString> blackPieceMap;
 
     void sceneRectChanged(const QRectF &rect);
+    void drawMovedPieceBackground();
     void drawPieces();
 
 private slots:

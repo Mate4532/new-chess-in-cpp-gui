@@ -28,12 +28,15 @@ QPushButton* InfoView::createMoveButton(const QString& move, int movePly) {
     QFont resizedBtnFont = resizeFontSize(btnFont);
 
     QPushButton* moveBtn = new QPushButton(move);
+    moveBtn->setCheckable(true);
     moveBtn->setStyleSheet(moveBtnStyle);
     moveBtn->setCursor(Qt::PointingHandCursor);
     moveBtn->setProperty("ply", movePly);
     moveBtn->setFont(resizedBtnFont);
     moveBtn->setMinimumWidth(getCurrentFontMinWidth());
     moveBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    moveButtonGroup->addButton(moveBtn);
 
     return moveBtn;
 }
@@ -129,6 +132,9 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     connect(vScrollBar, &QScrollBar::rangeChanged, this, [vScrollBar](int min, int max) {
         vScrollBar->setValue(max);
     });
+
+    moveButtonGroup = new QButtonGroup(this);
+    moveButtonGroup->setExclusive(true);
 
     QWidget* scrollContent = new QWidget();
     scrollContent->setObjectName("scrollContent");
@@ -254,6 +260,8 @@ void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color) {
     }
 
     QPushButton* moveBtn = createMoveButton(move, movePly);
+    QString activeColor = (currentRow % 2 == 0) ? "#292725" : "#5C5C5C";
+    moveBtn->setStyleSheet(moveBtnStyle + QString("QPushButton:checked { background-color: %1; }").arg(activeColor));
 
     connect(moveBtn, &QPushButton::clicked, this, [this, moveBtn]() {
         int targetPly = moveBtn->property("ply").toInt();
@@ -261,6 +269,7 @@ void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color) {
     });
 
     movesLayout->addWidget(moveBtn, currentRow, currentCol, Qt::AlignCenter);
+    moveBtn->setChecked(true);
 
     if (color == BLACK) {
         currentRow++;

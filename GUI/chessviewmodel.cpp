@@ -379,6 +379,15 @@ void ChessViewModel::undoMove() {
         makeRobotMove();
 }
 
+MoveInfo ChessViewModel::getMoveInfo() {
+
+    if (reviewingPly >= 0) {
+        return bm.getMoveInfo(reviewingPly);
+    }
+
+    return bm.getMoveInfo();
+}
+
 std::vector<std::vector<std::pair<PieceType, Color>>> ChessViewModel::getBoardMatrix() const {
 
     if (reviewingPly >= 0) {

@@ -935,6 +935,35 @@ void Board::ClearBoard() {
     pieceHistory.clear();
 }
 
+MoveInfo Board::getMoveInfo(int ply) {
+    if (move_history.empty())
+        return MoveInfo();
+
+    int index;
+    if (ply == -1) {
+        index = static_cast<int>(move_history.size()) - 1;
+    } else {
+        index = ply;
+    }
+
+    if (index < 0 || index >= (int)move_history.size())
+        return MoveInfo();
+
+    Move m = move_history[index];
+    MoveInfo mi;
+
+    Square fromSquare = m.getFrom();
+    Square toSquare = m.getTo();
+
+    mi.fromFile = getFileFromSquare(fromSquare);
+    mi.fromRank = getRankFromSquare(fromSquare);
+    mi.toFile = getFileFromSquare(toSquare);
+    mi.toRank = getRankFromSquare(toSquare);
+    mi.isValid = true;
+
+    return mi;
+}
+
 void perft_thread_worker(Board board_copy, std::vector<Move> moves_to_test, int depth) {
     uint64_t local_nodes = 0;
 

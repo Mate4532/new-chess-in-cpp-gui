@@ -83,6 +83,12 @@ public:
     uint64_t getKingAttacks(Square sq) const;
     uint64_t getInvertedPawnAttacks(Square sq, Color attackerColor) const;
     uint64_t getPawnAttacks(Square sq, Color attackerColor) const;
+    inline int getFileFromSquare(Square sq) {
+        return static_cast<int>(sq) & 7;
+    }
+    inline int getRankFromSquare(Square sq) {
+        return static_cast<int>(sq) >> 3;
+    }
     inline const uint64_t(&getBitboards() const)[2][PIECE_TYPE_COUNT]{
         return m_bitboards;
     }
@@ -128,9 +134,21 @@ public:
     inline uint16_t getPly() const {
         return committedPly;
     }
-    inline const Move& getLastMove() {
-		return move_history[move_history.size() - 1];
+    inline const Move getLastMove() {
+        return move_history.empty() ? Move() : move_history.back();
     }
+    inline const Move getMove(int ply = -1){
+        if (move_history.empty()) {
+            return Move();
+        }
+        int index = (ply == -1) ? static_cast<int>(move_history.size()) - 1 : ply;
+
+        if (index < 0 || index >= static_cast<int>(move_history.size())) {
+            return Move();
+        }
+        return move_history[index];
+    }
+
     bool HasNonPawnMaterial(Color color) const;
     uint64_t getAttacksTo(Square sq, uint64_t occupied) const;
     Square getSmallestAttacker(uint64_t attackers, Color side, PieceType& attackerType) const;
@@ -156,6 +174,7 @@ public:
 
     void ClearBoard();
 
+    MoveInfo getMoveInfo(int ply = -1);
     static PieceType GetPromotionPiece(Move m);
     static PieceType GetPromotionPiece(MoveFlag promotion_piece);
 };

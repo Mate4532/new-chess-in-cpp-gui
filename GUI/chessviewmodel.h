@@ -32,6 +32,7 @@ public:
     void onRobotMoveFinished(Move m);
 
     void undoMove();
+    MoveInfo getMoveInfo();
     std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix() const;
     void refreshView();
 

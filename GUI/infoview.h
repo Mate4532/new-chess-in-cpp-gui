@@ -6,6 +6,7 @@
 #include <QWidget>
 #include <QPushButton>
 #include <QGridLayout>
+#include <QButtonGroup>
 
 class InfoView : public QWidget
 {
@@ -38,6 +39,8 @@ private:
     void openSettings();
 
     int panelCurrentWidth;
+
+    QButtonGroup* moveButtonGroup;
 
     QWidget* resultBox;
     QLabel* whiteKing;
