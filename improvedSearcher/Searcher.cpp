@@ -32,7 +32,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         stop = true;
     if (stop) return alpha;
 
-    int standPat = worseEvaluationEnabled ? WorseEvaluation::Evaluation::EvaluatePos(board) : ImprovedEvaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
+    int standPat = currentSettings.worseEvaluationEnabled ? WorseEvaluation::Evaluation::EvaluatePos(board) : ImprovedEvaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
 
     if (standPat >= beta) {
         return beta;
@@ -161,7 +161,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         board.getKingSquare(board.getSideToMove()),
         (Color)(board.getSideToMove() ^ 1));
 
-    int staticEval = worseEvaluationEnabled ? WorseEvaluation::Evaluation::EvaluatePos(board) : ImprovedEvaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
+    int staticEval = currentSettings.worseEvaluationEnabled ? WorseEvaluation::Evaluation::EvaluatePos(board) : ImprovedEvaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
 
     if (depth <= 4 && !inCheck && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
         int evalMargin = 120 * depth;
@@ -475,7 +475,7 @@ Move Searcher::IterativeDeepening() {
     Move bestMove;
     int lastScore = 0;
 
-    for (int depth = 1; depth <= max_depth; depth++) {
+    for (int depth = 1; depth <= currentSettings.maxDepth; depth++) {
         int score = lastScore;
         int alpha = -MATE_SCORE;
         int beta = MATE_SCORE;
@@ -653,43 +653,82 @@ std::vector<Move> Searcher::GetWhatIfPV(const std::vector<Move>& baseLine, Move 
     return resultPV;
 }
 
-bool Searcher::GetRandomMove(Move& randomMove, int chanceToMakeRandomMove) {
-    if (chanceToMakeRandomMove <= 0) return false;
+Move Searcher::GetBestAmongTopMoves(int depth, int topN, int chanceToActivatePossBlunder, int blunderThreshold) {
+    Move bestMoveFromID = IterativeDeepening();
+
+    startTime = now_ms();
+    stop = false;
 
     static std::mt19937 gen(now_ms());
     std::uniform_int_distribution<> dis(1, 100);
 
-    if (dis(gen) > chanceToMakeRandomMove) {
-        return false;
+    if (dis(gen) > chanceToActivatePossBlunder) {
+        return bestMoveFromID;
     }
 
     MoveList moves;
     MoveGenerator::GenerateMoves(board, moves);
 
-    std::vector<Move> legalMoves;
+    struct ScoredMove { Move m; int score; };
+    std::vector<ScoredMove> scoredMoves;
+
     for (int i = 0; i < moves.size(); ++i) {
-        Move m = moves[i];
-        if (board.MakeMove(m, true)) {
-            legalMoves.push_back(m);
-            board.UndoMove(m, true);
+        if (!board.MakeMove(moves[i], true)) continue;
+
+        int moveScore = 0;
+        moveScore = -negamax(std::max(depth - 3, 3), -MATE_SCORE, MATE_SCORE, 0, Move(), false, false);
+
+        scoredMoves.push_back({moves[i], moveScore});
+        board.UndoMove(moves[i], true);
+    }
+
+    if (scoredMoves.empty()) return Move();
+
+    std::sort(scoredMoves.begin(), scoredMoves.end(), [&](const ScoredMove& a, const ScoredMove& b) {
+        if (a.score != b.score) return a.score > b.score;
+        if (a.m == bestMoveFromID) return true;
+        if (b.m == bestMoveFromID) return false;
+        return false;
+    });
+
+    if (board.isDebugMode) {
+        std::cout << "info string --- Candidate Moves Rank (No TT) ---" << std::endl;
+        for (size_t i = 0; i < std::min((size_t)10, scoredMoves.size()); ++i) {
+            std::cout << "info string rank " << (i + 1)
+            << ": " << scoredMoves[i].m.toAlgebraic()
+            << " | score: " << scoredMoves[i].score << std::endl;
         }
     }
 
-    if (legalMoves.empty()) {
-        return false;
+    int limit = std::min((int)scoredMoves.size(), topN);
+    std::uniform_int_distribution<> topDis(0, limit - 1);
+    int chosenIndex = topDis(gen);
+
+    int bestScore = scoredMoves[0].score;
+    int chosenScore = scoredMoves[chosenIndex].score;
+
+    if (std::abs(bestScore - chosenScore) >= blunderThreshold) {
+        if (board.isDebugMode) {
+            std::cout << "info string Safety Net triggered! " << scoredMoves[chosenIndex].m.toAlgebraic()
+            << " (diff " << std::abs(bestScore - chosenScore) << ") was too much loss. Forcing best move." << std::endl;
+        }
+        return scoredMoves[0].m;
     }
 
-    std::uniform_int_distribution<> moveDis(0, (int)legalMoves.size() - 1);
-    randomMove = legalMoves[moveDis(gen)];
-    std::cout << " Random move happened";
+    if (board.isDebugMode) {
+        std::cout << "info string Bot picked move: " << scoredMoves[chosenIndex].m.toAlgebraic()
+        << " (rank " << (chosenIndex + 1) << ")" << std::endl;
+    }
 
-    return true;
+    return scoredMoves[chosenIndex].m;
 }
 
 Move Searcher::GetRobotMove() {
     Move m;
 
-    if (GetRandomMove(m, randomMovePercent)) return m;
+    if (currentSettings.areBlundersOnPurposeEnabled)
+        return GetBestAmongTopMoves(currentSettings.maxDepth, currentSettings.topNmove, currentSettings.chanceToActivatePossBlunder, currentSettings.blunderThreshold);
+
     return IterativeDeepening();
 }
 
@@ -706,27 +745,20 @@ void Searcher::setDifficulty(Difficulty diff) {
 
     switch (diff) {
     case Difficulty::EASY:
-        max_depth = 3;
-        worseEvaluationEnabled = true;
-        randomMovePercent = 50;
+        currentSettings = SearcherSettings::getSettings(Difficulty::EASY);
         break;
 
     case Difficulty::MEDIUM:
-        max_depth = 6;
-        worseEvaluationEnabled = true;
-        randomMovePercent = 25;
+        currentSettings = SearcherSettings::getSettings(Difficulty::MEDIUM);
         break;
 
     case Difficulty::HARD:
-        max_depth = 9;
-        worseEvaluationEnabled = true;
-        randomMovePercent = 10;
+        currentSettings = SearcherSettings::getSettings(Difficulty::HARD);
         break;
 
     case Difficulty::IMPOSSIBLE:
-        worseEvaluationEnabled = false;
-        max_depth = MAXIMUM_DEPTH;
-        randomMovePercent = 0;
+        currentSettings = SearcherSettings::getSettings(Difficulty::IMPOSSIBLE);
+        currentSettings.maxDepth = MAXIMUM_DEPTH;
         break;
 
     default:

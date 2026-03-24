@@ -40,6 +40,7 @@ if(Qt6_FOUND)
         GUI/boardAndPlayerPanel.cpp
         GUI/playerpanel.h GUI/playerpanel.cpp
         improvedSearcher/WorseEvaluation.cpp improvedSearcher/WorseEvaluation.h
+        improvedSearcher/SearcherSettings.h
     )
 endif()
 

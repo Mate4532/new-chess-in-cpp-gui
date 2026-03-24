@@ -7,6 +7,7 @@
 #include "TranspositionTable.h"
 #include "PrecomputedEvaluationData.h"
 #include "LMR.h"
+#include "SearcherSettings.h"
 #include "nnue-probe-master/src/nnue.h"
 
 namespace ImprovedSearcher {
@@ -26,7 +27,6 @@ namespace ImprovedSearcher {
         int negamax(int depth, int alpha, int beta, int ply, Move prev_move = Move(), bool prev_was_capture = false, bool allowNull = false);
         int quiescence(int alpha, int beta, int ply);
 
-        int max_depth = 128;
         int robot_thinking_time_ms = 1000;
 
         long long startTime = 0;
@@ -45,8 +45,7 @@ namespace ImprovedSearcher {
         void AgeHistory();
         void ClearKillers();
 
-        bool worseEvaluationEnabled = false;
-        int randomMovePercent = 0;
+        SearcherSettings currentSettings = SearcherSettings::getSettings(Difficulty::IMPOSSIBLE);
 
     public:
 
@@ -65,7 +64,7 @@ namespace ImprovedSearcher {
 
         int see(Move m);
         Move IterativeDeepening();
-        bool GetRandomMove(Move& m, int chanceToMakeRandomMove);
+        Move GetBestAmongTopMoves(int depth, int topN, int changeToActivate, int blunderThreshold);
         Move GetRobotMove();
         void PrintPvLine(int depth);
         std::vector<Move> GetPVLine(int depth);

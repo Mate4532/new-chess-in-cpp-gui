@@ -114,8 +114,7 @@ void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType
 
 void ChessViewModel::afterMoveBeenMade(Move m) {
 
-    if (!isInBotSimulation)
-        reviewEnded();
+    reviewEnded();
 
     emit boardChanged();
 

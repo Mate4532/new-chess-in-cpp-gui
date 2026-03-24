@@ -178,16 +178,16 @@ Move BoardManager::MakeRobotMove() {
     Move robot_move;
     std::cout << (board.getSideToMove() == WHITE ? (whiteRobot->getName() + " (feher) ") : (blackRobot->getName() + " (fekete) ")) <<"gondolkodik..." << std::endl;
     if (board.isDebugMode) {
-        uint64_t hash_before = board.getHash();
-        std::cout << "Hash kereses elott: " << board.getHash() << std::endl;
+        // uint64_t hash_before = board.getHash();
+        // std::cout << "Hash kereses elott: " << board.getHash() << std::endl;
         robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetRobotMove() : blackRobot->GetRobotMove();
 
         uint64_t hash_after = board.getHash();
-        std::cout << "Hash kereses utan: " << hash_after << std::endl;
-        std::cout << "Repetition_history merete: " << board.getRepetitionHash().size() << std::endl;
-        if (hash_before != hash_after) {
-            std::cout << "BAJ VAN\n\n\n\n\n" << std::endl;
-        }
+        // std::cout << "Hash kereses utan: " << hash_after << std::endl;
+        // std::cout << "Repetition_history merete: " << board.getRepetitionHash().size() << std::endl;
+        // if (hash_before != hash_after) {
+        //    std::cout << "BAJ VAN\n\n\n\n\n" << std::endl;
+        // }
     }
     else {
         robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetRobotMove() : blackRobot->GetRobotMove();
