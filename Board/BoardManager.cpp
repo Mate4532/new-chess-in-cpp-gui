@@ -180,7 +180,7 @@ Move BoardManager::MakeRobotMove() {
     if (board.isDebugMode) {
         uint64_t hash_before = board.getHash();
         std::cout << "Hash kereses elott: " << board.getHash() << std::endl;
-        robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetBestMove() : blackRobot->GetBestMove();
+        robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetRobotMove() : blackRobot->GetRobotMove();
 
         uint64_t hash_after = board.getHash();
         std::cout << "Hash kereses utan: " << hash_after << std::endl;
@@ -190,7 +190,7 @@ Move BoardManager::MakeRobotMove() {
         }
     }
     else {
-        robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetBestMove() : blackRobot->GetBestMove();
+        robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetRobotMove() : blackRobot->GetRobotMove();
     }
     if (!robot_move.isValid())
         return Move();

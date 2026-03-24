@@ -31,7 +31,7 @@ public:
     void loadBeginnerFEN();
     void loadFEN(std::string randomFEN);
     std::string getRandomOpening();
-    Move getBestMoveOnBoard() { return board.getSideToMove() == WHITE ? whiteRobot->GetBestMove() : blackRobot->GetBestMove(); }
+    Move getBestMoveOnBoard() { return board.getSideToMove() == WHITE ? whiteRobot->GetRobotMove() : blackRobot->GetRobotMove(); }
     Move MakeRobotMove();
     void printBestMove();
     MoveFlag getMoveFlagBasedOnPromotionPiece(PieceType promotionPiece);

@@ -45,6 +45,9 @@ namespace ImprovedSearcher {
         void AgeHistory();
         void ClearKillers();
 
+        bool worseEvaluationEnabled = false;
+        int randomMovePercent = 0;
+
     public:
 
         static const int MATE_SCORE = 30000;
@@ -62,7 +65,8 @@ namespace ImprovedSearcher {
 
         int see(Move m);
         Move IterativeDeepening();
-        Move GetBestMove();
+        bool GetRandomMove(Move& m, int chanceToMakeRandomMove);
+        Move GetRobotMove();
         void PrintPvLine(int depth);
         std::vector<Move> GetPVLine(int depth);
         void PrintWhatIfPV(const std::vector<Move>& baseLine, Move alternativeMove, int depth);

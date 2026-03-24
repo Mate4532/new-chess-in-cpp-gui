@@ -59,7 +59,7 @@ public:
 
     int see(Move m);
     Move IterativeDeepening();
-    Move GetBestMove();
+    Move GetRobotMove();
     void PrintPvLine(int depth);
     std::vector<Move> GetPVLine(int depth);
     void PrintWhatIfPV(const std::vector<Move>& baseLine, Move alternativeMove, int depth);

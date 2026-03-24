@@ -508,7 +508,7 @@ std::vector<Move> Searcher::GetWhatIfPV(const std::vector<Move>& baseLine, Move 
     return resultPV;
 }
 
-Move Searcher::GetBestMove() {
+Move Searcher::GetRobotMove() {
     return IterativeDeepening();
 }
 

@@ -1,7 +1,9 @@
 #include "Searcher.h"
 #include "Evaluation.h"
+#include "WorseEvaluation.h"
 #include <chrono>
 #include <iostream>
+#include <random>
 
 using namespace ImprovedSearcher;
 using namespace ImprovedEvaluation;
@@ -30,7 +32,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         stop = true;
     if (stop) return alpha;
 
-    int standPat = Evaluation::EvaluatePos(board, ply, nnue_state);
+    int standPat = worseEvaluationEnabled ? WorseEvaluation::Evaluation::EvaluatePos(board) : ImprovedEvaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
 
     if (standPat >= beta) {
         return beta;
@@ -159,7 +161,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
         board.getKingSquare(board.getSideToMove()),
         (Color)(board.getSideToMove() ^ 1));
 
-    int staticEval = Evaluation::EvaluatePos(board, ply, nnue_state);
+    int staticEval = worseEvaluationEnabled ? WorseEvaluation::Evaluation::EvaluatePos(board) : ImprovedEvaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
 
     if (depth <= 4 && !inCheck && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
         int evalMargin = 120 * depth;
@@ -651,7 +653,43 @@ std::vector<Move> Searcher::GetWhatIfPV(const std::vector<Move>& baseLine, Move 
     return resultPV;
 }
 
-Move Searcher::GetBestMove() {
+bool Searcher::GetRandomMove(Move& randomMove, int chanceToMakeRandomMove) {
+    if (chanceToMakeRandomMove <= 0) return false;
+
+    static std::mt19937 gen(now_ms());
+    std::uniform_int_distribution<> dis(1, 100);
+
+    if (dis(gen) > chanceToMakeRandomMove) {
+        return false;
+    }
+
+    MoveList moves;
+    MoveGenerator::GenerateMoves(board, moves);
+
+    std::vector<Move> legalMoves;
+    for (int i = 0; i < moves.size(); ++i) {
+        Move m = moves[i];
+        if (board.MakeMove(m, true)) {
+            legalMoves.push_back(m);
+            board.UndoMove(m, true);
+        }
+    }
+
+    if (legalMoves.empty()) {
+        return false;
+    }
+
+    std::uniform_int_distribution<> moveDis(0, (int)legalMoves.size() - 1);
+    randomMove = legalMoves[moveDis(gen)];
+    std::cout << " Random move happened";
+
+    return true;
+}
+
+Move Searcher::GetRobotMove() {
+    Move m;
+
+    if (GetRandomMove(m, randomMovePercent)) return m;
     return IterativeDeepening();
 }
 
@@ -669,18 +707,26 @@ void Searcher::setDifficulty(Difficulty diff) {
     switch (diff) {
     case Difficulty::EASY:
         max_depth = 3;
+        worseEvaluationEnabled = true;
+        randomMovePercent = 50;
         break;
 
     case Difficulty::MEDIUM:
         max_depth = 6;
+        worseEvaluationEnabled = true;
+        randomMovePercent = 25;
         break;
 
     case Difficulty::HARD:
         max_depth = 9;
+        worseEvaluationEnabled = true;
+        randomMovePercent = 10;
         break;
 
     case Difficulty::IMPOSSIBLE:
+        worseEvaluationEnabled = false;
         max_depth = MAXIMUM_DEPTH;
+        randomMovePercent = 0;
         break;
 
     default:

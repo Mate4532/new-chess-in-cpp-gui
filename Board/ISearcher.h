@@ -10,7 +10,7 @@ enum SearcherType {
 class ISearcher {
 public:
     virtual void ClearSearcher() = 0;
-    virtual Move GetBestMove() = 0;
+    virtual Move GetRobotMove() = 0;
     virtual void setDifficulty(Difficulty d) = 0;
     virtual void setSearchTime(int t) = 0;
     virtual bool isUnderSearch() = 0;

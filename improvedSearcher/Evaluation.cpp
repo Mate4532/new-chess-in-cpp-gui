@@ -39,7 +39,6 @@ int Evaluation::GetNnuePieceNum(PieceType p, Color c) {
 
     default:
         return -1;
-
     }
 
 }
