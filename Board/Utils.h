@@ -167,5 +167,5 @@ const int basePieceCounts[PieceType::PIECE_TYPE_COUNT] = { 8, 2, 2, 2, 1, 1 };
 struct MoveInfo {
     int fromFile = -1, fromRank = -1;
     int toFile = -1, toRank = -1;
-    bool isValid = false;
+    bool isValid() { return !(fromFile == -1 || fromRank == -1 || toFile == -1 || toRank == -1); }
 };

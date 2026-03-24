@@ -239,6 +239,7 @@ void Board::LoadFEN(std::string fen) {
 
     repetition_history.Push(boardStateHistory[m_ply].zobrist_hash, true);
     pieceHistory.push_back(getBoardMatrix());
+    move_history.push_back(Move());
 }
 
 void Board::loadNewGame() {
@@ -946,7 +947,7 @@ MoveInfo Board::getMoveInfo(int ply) {
         index = ply;
     }
 
-    if (index < 0 || index >= (int)move_history.size())
+    if (index < 0 || index >= (int)move_history.size() || !move_history[index].isValid())
         return MoveInfo();
 
     Move m = move_history[index];
@@ -959,7 +960,6 @@ MoveInfo Board::getMoveInfo(int ply) {
     mi.fromRank = getRankFromSquare(fromSquare);
     mi.toFile = getFileFromSquare(toSquare);
     mi.toRank = getRankFromSquare(toSquare);
-    mi.isValid = true;
 
     return mi;
 }

@@ -55,7 +55,6 @@ void ChessScene::preloadPixmaps()
     loadMap(blackPieceMap);
 }
 
-// PROFI MEGOLDÁS: A tábla belső területének arányos felosztása kerekítési hiba nélkül
 QRectF ChessScene::getSquareRect(int visualCol, int visualRow) const {
     const double fullBoardSize = 8.0 * TILE_SIZE;
 
@@ -95,9 +94,8 @@ void ChessScene::drawMovedPieceBackground() {
     if (!cvm) return;
 
     MoveInfo lastMove = cvm->getMoveInfo();
-    if (!lastMove.isValid) return;
+    if (!lastMove.isValid()) return;
 
-    // Chess.com stílusú sárga kiemelés
     QColor highlightColor(246, 246, 105, 150);
     bool isFlipped = cvm->getIsBoardFlipped();
 
@@ -107,11 +105,10 @@ void ChessScene::drawMovedPieceBackground() {
 
         QRectF rectArea = getSquareRect(visualCol, visualRow);
 
-        // Minimális igazítás az élsimítás (anti-aliasing) miatt, hogy ne legyen rés
         QGraphicsRectItem* rect = new QGraphicsRectItem(rectArea.adjusted(-0.1, -0.1, 0.1, 0.1));
         rect->setBrush(QBrush(highlightColor));
         rect->setPen(Qt::NoPen);
-        rect->setZValue(1); // Bábuk alatt
+        rect->setZValue(1);
 
         addItem(rect);
     };
@@ -159,7 +156,6 @@ void ChessScene::drawPieces() {
                 item->setPixmap(scaled);
             }
 
-            // A bábu pozícionálása a közös rács alapján
             QRectF square = getSquareRect(visualCol, visualRow);
             qreal offX = (square.width() - PIECE_SIZE) / 2.0;
             qreal offY = (square.height() - PIECE_SIZE) / 2.0;
@@ -170,7 +166,7 @@ void ChessScene::drawPieces() {
 
             item->setData(FileKey, logicalFile);
             item->setData(RankKey, logicalRank);
-            item->setZValue(10); // Kiemelés felett
+            item->setZValue(10);
 
             addItem(item);
         }
