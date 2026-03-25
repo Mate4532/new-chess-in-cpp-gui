@@ -53,6 +53,7 @@ public slots:
 
 signals:
     void gameEnded(GameResult gr);
+    void robotSimulationEnded();
     void boardChanged();
     void moveMade(int movePly, const QString& move, Color c);
     void removeLastButFromInfoDisplayRequest();

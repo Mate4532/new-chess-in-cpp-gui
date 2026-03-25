@@ -129,8 +129,10 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     )");
 
     QScrollBar* vScrollBar = scrollArea->verticalScrollBar();
-    connect(vScrollBar, &QScrollBar::rangeChanged, this, [vScrollBar](int min, int max) {
-        vScrollBar->setValue(max);
+    connect(vScrollBar, &QScrollBar::rangeChanged, this, [vScrollBar, this](int min, int max) {
+        if (!currentAllS.robotSettings.isBotVsBot || currentReviewPly == buttonAmount) {
+            vScrollBar->setValue(max);
+        }
     });
 
     moveButtonGroup = new QButtonGroup(this);
@@ -265,11 +267,15 @@ void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color) {
 
     connect(moveBtn, &QPushButton::clicked, this, [this, moveBtn]() {
         int targetPly = moveBtn->property("ply").toInt();
+        currentReviewPly = targetPly;
         emit reviewRequested(targetPly);
     });
 
+    if (!currentAllS.robotSettings.isBotVsBot || currentReviewPly == buttonAmount) {
+        moveBtn->setChecked(true);
+        currentReviewPly = movePly;
+    }
     movesLayout->addWidget(moveBtn, currentRow, currentCol, Qt::AlignCenter);
-    moveBtn->setChecked(true);
 
     if (color == BLACK) {
         currentRow++;
@@ -420,6 +426,7 @@ void InfoView::clearMoveDisplay()
 
     currentRow = 0;
     buttonAmount = 0;
+    currentReviewPly = 0;
 }
 
 void InfoView::openSettings()

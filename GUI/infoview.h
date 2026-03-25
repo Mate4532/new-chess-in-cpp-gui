@@ -39,6 +39,7 @@ private:
     void openSettings();
 
     int panelCurrentWidth;
+    int currentReviewPly = 0;
 
     QButtonGroup* moveButtonGroup;
 

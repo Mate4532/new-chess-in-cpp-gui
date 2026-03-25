@@ -51,7 +51,12 @@ void ChessViewModel::endGame() {
 
     isGameRunning = false;
     GameResult gr = bm.getGameResult();
-    emit gameEnded(gr);
+    if (!isInBotSimulation) {
+        emit gameEnded(gr);
+    }
+    else {
+        emit robotSimulationEnded();
+    }
 }
 
 bool ChessViewModel::isMovePromotion(int fromX, int fromY, int toX, int toY) const {
@@ -114,7 +119,8 @@ void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType
 
 void ChessViewModel::afterMoveBeenMade(Move m) {
 
-    reviewEnded();
+    if (!isInBotSimulation)
+        reviewEnded();
 
     emit boardChanged();
 
@@ -269,8 +275,8 @@ void ChessViewModel::startRobotGameLoop() {
     simJ = 0;
     isInBotSimulation = true;
 
-    disconnect(this, &ChessViewModel::gameEnded, this, &ChessViewModel::advanceSimulation);
-    connect(this, &ChessViewModel::gameEnded, this, &ChessViewModel::advanceSimulation);
+    disconnect(this, &ChessViewModel::robotSimulationEnded, this, &ChessViewModel::advanceSimulation);
+    connect(this, &ChessViewModel::robotSimulationEnded, this, &ChessViewModel::advanceSimulation);
 
     runNextSimGame();
 }
@@ -283,7 +289,7 @@ void ChessViewModel::runNextSimGame() {
         return;
     }
 
-    disconnect(this, &ChessViewModel::gameEnded, this, &ChessViewModel::advanceSimulation);
+    disconnect(this, &ChessViewModel::robotSimulationEnded, this, &ChessViewModel::advanceSimulation);
 
     if (simJ == 0) {
         currentSimFen = QString::fromStdString(bm.getRandomOpening());
@@ -295,7 +301,7 @@ void ChessViewModel::runNextSimGame() {
 
     emit boardChanged();
 
-    connect(this, &ChessViewModel::gameEnded, this, &ChessViewModel::advanceSimulation);
+    connect(this, &ChessViewModel::robotSimulationEnded, this, &ChessViewModel::advanceSimulation);
 
     QTimer::singleShot(100, this, &ChessViewModel::makeRobotMove);
 }
