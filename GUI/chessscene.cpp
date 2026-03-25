@@ -58,7 +58,6 @@ void ChessScene::preloadPixmaps()
 QRectF ChessScene::getSquareRect(int visualCol, int visualRow) const {
     const double fullBoardSize = 8.0 * TILE_SIZE;
 
-    // Kiszámoljuk az intervallumokat a teljes méret alapján
     double x1 = (static_cast<double>(visualCol) * fullBoardSize) / 8.0;
     double x2 = (static_cast<double>(visualCol + 1) * fullBoardSize) / 8.0;
     double y1 = (static_cast<double>(visualRow) * fullBoardSize) / 8.0;
@@ -90,6 +89,98 @@ bool ChessScene::scenePosToSquare(const QPointF& pos, int& file, int& visualRank
     return true;
 }
 
+void ChessScene::highlightPromotionSquares() {
+
+    std::vector<std::pair<int, int>> promotionSquares = getPromotionSquares(promotionSquareTo.first, promotionSquareTo.second);
+    QColor highlightColor(255, 255, 255);
+    for (auto promotionSquare : promotionSquares)
+        highlightSquare(promotionSquare.first, promotionSquare.second, highlightColor);
+}
+
+void ChessScene::highlightSquare(int logicalFile, int logicalRank, QColor highlightColor) {
+
+    bool isFlipped = cvm->getIsBoardFlipped();
+
+    int visualCol = isFlipped ? (7 - logicalFile) : logicalFile;
+    int visualRow = isFlipped ? logicalRank : (7 - logicalRank);
+
+    QRectF rectArea = getSquareRect(visualCol, visualRow);
+
+    QGraphicsRectItem* rect = new QGraphicsRectItem(rectArea.adjusted(-0.5, -0.5, 0.5, 0.5));
+    rect->setBrush(QBrush(highlightColor));
+    rect->setPen(Qt::NoPen);
+    rect->setZValue(1);
+
+    addItem(rect);
+}
+
+std::vector<std::pair<int, int>> ChessScene::getPromotionSquares(int promotionFile, int promotionRank) {
+    std::vector<std::pair<int, int>> promotionSquares;
+
+    for (int i = 0; i < 4; ++i) {
+        int yDirection = promotionRank == 7 ?  -i : i;
+        std::pair<int, int> promotionSquare(promotionFile, promotionRank + yDirection);
+        promotionSquares.push_back(promotionSquare);
+    }
+
+    return promotionSquares;
+}
+
+void ChessScene::drawPromotionPieces() {
+    if (!cvm->isBoardUnderPromoption() || !cvm) return;
+
+    Color promoColor = (promotionSquareTo.second == 7) ? Color::WHITE : Color::BLACK;
+
+    std::vector<PieceType> promoTypes = {
+        PieceType::QUEEN,
+        PieceType::ROOK,
+        PieceType::BISHOP,
+        PieceType::KNIGHT
+    };
+
+    std::vector<std::pair<int, int>> targetSquares = getPromotionSquares(promotionSquareTo.first, promotionSquareTo.second);
+
+    bool isFlipped = cvm->getIsBoardFlipped();
+    const qreal qualityMultiplier = 1.5;
+
+    for (size_t i = 0; i < promoTypes.size(); ++i) {
+        PieceType type = promoTypes[i];
+        int logicalFile = targetSquares[i].first;
+        int logicalRank = targetSquares[i].second;
+
+        QString resource;
+        const auto& map = (promoColor == Color::WHITE) ? whitePieceMap : blackPieceMap;
+        if (map.count(type)) resource = map.at(type);
+
+        if (resource.isEmpty()) continue;
+
+        QGraphicsPixmapItem* item = new ChessPieceItem();
+
+        if (originalPixmaps.count(resource)) {
+            int highResSize = static_cast<int>(PIECE_SIZE * qualityMultiplier);
+            QPixmap scaled = originalPixmaps[resource].scaled(
+                highResSize, highResSize,
+                Qt::KeepAspectRatio, Qt::SmoothTransformation
+                );
+            scaled.setDevicePixelRatio(qualityMultiplier);
+            item->setPixmap(scaled);
+        }
+
+        int visualCol = isFlipped ? (7 - logicalFile) : logicalFile;
+        int visualRow = isFlipped ? logicalRank : (7 - logicalRank);
+        QRectF square = getSquareRect(visualCol, visualRow);
+
+        item->setPos(square.topLeft());
+
+        item->setData(IsPromotionKey, true);
+        item->setData(PieceTypeKey, static_cast<int>(type));
+
+        item->setZValue(110);
+
+        addItem(item);
+    }
+}
+
 void ChessScene::drawMovedPieceBackground() {
     if (!cvm) return;
 
@@ -97,24 +188,9 @@ void ChessScene::drawMovedPieceBackground() {
     if (!lastMove.isValid()) return;
 
     QColor highlightColor(246, 246, 105, 150);
-    bool isFlipped = cvm->getIsBoardFlipped();
 
-    auto highlightSquare = [&](int logicalFile, int logicalRank) {
-        int visualCol = isFlipped ? (7 - logicalFile) : logicalFile;
-        int visualRow = isFlipped ? logicalRank : (7 - logicalRank);
-
-        QRectF rectArea = getSquareRect(visualCol, visualRow);
-
-        QGraphicsRectItem* rect = new QGraphicsRectItem(rectArea.adjusted(-0.1, -0.1, 0.1, 0.1));
-        rect->setBrush(QBrush(highlightColor));
-        rect->setPen(Qt::NoPen);
-        rect->setZValue(1);
-
-        addItem(rect);
-    };
-
-    highlightSquare(lastMove.fromFile, lastMove.fromRank);
-    highlightSquare(lastMove.toFile, lastMove.toRank);
+    highlightSquare(lastMove.fromFile, lastMove.fromRank, highlightColor);
+    highlightSquare(lastMove.toFile, lastMove.toRank, highlightColor);
 }
 
 void ChessScene::drawPieces() {
@@ -122,11 +198,36 @@ void ChessScene::drawPieces() {
     bool isFlipped = cvm->getIsBoardFlipped();
     const qreal qualityMultiplier = 1.5;
 
+    std::vector<std::pair<int, int>> promoSquares;
+    bool isPromotion = cvm->isBoardUnderPromoption();
+
+    if (isPromotion) {
+        promoSquares = getPromotionSquares(promotionSquareTo.first, promotionSquareTo.second);
+    }
+
     for (int visualRow = 0; visualRow < 8; ++visualRow) {
         for (int visualCol = 0; visualCol < 8; ++visualCol) {
 
             int matrixRow = isFlipped ? (7 - visualRow) : visualRow;
             int matrixCol = isFlipped ? (7 - visualCol) : visualCol;
+
+            int logicalRank = 7 - matrixRow;
+            int logicalFile = matrixCol;
+
+            if (isPromotion) {
+                if (logicalFile == promotionSquareFrom.first && logicalRank == promotionSquareFrom.second) {
+                    continue;
+                }
+
+                bool isReservedForPromotion = false;
+                for (const auto& sq : promoSquares) {
+                    if (sq.first == logicalFile && sq.second == logicalRank) {
+                        isReservedForPromotion = true;
+                        break;
+                    }
+                }
+                if (isReservedForPromotion) continue;
+            }
 
             PieceType type = boardMatrix[matrixRow][matrixCol].first;
             Color color = boardMatrix[matrixRow][matrixCol].second;
@@ -157,13 +258,8 @@ void ChessScene::drawPieces() {
             }
 
             QRectF square = getSquareRect(visualCol, visualRow);
-            qreal offX = (square.width() - PIECE_SIZE) / 2.0;
-            qreal offY = (square.height() - PIECE_SIZE) / 2.0;
-            item->setPos(square.topLeft() + QPointF(offX, offY));
 
-            int logicalRank = 7 - matrixRow;
-            int logicalFile = matrixCol;
-
+            item->setPos(square.topLeft());
             item->setData(FileKey, logicalFile);
             item->setData(RankKey, logicalRank);
             item->setZValue(10);
@@ -180,9 +276,26 @@ void ChessScene::updateLayout()
     activeItem = nullptr;
     drawMovedPieceBackground();
     drawPieces();
+    if (cvm->isBoardUnderPromoption()) {
+        highlightPromotionSquares();
+        drawPromotionPieces();
+    }
 }
 
 void ChessScene::onBoardChanged() {
+    updateLayout();
+}
+
+void ChessScene::onPromotionEnded() {
+    cvm->setIsBoardUnderPromotion(false);
+    updateLayout();
+}
+
+void ChessScene::handlePromotion(int fromX, int fromY, int toX, int toY) {
+
+    cvm->setIsBoardUnderPromotion(true);
+    promotionSquareFrom = std::pair<int, int>(fromX, fromY);
+    promotionSquareTo = std::pair<int, int>(toX, toY);
     updateLayout();
 }
 
@@ -194,7 +307,15 @@ void ChessScene::onSceneRectChanged(const QRectF& rect)
 
 void ChessScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
 {
+    bool isPromotion = cvm->isBoardUnderPromoption();
+
     if (event->button() == Qt::RightButton) {
+        if (isPromotion) {
+            onPromotionEnded();
+            event->accept();
+            return;
+        }
+
         if (activeItem) {
             activeItem->setPos(activeItemOriginalPos);
             activeItem->setZValue(10);
@@ -206,6 +327,28 @@ void ChessScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
     }
 
     if (event->button() == Qt::LeftButton) {
+
+        QGraphicsItem* itemUnderMouse = itemAt(event->scenePos(), QTransform());
+        if (itemUnderMouse) {
+            QVariant isPromoData = itemUnderMouse->data(IsPromotionKey);
+            if (isPromoData.isValid() && isPromoData.toBool()) {
+                PieceType chosenType = static_cast<PieceType>(itemUnderMouse->data(PieceTypeKey).toInt());
+
+                cvm->movePiece(promotionSquareFrom.first, promotionSquareFrom.second,
+                                  promotionSquareTo.first, promotionSquareTo.second,
+                                  chosenType);
+
+                onPromotionEnded();
+                event->accept();
+                return;
+            }
+        }
+
+        if (isPromotion) {
+            onPromotionEnded();
+            return;
+        }
+
         int clickedFile, clickedVisualRank;
         if (!scenePosToSquare(event->scenePos(), clickedFile, clickedVisualRank)) {
             QGraphicsScene::mousePressEvent(event);
@@ -217,7 +360,7 @@ void ChessScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
 
         for (QGraphicsItem* item : items()) {
             auto* castedItem = dynamic_cast<QGraphicsPixmapItem*>(item);
-            if (!castedItem || castedItem->zValue() < 5) continue; // Csak bábuk
+            if (!castedItem || castedItem->zValue() < 5) continue;
 
             int itemFile = castedItem->data(FileKey).toInt();
             int itemRank = castedItem->data(RankKey).toInt();
@@ -263,8 +406,8 @@ void ChessScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
         if (insideBoard && cvm) {
             int toLogicalRank = 7 - visualRank;
             bool isMovePromotion = cvm->isMovePromotion(fromFile, fromRank, toFile, toLogicalRank);
-            PieceType promotionPiece = isMovePromotion ? PieceType::QUEEN : PieceType::PIECE_NONE;
-            cvm->movePiece(fromFile, fromRank, toFile, toLogicalRank, promotionPiece);
+            if (!isMovePromotion) cvm->movePiece(fromFile, fromRank, toFile, toLogicalRank);
+            else handlePromotion(fromFile, fromRank, toFile, toLogicalRank);
         }
 
         if (items().contains(activeItem)) {

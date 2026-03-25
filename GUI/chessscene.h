@@ -15,7 +15,9 @@ public:
 
     enum PieceData {
         FileKey = Qt::UserRole + 1,
-        RankKey
+        RankKey,
+        PieceTypeKey,
+        IsPromotionKey
     };
 
     explicit ChessScene(QObject* parent = nullptr);
@@ -40,6 +42,7 @@ public:
 
 public slots:
     void onBoardChanged();
+    void onPromotionEnded();
 
 protected:
     void mousePressEvent(QGraphicsSceneMouseEvent* event) override;
@@ -57,8 +60,18 @@ private:
     static const std::unordered_map<PieceType, QString> blackPieceMap;
 
     void sceneRectChanged(const QRectF &rect);
+    void drawPromotionPieces();
     void drawMovedPieceBackground();
     void drawPieces();
+
+    void handlePromotion(int fromX, int fromY, int toX, int toY);
+
+    void highlightPromotionSquares();
+    void highlightSquare(int logicalFile, int logicalRank, QColor highlightColor);
+    std::vector<std::pair<int, int>> getPromotionSquares(int promotionFile, int promotionRank);
+
+    std::pair<int, int> promotionSquareFrom;
+    std::pair<int, int> promotionSquareTo;
 
 private slots:
     void onSceneRectChanged(const QRectF& rect);

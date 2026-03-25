@@ -14,7 +14,7 @@ class ChessViewModel : public QObject
     Q_OBJECT
 public:
     explicit ChessViewModel(BoardManager& b, QObject* parent = nullptr);
-    static constexpr int ROBOT_GAMES = 200;
+    static constexpr int ROBOT_GAMES = 1000;
 
     AllSettings currentSettings;
 
@@ -39,9 +39,12 @@ public:
     void loadBeginnerFEN();
     void loadFEN(std::string fen);
 
-    bool isMovePromotion(int fromX, int fromY, int toX, int toY) const;
+    bool isMovePromotion(int fromX, int fromY, int toX, int toY);
     bool isRobotUnderSearch() const;
+
     inline bool getIsBoardFlipped() const { return isBoardFlipped; }
+    inline void setIsBoardUnderPromotion(bool isUnderPromotion) { this->isUnderPromotion =  isUnderPromotion; }
+    inline bool isBoardUnderPromoption() { return isUnderPromotion; }
 
     void loadSettings(AllSettings& allS);
 
@@ -61,6 +64,7 @@ signals:
     void flipBoardToRequest(bool isFlipped);
     void playerPanelsUpdateRequest(QString playerName, QString playerIconPath, Color playerColor);
     void syncPiecesWithPanelsRequest(int pieces[2][6]);
+    void endPromotion();
 
 private:
     BoardManager& bm;
@@ -81,6 +85,8 @@ private:
     int simJ = 0;
     QString currentSimFen;
     std::vector<std::vector<std::pair<PieceType, Color>>> cachedMatrix;
+
+    bool isUnderPromotion = false;
 
     int reviewingPly = -1;
     void reviewEnded();

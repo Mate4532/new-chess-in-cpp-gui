@@ -432,6 +432,23 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, b
     return alpha;
 }
 
+void Searcher::PrepareSearcher() {
+    startTime = now_ms();
+    stop = false;
+    isStoppedManually = false;
+    isSearching = true;
+    nodes = 0;
+
+    repetitionTable.Init(board);
+    repetitionTable.Push(board.getHash(), false);
+    AgeHistory();
+    ClearKillers();
+    tt.NewWrite();
+
+    nnue_state[0].dirtyPiece.dirtyNum = 0;
+    nnue_state[0].accumulator.computedAccumulation = 0;
+}
+
 void Searcher::ClearHistory() {
     for (int c = 0; c < 2; c++)
         for (int f = 0; f < SQUARE_COUNT; f++)
@@ -454,20 +471,8 @@ void Searcher::ClearKillers() {
 }
 
 Move Searcher::IterativeDeepening() {
-    startTime = now_ms();
-    stop = false;
-    isStoppedManually = false;
-    isSearching = true;
-    nodes = 0;
 
-    repetitionTable.Init(board);
-    repetitionTable.Push(board.getHash(), false);
-    AgeHistory();
-    ClearKillers();
-    tt.NewWrite();
-
-    nnue_state[0].dirtyPiece.dirtyNum = 0;
-    nnue_state[0].accumulator.computedAccumulation = 0;
+    PrepareSearcher();
 
     int rawScore;
     Move tmpMove;
@@ -654,16 +659,14 @@ std::vector<Move> Searcher::GetWhatIfPV(const std::vector<Move>& baseLine, Move 
 }
 
 Move Searcher::GetBestAmongTopMoves(int depth, int topN, int chanceToActivatePossBlunder, int blunderThreshold) {
-    Move bestMoveFromID = IterativeDeepening();
 
-    startTime = now_ms();
-    stop = false;
+    PrepareSearcher();
 
     static std::mt19937 gen(now_ms());
     std::uniform_int_distribution<> dis(1, 100);
 
     if (dis(gen) > chanceToActivatePossBlunder) {
-        return bestMoveFromID;
+        return IterativeDeepening();
     }
 
     MoveList moves;
@@ -678,17 +681,19 @@ Move Searcher::GetBestAmongTopMoves(int depth, int topN, int chanceToActivatePos
         int moveScore = 0;
         moveScore = -negamax(std::max(depth - 3, 3), -MATE_SCORE, MATE_SCORE, 0, Move(), false, false);
 
+        if (stop) break;
+
         scoredMoves.push_back({moves[i], moveScore});
         board.UndoMove(moves[i], true);
     }
 
-    if (scoredMoves.empty()) return Move();
+    isSearching = false;
+
+    if (scoredMoves.empty())
+        return IterativeDeepening();
 
     std::sort(scoredMoves.begin(), scoredMoves.end(), [&](const ScoredMove& a, const ScoredMove& b) {
-        if (a.score != b.score) return a.score > b.score;
-        if (a.m == bestMoveFromID) return true;
-        if (b.m == bestMoveFromID) return false;
-        return false;
+        return a.score > b.score;
     });
 
     if (board.isDebugMode) {

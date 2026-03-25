@@ -41,6 +41,7 @@ MainWindow::MainWindow(QWidget* parent)
     bapp = new BoardAndPlayerPanel(whitePlayer, blackPlayer, chessView);
 
     connect(chessViewModel, &ChessViewModel::boardChanged, chessScene, &ChessScene::onBoardChanged);
+    connect(chessViewModel, &ChessViewModel::endPromotion, chessScene, &ChessScene::onPromotionEnded);
 
     connect(chessViewModel, &ChessViewModel::gameEnded, infoContainer, &InfoView::writeGameResultToDisplay);
     connect(chessViewModel, &ChessViewModel::moveMade, infoContainer, &InfoView::addMoveToDisplay);

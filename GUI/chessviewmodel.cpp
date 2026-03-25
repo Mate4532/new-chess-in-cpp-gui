@@ -49,6 +49,9 @@ void ChessViewModel::endGame() {
         stopRobotSearch();
     }
 
+    if (isUnderPromotion)
+        emit endPromotion();
+
     isGameRunning = false;
     GameResult gr = bm.getGameResult();
     if (!isInBotSimulation) {
@@ -59,7 +62,7 @@ void ChessViewModel::endGame() {
     }
 }
 
-bool ChessViewModel::isMovePromotion(int fromX, int fromY, int toX, int toY) const {
+bool ChessViewModel::isMovePromotion(int fromX, int fromY, int toX, int toY) {
     return bm.isMovePromotion(fromX, fromY, toX, toY);
 }
 
@@ -363,6 +366,8 @@ void ChessViewModel::undoMove() {
         return;
 
     reviewEnded();
+    if (isUnderPromotion)
+        emit endPromotion();
 
     if (isRobotUnderSearch())
         stopRobotSearch();
@@ -407,6 +412,8 @@ std::vector<std::vector<std::pair<PieceType, Color>>> ChessViewModel::getBoardMa
 void ChessViewModel::reviewHistory(int targetPly) {
 
     int currentPly = bm.getPly();
+    if (isUnderPromotion)
+        emit endPromotion();
 
     if (targetPly >= 0 && targetPly <= currentPly) {
         if (targetPly == currentPly)

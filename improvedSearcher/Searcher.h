@@ -41,6 +41,7 @@ namespace ImprovedSearcher {
 
         NNUEdata nnue_state[MAXIMUM_DEPTH + 10];
 
+        void PrepareSearcher();
         void ClearHistory();
         void AgeHistory();
         void ClearKillers();
