@@ -30,6 +30,7 @@ public:
                                                  ChessView::WHOLE_CHESSBOARD_HEIGHT_PX - CHESSBOARD_OFFSET_UP_PX - CHESSBOARD_OFFSET_DOWN_PX) / 8;
     static constexpr double PIECE_SIZE_SQUARE_RATIO = 0.9;
     static constexpr double PIECE_SIZE = TILE_SIZE * 0.9;
+    static constexpr double FULL_BOARD_SIZE = TILE_SIZE * 8;
 
     void setViewModel(ChessViewModel* cvm);
     void preloadPixmaps();
@@ -48,6 +49,7 @@ protected:
     void mousePressEvent(QGraphicsSceneMouseEvent* event) override;
     void mouseMoveEvent(QGraphicsSceneMouseEvent* event) override;
     void mouseReleaseEvent(QGraphicsSceneMouseEvent* event) override;
+    void mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event) override;
 
 private:
     ChessViewModel* cvm = nullptr;

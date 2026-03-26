@@ -56,12 +56,11 @@ void ChessScene::preloadPixmaps()
 }
 
 QRectF ChessScene::getSquareRect(int visualCol, int visualRow) const {
-    const double fullBoardSize = 8.0 * TILE_SIZE;
 
-    double x1 = (static_cast<double>(visualCol) * fullBoardSize) / 8.0;
-    double x2 = (static_cast<double>(visualCol + 1) * fullBoardSize) / 8.0;
-    double y1 = (static_cast<double>(visualRow) * fullBoardSize) / 8.0;
-    double y2 = (static_cast<double>(visualRow + 1) * fullBoardSize) / 8.0;
+    double x1 = (static_cast<double>(visualCol) * FULL_BOARD_SIZE) / 8.0;
+    double x2 = (static_cast<double>(visualCol + 1) * FULL_BOARD_SIZE) / 8.0;
+    double y1 = (static_cast<double>(visualRow) * FULL_BOARD_SIZE) / 8.0;
+    double y2 = (static_cast<double>(visualRow + 1) * FULL_BOARD_SIZE) / 8.0;
 
     return QRectF(
         CHESSBOARD_OFFSET_LEFT_PX + x1,
@@ -442,4 +441,9 @@ void ChessScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
         activeItem = nullptr;
     }
     QGraphicsScene::mouseReleaseEvent(event);
+}
+
+void ChessScene::mouseDoubleClickEvent(QGraphicsSceneMouseEvent* event)
+{
+    mousePressEvent(event);
 }

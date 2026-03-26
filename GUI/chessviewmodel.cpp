@@ -140,12 +140,12 @@ void ChessViewModel::afterMoveBeenMade(Move m) {
     if (bm.didGameEnd())
         endGame();
 
-    if (isGameRunning && bm.isRobotToMove())
-        makeRobotMove();
-
     int ply = bm.getPly();
 
     emit moveMade(ply, QString::fromStdString(m.toHumanReadable()), lastMovedColor);
+
+    if (isGameRunning && bm.isRobotToMove())
+        makeRobotMove();
 }
 
 void ChessViewModel::loadSettings(AllSettings& allS) {
