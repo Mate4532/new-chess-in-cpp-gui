@@ -36,8 +36,7 @@ public:
     void preloadPixmaps();
 
     bool scenePosToSquare(const QPointF& pos, int& file, int& visualRank) const;
-    QPointF squareToScenePos(int file, int visualRank) const;
-    QRectF getSquareRect(int visualCol, int visualRow) const;
+    QRectF getSquareRect(int col, int row, bool fromBoardCoordinates) const;
 
     void updateLayout();
 

@@ -55,7 +55,19 @@ void ChessScene::preloadPixmaps()
     loadMap(blackPieceMap);
 }
 
-QRectF ChessScene::getSquareRect(int visualCol, int visualRow) const {
+QRectF ChessScene::getSquareRect(int col, int row, bool fromBoardCoordinates) const {
+
+    bool isFlipped = cvm->getIsBoardFlipped();
+    int visualCol, visualRow;
+
+    if (fromBoardCoordinates) {
+        visualCol = isFlipped ? (7 - col) : col;
+        visualRow = isFlipped ? row : (7 - row);
+    }
+    else {
+        visualCol = isFlipped ? (7 - col) : col;
+        visualRow = isFlipped ? (7 - row) : row;
+    }
 
     double x1 = (static_cast<double>(visualCol) * FULL_BOARD_SIZE) / 8.0;
     double x2 = (static_cast<double>(visualCol + 1) * FULL_BOARD_SIZE) / 8.0;
@@ -98,11 +110,7 @@ void ChessScene::highlightPromotionSquares() {
         auto sq = promotionSquares[i];
 
         highlightSquare(sq.first, sq.second, highlightColor);
-
-        bool isFlipped = cvm->getIsBoardFlipped();
-        int visualCol = isFlipped ? (7 - sq.first) : sq.first;
-        int visualRow = isFlipped ? sq.second : (7 - sq.second);
-        QRectF rect = getSquareRect(visualCol, visualRow);
+        QRectF rect = getSquareRect(sq.first, sq.second, true);
 
         if (i == 0) boundingBox = rect;
         else boundingBox = boundingBox.united(rect);
@@ -124,12 +132,7 @@ void ChessScene::highlightPromotionSquares() {
 
 void ChessScene::highlightSquare(int logicalFile, int logicalRank, QColor highlightColor) {
 
-    bool isFlipped = cvm->getIsBoardFlipped();
-
-    int visualCol = isFlipped ? (7 - logicalFile) : logicalFile;
-    int visualRow = isFlipped ? logicalRank : (7 - logicalRank);
-
-    QRectF rectArea = getSquareRect(visualCol, visualRow);
+    QRectF rectArea = getSquareRect(logicalFile, logicalRank, true);
 
     QGraphicsRectItem* rect = new QGraphicsRectItem(rectArea.adjusted(-0.5, -0.5, 0.5, 0.5));
     rect->setBrush(QBrush(highlightColor));
@@ -171,11 +174,7 @@ void ChessScene::addPieceToBoard(PieceType type, Color color, int logicalFile, i
         item->setPixmap(scaled);
     }
 
-    bool isFlipped = cvm->getIsBoardFlipped();
-    int visualCol = isFlipped ? (7 - logicalFile) : logicalFile;
-    int visualRow = isFlipped ? logicalRank : (7 - logicalRank);
-
-    QRectF square = getSquareRect(visualCol, visualRow);
+    QRectF square = getSquareRect(logicalFile, logicalRank, true);
     item->setPos(square.topLeft());
 
     if (isPromotion) {
@@ -292,11 +291,8 @@ void ChessScene::onSceneRectChanged(const QRectF& rect)
 void ChessScene::updateHoverHighlight(const QPointF& scenePos) {
     int file, rank;
     if (scenePosToSquare(scenePos, file, rank)) {
-        bool isFlipped = cvm->getIsBoardFlipped();
-        int visualCol = isFlipped ? (7 - file) : file;
-        int visualRank = isFlipped ? (7- rank) : rank ;
 
-        QRectF squareRect = getSquareRect(visualCol, visualRank);
+        QRectF squareRect = getSquareRect(file, rank, false);
 
         const qreal penWidth = 6.0;
 
