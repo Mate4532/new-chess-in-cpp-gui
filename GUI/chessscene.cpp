@@ -290,10 +290,11 @@ void ChessScene::onSceneRectChanged(const QRectF& rect)
 }
 
 void ChessScene::updateHoverHighlight(const QPointF& scenePos) {
-    int file, visualRank;
-    if (scenePosToSquare(scenePos, file, visualRank)) {
+    int file, rank;
+    if (scenePosToSquare(scenePos, file, rank)) {
         bool isFlipped = cvm->getIsBoardFlipped();
         int visualCol = isFlipped ? (7 - file) : file;
+        int visualRank = isFlipped ? (7- rank) : rank ;
 
         QRectF squareRect = getSquareRect(visualCol, visualRank);
 
