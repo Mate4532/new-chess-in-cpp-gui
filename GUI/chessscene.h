@@ -53,6 +53,7 @@ private:
     ChessViewModel* cvm = nullptr;
 
     QGraphicsPixmapItem* activeItem = nullptr;
+    QGraphicsRectItem* hoverHighlightItem = nullptr;
     QPointF activeItemOriginalPos;
 
     std::unordered_map<QString, QPixmap> originalPixmaps;
@@ -60,10 +61,12 @@ private:
     static const std::unordered_map<PieceType, QString> blackPieceMap;
 
     void sceneRectChanged(const QRectF &rect);
+    void addPieceToBoard(PieceType type, Color color, int logicalFile, int logicalRank, bool isPromotion);
     void drawPromotionPieces();
     void drawMovedPieceBackground();
     void drawPieces();
 
+    void updateHoverHighlight(const QPointF& scenePos);
     void handlePromotion(int fromX, int fromY, int toX, int toY);
 
     void highlightPromotionSquares();

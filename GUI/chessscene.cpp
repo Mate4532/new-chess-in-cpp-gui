@@ -90,11 +90,37 @@ bool ChessScene::scenePosToSquare(const QPointF& pos, int& file, int& visualRank
 }
 
 void ChessScene::highlightPromotionSquares() {
-
     std::vector<std::pair<int, int>> promotionSquares = getPromotionSquares(promotionSquareTo.first, promotionSquareTo.second);
     QColor highlightColor(255, 255, 255);
-    for (auto promotionSquare : promotionSquares)
-        highlightSquare(promotionSquare.first, promotionSquare.second, highlightColor);
+
+    QRectF boundingBox;
+
+    for (size_t i = 0; i < promotionSquares.size(); ++i) {
+        auto sq = promotionSquares[i];
+
+        highlightSquare(sq.first, sq.second, highlightColor);
+
+        bool isFlipped = cvm->getIsBoardFlipped();
+        int visualCol = isFlipped ? (7 - sq.first) : sq.first;
+        int visualRow = isFlipped ? sq.second : (7 - sq.second);
+        QRectF rect = getSquareRect(visualCol, visualRow);
+
+        if (i == 0) boundingBox = rect;
+        else boundingBox = boundingBox.united(rect);
+    }
+
+    QGraphicsRectItem* containerBorder = new QGraphicsRectItem(boundingBox);
+
+    QColor black(0, 0, 0);
+    QPen borderPen(black);
+    borderPen.setWidth(4);
+    borderPen.setJoinStyle(Qt::MiterJoin);
+
+    containerBorder->setPen(borderPen);
+    containerBorder->setBrush(Qt::NoBrush);
+    containerBorder->setZValue(105);
+
+    addItem(containerBorder);
 }
 
 void ChessScene::highlightSquare(int logicalFile, int logicalRank, QColor highlightColor) {
@@ -126,58 +152,57 @@ std::vector<std::pair<int, int>> ChessScene::getPromotionSquares(int promotionFi
     return promotionSquares;
 }
 
+void ChessScene::addPieceToBoard(PieceType type, Color color, int logicalFile, int logicalRank, bool isPromotion) {
+    QString resource;
+    const auto& map = (color == Color::WHITE) ? whitePieceMap : blackPieceMap;
+    if (map.count(type)) resource = map.at(type);
+
+    if (resource.isEmpty()) return;
+
+    ChessPieceItem* item = new ChessPieceItem();
+
+    if (originalPixmaps.count(resource)) {
+        const qreal qualityMultiplier = 1.5;
+        int highResSize = static_cast<int>(PIECE_SIZE * qualityMultiplier);
+        QPixmap scaled = originalPixmaps[resource].scaled(
+            highResSize, highResSize,
+            Qt::KeepAspectRatio, Qt::SmoothTransformation
+            );
+        scaled.setDevicePixelRatio(qualityMultiplier);
+        item->setPixmap(scaled);
+    }
+
+    bool isFlipped = cvm->getIsBoardFlipped();
+    int visualCol = isFlipped ? (7 - logicalFile) : logicalFile;
+    int visualRow = isFlipped ? logicalRank : (7 - logicalRank);
+
+    QRectF square = getSquareRect(visualCol, visualRow);
+    item->setPos(square.topLeft());
+
+    if (isPromotion) {
+        item->setData(IsPromotionKey, true);
+        item->setData(PieceTypeKey, static_cast<int>(type));
+        item->setZValue(110);
+        item->setCursor(Qt::PointingHandCursor);
+    } else {
+        item->setData(FileKey, logicalFile);
+        item->setData(RankKey, logicalRank);
+        item->setZValue(10);
+    }
+
+    addItem(item);
+}
+
+
 void ChessScene::drawPromotionPieces() {
     if (!cvm->isBoardUnderPromoption() || !cvm) return;
 
     Color promoColor = (promotionSquareTo.second == 7) ? Color::WHITE : Color::BLACK;
-
-    std::vector<PieceType> promoTypes = {
-        PieceType::QUEEN,
-        PieceType::ROOK,
-        PieceType::BISHOP,
-        PieceType::KNIGHT
-    };
-
+    std::vector<PieceType> promoTypes = { PieceType::QUEEN, PieceType::ROOK, PieceType::BISHOP, PieceType::KNIGHT };
     std::vector<std::pair<int, int>> targetSquares = getPromotionSquares(promotionSquareTo.first, promotionSquareTo.second);
 
-    bool isFlipped = cvm->getIsBoardFlipped();
-    const qreal qualityMultiplier = 1.5;
-
     for (size_t i = 0; i < promoTypes.size(); ++i) {
-        PieceType type = promoTypes[i];
-        int logicalFile = targetSquares[i].first;
-        int logicalRank = targetSquares[i].second;
-
-        QString resource;
-        const auto& map = (promoColor == Color::WHITE) ? whitePieceMap : blackPieceMap;
-        if (map.count(type)) resource = map.at(type);
-
-        if (resource.isEmpty()) continue;
-
-        QGraphicsPixmapItem* item = new ChessPieceItem();
-
-        if (originalPixmaps.count(resource)) {
-            int highResSize = static_cast<int>(PIECE_SIZE * qualityMultiplier);
-            QPixmap scaled = originalPixmaps[resource].scaled(
-                highResSize, highResSize,
-                Qt::KeepAspectRatio, Qt::SmoothTransformation
-                );
-            scaled.setDevicePixelRatio(qualityMultiplier);
-            item->setPixmap(scaled);
-        }
-
-        int visualCol = isFlipped ? (7 - logicalFile) : logicalFile;
-        int visualRow = isFlipped ? logicalRank : (7 - logicalRank);
-        QRectF square = getSquareRect(visualCol, visualRow);
-
-        item->setPos(square.topLeft());
-
-        item->setData(IsPromotionKey, true);
-        item->setData(PieceTypeKey, static_cast<int>(type));
-
-        item->setZValue(110);
-
-        addItem(item);
+        addPieceToBoard(promoTypes[i], promoColor, targetSquares[i].first, targetSquares[i].second, true);
     }
 }
 
@@ -195,76 +220,35 @@ void ChessScene::drawMovedPieceBackground() {
 
 void ChessScene::drawPieces() {
     auto boardMatrix = cvm->getBoardMatrix();
-    bool isFlipped = cvm->getIsBoardFlipped();
-    const qreal qualityMultiplier = 1.5;
-
-    std::vector<std::pair<int, int>> promoSquares;
     bool isPromotion = cvm->isBoardUnderPromoption();
+    std::vector<std::pair<int, int>> promoSquares;
 
     if (isPromotion) {
         promoSquares = getPromotionSquares(promotionSquareTo.first, promotionSquareTo.second);
     }
 
-    for (int visualRow = 0; visualRow < 8; ++visualRow) {
-        for (int visualCol = 0; visualCol < 8; ++visualCol) {
-
-            int matrixRow = isFlipped ? (7 - visualRow) : visualRow;
-            int matrixCol = isFlipped ? (7 - visualCol) : visualCol;
+    for (int matrixRow = 0; matrixRow < 8; ++matrixRow) {
+        for (int matrixCol = 0; matrixCol < 8; ++matrixCol) {
 
             int logicalRank = 7 - matrixRow;
             int logicalFile = matrixCol;
 
             if (isPromotion) {
-                if (logicalFile == promotionSquareFrom.first && logicalRank == promotionSquareFrom.second) {
-                    continue;
-                }
+                if (logicalFile == promotionSquareFrom.first && logicalRank == promotionSquareFrom.second) continue;
 
-                bool isReservedForPromotion = false;
+                bool isReserved = false;
                 for (const auto& sq : promoSquares) {
-                    if (sq.first == logicalFile && sq.second == logicalRank) {
-                        isReservedForPromotion = true;
-                        break;
-                    }
+                    if (sq.first == logicalFile && sq.second == logicalRank) { isReserved = true; break; }
                 }
-                if (isReservedForPromotion) continue;
+                if (isReserved) continue;
             }
 
             PieceType type = boardMatrix[matrixRow][matrixCol].first;
             Color color = boardMatrix[matrixRow][matrixCol].second;
 
-            if (type == PieceType::PIECE_NONE) continue;
-
-            QString resource;
-            if (color == Color::WHITE) {
-                auto it = whitePieceMap.find(type);
-                if (it != whitePieceMap.end()) resource = it->second;
-            } else {
-                auto it = blackPieceMap.find(type);
-                if (it != blackPieceMap.end()) resource = it->second;
+            if (type != PieceType::PIECE_NONE) {
+                addPieceToBoard(type, color, logicalFile, logicalRank, false);
             }
-
-            if (resource.isEmpty()) continue;
-
-            QGraphicsPixmapItem* item = new ChessPieceItem();
-
-            if (originalPixmaps.count(resource)) {
-                int highResSize = static_cast<int>(PIECE_SIZE * qualityMultiplier);
-                QPixmap scaled = originalPixmaps[resource].scaled(
-                    highResSize, highResSize,
-                    Qt::KeepAspectRatio, Qt::SmoothTransformation
-                    );
-                scaled.setDevicePixelRatio(qualityMultiplier);
-                item->setPixmap(scaled);
-            }
-
-            QRectF square = getSquareRect(visualCol, visualRow);
-
-            item->setPos(square.topLeft());
-            item->setData(FileKey, logicalFile);
-            item->setData(RankKey, logicalRank);
-            item->setZValue(10);
-
-            addItem(item);
         }
     }
 }
@@ -274,6 +258,7 @@ void ChessScene::updateLayout()
     if (!cvm) return;
     clear();
     activeItem = nullptr;
+    hoverHighlightItem = nullptr;
     drawMovedPieceBackground();
     drawPieces();
     if (cvm->isBoardUnderPromoption()) {
@@ -303,6 +288,37 @@ void ChessScene::onSceneRectChanged(const QRectF& rect)
 {
     Q_UNUSED(rect);
     updateLayout();
+}
+
+void ChessScene::updateHoverHighlight(const QPointF& scenePos) {
+    int file, visualRank;
+    if (scenePosToSquare(scenePos, file, visualRank)) {
+        bool isFlipped = cvm->getIsBoardFlipped();
+        int visualCol = isFlipped ? (7 - file) : file;
+
+        QRectF squareRect = getSquareRect(visualCol, visualRank);
+
+        const qreal penWidth = 6.0;
+
+        if (!hoverHighlightItem) {
+            hoverHighlightItem = new QGraphicsRectItem();
+            QPen boldPen(Qt::white);
+            boldPen.setWidthF(penWidth);
+            boldPen.setJoinStyle(Qt::MiterJoin);
+            boldPen.setCapStyle(Qt::FlatCap);
+            hoverHighlightItem->setPen(boldPen);
+            hoverHighlightItem->setBrush(Qt::NoBrush);
+            hoverHighlightItem->setZValue(50);
+            addItem(hoverHighlightItem);
+        }
+
+        qreal offset = penWidth / 2.0;
+        hoverHighlightItem->setRect(squareRect.adjusted(offset, offset, -offset, -offset));
+
+        hoverHighlightItem->setVisible(true);
+    } else {
+        if (hoverHighlightItem) hoverHighlightItem->setVisible(false);
+    }
 }
 
 void ChessScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
@@ -377,6 +393,8 @@ void ChessScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
             activeItem->setZValue(100);
             activeItem->setCursor(Qt::ClosedHandCursor);
             activeItem->setPos(event->scenePos() - activeItem->boundingRect().center());
+
+            updateHoverHighlight(event->scenePos());
         }
     }
     QGraphicsScene::mousePressEvent(event);
@@ -386,13 +404,21 @@ void ChessScene::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
 {
     if (activeItem) {
         activeItem->setPos(event->scenePos() - activeItem->boundingRect().center());
+
+        updateHoverHighlight(event->scenePos());
     } else {
+        if (hoverHighlightItem) hoverHighlightItem->setVisible(false);
         QGraphicsScene::mouseMoveEvent(event);
     }
 }
 
 void ChessScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 {
+
+    if (hoverHighlightItem) {
+        hoverHighlightItem->setVisible(false);
+    }
+
     if (activeItem) {
         activeItem->setCursor(Qt::OpenHandCursor);
         activeItem->setZValue(10);
