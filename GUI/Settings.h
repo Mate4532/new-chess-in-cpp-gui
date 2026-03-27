@@ -7,7 +7,7 @@ struct RobotSettings {
     bool isWhiteRobot = false;
     bool isBlackRobot = false;
     bool isBotVsBot = false;
-    int botVsBotSearchTimeMs = 1000;
+    int botSearchTimeMs = 1000;
     Difficulty whiteRobotDifficulty = Difficulty::EASY;
     Difficulty blackRobotDifficulty = Difficulty::EASY;
 
@@ -17,7 +17,7 @@ struct RobotSettings {
                whiteRobotDifficulty != other.whiteRobotDifficulty ||
                blackRobotDifficulty != other.blackRobotDifficulty ||
                isBotVsBot != other.isBotVsBot ||
-               botVsBotSearchTimeMs != other.botVsBotSearchTimeMs;
+               botSearchTimeMs != other.botSearchTimeMs;
     }
 };
 

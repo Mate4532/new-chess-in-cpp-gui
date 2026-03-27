@@ -1,32 +1,44 @@
 #ifndef SETTINGSDIALOG_H
 #define SETTINGSDIALOG_H
 
-#include "Settings.h"
+#include "settings.h"
 
 #include <QDialog>
-#include <QSlider>
 #include <QCheckBox>
 #include <QTabWidget>
 #include <QComboBox>
 #include <QLabel>
 #include <QLineEdit>
+#include <QVBoxLayout>
 
 class SettingsDialog : public QDialog
 {
     Q_OBJECT
 
 public:
-    explicit SettingsDialog(AllSettings& allS, QWidget *parent = nullptr);
+    explicit SettingsDialog(AllSettings& allSettings, QWidget *parent = nullptr);
 
-    RobotSettings getRobotSettings() const;
+private slots:
+    void onSaveClicked();
 
 private:
+    // UI építő és segéd metódusok
+    void applyStyles();
+    void setupActionButtons(QVBoxLayout* layout);
+    void setupRobotSignals();
+    void setBotVsBotUI(bool active);
+    void updateSearchTimeEnable();
+
     QWidget* createRobotTab();
     QWidget* createBoardTab();
-    QWidget* creatBotVsBot();
 
+    // Adat referencia
+    AllSettings& allS;
+
+    // UI elemek
     QTabWidget* tabWidget;
 
+    // Robot Tab elemek
     QCheckBox* checkWhiteRobot;
     QComboBox* comboWhiteDiff;
     QCheckBox* checkBlackRobot;
@@ -36,9 +48,8 @@ private:
     QLabel* labelSearchTime;
     QLineEdit *lineSearchTime;
 
+    // Tábla Tab elemek
     QCheckBox* checkBoardFlipped;
-
-    AllSettings& allS;
 };
 
 #endif // SETTINGSDIALOG_H

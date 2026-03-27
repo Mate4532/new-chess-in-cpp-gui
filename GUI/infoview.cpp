@@ -9,6 +9,7 @@
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QElapsedTimer>
+#include <QButtonGroup>
 
 QFont InfoView::resizeFontSize(QFont f) {
     QFont mbf = f;
@@ -21,32 +22,47 @@ int InfoView::getCurrentFontMinWidth() {
     return sSize * 3;
 }
 
+int InfoView::getCurrentIconSize() {
+    int iconSizeVal = qMax(22, panelCurrentWidth / 14);
+    return iconSizeVal;
+}
+
 InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWidget(parent)
 {
+    setupGeneralSettings();
+
+    QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(10, 10, 10, 10);
+    mainLayout->setSpacing(10);
+
+    setupHeader(mainLayout);
+    setupMoveListArea(mainLayout);
+    setupResultArea(mainLayout);
+    setupNavigationArea(mainLayout);
+    setupActionButtons(mainLayout);
+
+    mainLayout->setStretch(1, 10);
+    mainLayout->setStretch(2, 2);
+
+    clearMoveDisplay();
+    updateInfoPanel();
+}
+
+void InfoView::setupGeneralSettings() {
     setMinimumWidth(MIN_WIDTH);
     this->setObjectName("InfoPanel");
     this->setAttribute(Qt::WA_StyledBackground, true);
     panelCurrentWidth = this->width();
 
     this->setStyleSheet(R"(
-        #InfoPanel {
-            background-color: rgb(49, 46, 43);
-            border-radius: 10px;
-        }
-        QPushButton#settingsBtn {
-            background-color: transparent;
-            color: #888;
-            font-size: 20px;
-            border: none;
-            font-family: "Segoe UI Symbol";
-        }
-        QPushButton#settingsBtn:hover { color: white; }
-    )");
+    #InfoPanel {
+        background-color: rgb(49, 46, 43);
+        border-radius: 10px;
+    }
+)");
+}
 
-    QVBoxLayout* mainLayout = new QVBoxLayout(this);
-    mainLayout->setContentsMargins(10, 10, 10, 10);
-    mainLayout->setSpacing(10);
-
+void InfoView::setupHeader(QVBoxLayout* layout) {
     QHBoxLayout* headerLayout = new QHBoxLayout();
     headerLayout->addStretch();
 
@@ -56,62 +72,83 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     btnSettings->setFixedSize(40, 40);
 
     QString settingsStyle = R"(
-        QPushButton {
-            background-color: transparent;
-            color: #888888;
-            font-size: 30px;
-            border: none;
-            border-radius: 22px;
-        }
-        QPushButton:hover {
-            color: #ffffff;
-        }
-        QPushButton:pressed {
-            color: #B48866;
-            padding-top: 2px;
-            padding-left: 2px;
-        }
-    )";
+    QPushButton {
+        background-color: transparent;
+        color: #888888;
+        font-size: 30px;
+        border: none;
+        border-radius: 22px;
+    }
+    QPushButton:hover { color: #ffffff; }
+    QPushButton:pressed { color: #B48866; padding-top: 2px; padding-left: 2px; }
+)";
 
     btnSettings->setStyleSheet(settingsStyle);
     headerLayout->addWidget(btnSettings);
-    mainLayout->addLayout(headerLayout);
+    layout->addLayout(headerLayout);
 
-    QScrollArea* scrollArea = new QScrollArea(this);
-    scrollArea->setWidgetResizable(true);
-    scrollArea->setStyleSheet(R"(
-        QScrollArea {
-            border: none;
-            background-color: transparent;
+    connect(btnSettings, &QPushButton::clicked, this, &InfoView::openSettings);
+}
+
+void InfoView::scrollToMove(int ply) {
+    if (!moveScrollArea || !moveScrollArea->verticalScrollBar()) return;
+
+    if (ply <= 0) {
+        moveScrollArea->verticalScrollBar()->setValue(0);
+        return;
+    }
+
+    QPushButton* targetBtn = nullptr;
+    for (auto btn : moveButtonGroup->buttons()) {
+        if (btn->property("ply").toInt() == ply) {
+            targetBtn = qobject_cast<QPushButton*>(btn);
+            break;
         }
-        QScrollBar:vertical {
-            background: #2a2724;
-            width: 10px;
-            border-radius: 5px;
-        }
-        QScrollBar::handle:vertical {
-            background-color: #555555;
-            min-height: 20px;
-            border-radius: 4px;
-        }
-        QScrollBar::handle:vertical:hover {
-            background-color: #888888;
-        }
-        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-            height: 0px;
-        }
-        QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
-            background: none;
-        }
-        QWidget#scrollContent {
-            background-color: transparent;
-        }
+    }
+
+    if (!targetBtn) return;
+
+    int idx = movesLayout->indexOf(targetBtn);
+    int row, col, rs, cs;
+    movesLayout->getItemPosition(idx, &row, &col, &rs, &cs);
+
+    QFrame* rowFrame = nullptr;
+    QLayoutItem* item = movesLayout->itemAtPosition(row, 0);
+    if (item && item->widget()) {
+        rowFrame = qobject_cast<QFrame*>(item->widget());
+    }
+
+    QWidget* targetWidget = rowFrame ? static_cast<QWidget*>(rowFrame) : static_cast<QWidget*>(targetBtn);
+
+    int top = targetWidget->pos().y();
+    int bottom = top + targetWidget->height();
+    int viewTop = moveScrollArea->verticalScrollBar()->value();
+    int viewBottom = viewTop + moveScrollArea->viewport()->height();
+
+    if (top < viewTop) {
+        moveScrollArea->verticalScrollBar()->setValue(top);
+    }
+    else if (bottom > viewBottom) {
+        moveScrollArea->verticalScrollBar()->setValue(bottom - moveScrollArea->viewport()->height());
+    }
+}
+
+void InfoView::setupMoveListArea(QVBoxLayout* layout) {
+    moveScrollArea = new QScrollArea(this);
+    moveScrollArea->setWidgetResizable(true);
+    moveScrollArea->setStyleSheet(R"(
+        QScrollArea { border: none; background-color: transparent; }
+        QScrollBar:vertical { background: #2a2724; width: 10px; border-radius: 5px; }
+        QScrollBar::handle:vertical { background-color: #555555; min-height: 20px; border-radius: 4px; }
+        QScrollBar::handle:vertical:hover { background-color: #888888; }
+        QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0px; }
+        QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical { background: none; }
     )");
 
-    QScrollBar* vScrollBar = scrollArea->verticalScrollBar();
-    connect(vScrollBar, &QScrollBar::rangeChanged, this, [vScrollBar, this](int min, int max) {
+    QScrollBar* vScrollBar = moveScrollArea->verticalScrollBar();
+    connect(vScrollBar, &QScrollBar::rangeChanged, this, [this, vScrollBar](int min, int max) {
         if (!currentAllS.robotSettings.isBotVsBot || currentReviewPly == buttonAmount) {
-            vScrollBar->setValue(max);
+            scrollToMove(buttonAmount);
         }
     });
 
@@ -120,35 +157,34 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
 
     QWidget* scrollContent = new QWidget();
     scrollContent->setObjectName("scrollContent");
+    scrollContent->setStyleSheet("background-color: transparent;");
 
     movesLayout = new QGridLayout(scrollContent);
     movesLayout->setAlignment(Qt::AlignTop);
-
     movesLayout->setColumnStretch(0, 2);
     movesLayout->setColumnStretch(1, 5);
     movesLayout->setColumnStretch(2, 5);
-
     movesLayout->setSpacing(0);
     movesLayout->setContentsMargins(0, 0, 0, 0);
 
-    scrollContent->setLayout(movesLayout);
-    scrollArea->setWidget(scrollContent);
+    moveScrollArea->setWidget(scrollContent);
+    layout->addWidget(moveScrollArea);
+}
 
-    mainLayout->addWidget(scrollArea);
-
+void InfoView::setupResultArea(QVBoxLayout* layout) {
     resultBox = new QWidget(this);
     resultBox->setVisible(false);
     resultBox->setStyleSheet("background: transparent;");
-    QVBoxLayout* vLay = new QVBoxLayout(resultBox);
 
+    QVBoxLayout* vLay = new QVBoxLayout(resultBox);
     QHBoxLayout* hLay = new QHBoxLayout();
+
     whiteKing = new QLabel();
     blackKing = new QLabel();
     scoreLabel = new QLabel();
 
     whiteKing->setAlignment(Qt::AlignRight);
     blackKing->setAlignment(Qt::AlignLeft);
-
     scoreLabel->setAlignment(Qt::AlignCenter);
     scoreLabel->setStyleSheet("color: white; font-weight: bold;");
 
@@ -161,14 +197,57 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     statusLabel->setStyleSheet("color: #888;");
 
     vLay->setAlignment(Qt::AlignVCenter);
-
     vLay->addLayout(hLay);
     vLay->addWidget(statusLabel);
 
-    mainLayout->addWidget(resultBox);
+    layout->addWidget(resultBox);
+}
 
-    clearMoveDisplay();
+void InfoView::setupNavigationArea(QVBoxLayout* layout) {
+    QHBoxLayout* navLayout = new QHBoxLayout();
 
+    btnFirst = new QPushButton("«");
+    btnPrev = new QPushButton("‹");
+    btnNext = new QPushButton("›");
+    btnLast = new QPushButton("»");
+
+    navButtonGroup = new QButtonGroup(this);
+    navButtonGroup->addButton(btnFirst, 0);
+    navButtonGroup->addButton(btnPrev, 1);
+    navButtonGroup->addButton(btnNext, 2);
+    navButtonGroup->addButton(btnLast, 3);
+
+    QString navStyle = R"(
+        QPushButton {
+            background-color: #262421;
+            color: #aaaaaa;
+            border: none;
+            border-radius: 4px;
+            font-size: 24px;
+            font-weight: bold;
+            padding-bottom: 4px;
+            min-width: 50px;
+        }
+        QPushButton:hover {
+            background-color: #3d3a37;
+            color: #ffffff;
+        }
+        QPushButton:pressed {
+            background-color: #1a1917;
+        }
+    )";
+
+    for (auto btn : {btnFirst, btnPrev, btnNext, btnLast}) {
+        btn->setStyleSheet(navStyle);
+        btn->setCursor(Qt::PointingHandCursor);
+        navLayout->addWidget(btn);
+    }
+
+    layout->addLayout(navLayout);
+    connect(navButtonGroup, &QButtonGroup::idClicked, this, &InfoView::handleNavigation);
+}
+
+void InfoView::setupActionButtons(QVBoxLayout* layout) {
     btnNewGame = new QPushButton("Új Játék");
     btnUndo = new QPushButton("Visszavonás");
     btnGiveUp = new QPushButton("Feladás");
@@ -177,183 +256,191 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     btnUndo->setStyleSheet(mainButtonStyle);
     btnGiveUp->setStyleSheet(mainButtonStyle);
 
-    mainLayout->addWidget(btnNewGame);
-    mainLayout->addWidget(btnUndo);
-    mainLayout->addWidget(btnGiveUp);
-
-    mainLayout->setStretch(1, 10);
-    mainLayout->setStretch(2, 2);
-    mainLayout->setStretch(3, 0);
-    mainLayout->setStretch(4, 0);
-    mainLayout->setStretch(5, 0);
+    layout->addWidget(btnNewGame);
+    layout->addWidget(btnUndo);
+    layout->addWidget(btnGiveUp);
 
     connect(btnNewGame, &QPushButton::clicked, this, [this]() {
         static QElapsedTimer timer;
-
-        bool isBotVsBot = currentAllS.robotSettings.isBotVsBot;
-        bool cantClick = timer.isValid() && !timer.hasExpired(500);
-
-        if (isBotVsBot && cantClick) {
-            return;
-        }
-
+        if (currentAllS.robotSettings.isBotVsBot && timer.isValid() && !timer.hasExpired(500)) return;
         timer.restart();
         emit newGameRequested();
     });
     connect(btnUndo, &QPushButton::clicked, this, &InfoView::undoRequested);
     connect(btnGiveUp, &QPushButton::clicked, this, &InfoView::giveUpRequested);
-    connect(btnSettings, &QPushButton::clicked, this, &InfoView::openSettings);
+}
 
-    updateInfoPanel();
+void InfoView::handleNavigation(int id) {
+    int target = currentReviewPly;
+    if (id == 0) target = 0;
+    else if (id == 1) target = qMax(0, currentReviewPly - 1);
+    else if (id == 2) target = qMin(buttonAmount, currentReviewPly + 1);
+    else if (id == 3) target = buttonAmount;
+
+    if (target != currentReviewPly && buttonAmount > 0) {
+        currentReviewPly = target;
+        emit reviewRequested(target);
+
+        scrollToMove(target);
+
+        if (target == 0) {
+            moveButtonGroup->setExclusive(false);
+            if (auto checked = moveButtonGroup->checkedButton()) {
+                checked->setChecked(false);
+            }
+            moveButtonGroup->setExclusive(true);
+        }
+        else {
+            for (auto btn : moveButtonGroup->buttons()) {
+                if (btn->property("ply").toInt() == target) {
+                    btn->setChecked(true);
+                    break;
+                }
+            }
+        }
+    }
 }
 
 QPushButton* InfoView::createMoveButton(const QString& move, int movePly, Color pieceColor, PieceType movedPiece) {
-
     QFont btnFont;
     btnFont.setWeight(QFont::Bold);
-    QFont resizedBtnFont = resizeFontSize(btnFont);
 
     QPushButton* moveBtn = new QPushButton(move);
     moveBtn->setCheckable(true);
     moveBtn->setStyleSheet(moveBtnStyle);
     moveBtn->setCursor(Qt::PointingHandCursor);
     moveBtn->setProperty("ply", movePly);
-    moveBtn->setFont(resizedBtnFont);
+    moveBtn->setFont(resizeFontSize(btnFont));
     moveBtn->setMinimumWidth(getCurrentFontMinWidth());
     moveBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
 
-    QString iconPath;
-    if (pieceColor == WHITE) {
-        iconPath = ChessScene::whitePieceMap.at(movedPiece);
-    } else {
-        iconPath = ChessScene::blackPieceMap.at(movedPiece);
-    }
+    QString iconPath = (pieceColor == WHITE) ? ChessScene::whitePieceMap.at(movedPiece) : ChessScene::blackPieceMap.at(movedPiece);
+    int iconSizeVal = getCurrentIconSize();
 
-    int iconSizeVal = qMax(16, panelCurrentWidth / 16);
     if (movedPiece != PAWN && movedPiece != KING) {
         moveBtn->setIcon(QIcon(iconPath));
         moveBtn->setIconSize(QSize(iconSizeVal, iconSizeVal));
     }
 
     moveButtonGroup->addButton(moveBtn);
-
     return moveBtn;
 }
 
+QPushButton* InfoView::getLastButton(int* r, int* c) {
+    for (int i = movesLayout->count() - 1; i >= 0; --i) {
+        if (auto btn = qobject_cast<QPushButton*>(movesLayout->itemAt(i)->widget())) {
+            int rs, cs;
+            if (r && c) movesLayout->getItemPosition(i, r, c, &rs, &cs);
+            return btn;
+        }
+    }
+    return nullptr;
+}
+
+void InfoView::clearRowWidgets(int row) {
+    for (int i = movesLayout->count() - 1; i >= 0; --i) {
+        int r, c, rs, cs;
+        movesLayout->getItemPosition(i, &r, &c, &rs, &cs);
+        if (r == row) {
+            if (auto item = movesLayout->takeAt(i)) {
+                if (item->widget()) item->widget()->deleteLater();
+                delete item;
+            }
+        }
+    }
+}
+
 void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color, PieceType movedPiece) {
+    int row = (movePly + 1) / 2;
+    int col = (color == WHITE) ? 1 : 2;
 
-    QFont labelFont;
-    labelFont.setWeight(QFont::Bold);
+    currentRow = row;
 
-    QFont btnFont;
-    btnFont.setWeight(QFont::Bold);
-
-    QFont resizedLabelFont = resizeFontSize(labelFont);
-    QFont resizedBtnFont = resizeFontSize(btnFont);
-
-    int currentCol = color == WHITE ? 1 : 2;
-
-    QLayoutItem* item = movesLayout->itemAtPosition(currentRow, 0);
-
-    bool needsNumber = item == nullptr;
-
-    if (needsNumber) {
-
-        if (currentRow % 2 == 0) {
+    if (!movesLayout->itemAtPosition(row, 0)) {
+        if (row % 2 == 1) {
             QFrame* rowBg = new QFrame();
+            rowBg->setObjectName("rowBg_" + QString::number(row));
             rowBg->setStyleSheet("background-color: rgba(255, 255, 255, 0.05); border-radius: 4px;");
-            movesLayout->addWidget(rowBg, currentRow, 0, 1, 3);
+            movesLayout->addWidget(rowBg, row, 0, 1, 3);
         }
 
-        int rowNumber = movePly / 2 + 1;
-        QLabel* numLabel = new QLabel(QString::number(rowNumber) + ".");
+        QLabel* numLabel = new QLabel(QString::number(movePly / 2 + 1) + ".");
         numLabel->setStyleSheet(numStyle);
         numLabel->setAlignment(Qt::AlignCenter);
-        movesLayout->addWidget(numLabel, currentRow, 0);
-        numLabel->setFont(resizedLabelFont);
-        numLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+        numLabel->setFont(resizeFontSize(numLabel->font()));
+        movesLayout->addWidget(numLabel, row, 0);
     }
 
     QPushButton* moveBtn = createMoveButton(move, movePly, color, movedPiece);
-    QString activeColor = (currentRow % 2 == 0) ? "#292725" : "#5C5C5C";
+
+    QString activeColor = "#5C5C5C";
     moveBtn->setStyleSheet(moveBtnStyle + QString("QPushButton:checked { background-color: %1; }").arg(activeColor));
 
     connect(moveBtn, &QPushButton::clicked, this, [this, moveBtn]() {
-        int targetPly = moveBtn->property("ply").toInt();
-        currentReviewPly = targetPly;
-        emit reviewRequested(targetPly);
+        currentReviewPly = moveBtn->property("ply").toInt();
+        emit reviewRequested(currentReviewPly);
+        scrollToMove(currentReviewPly);
     });
 
+    movesLayout->addWidget(moveBtn, row, col, Qt::AlignCenter);
     if (!currentAllS.robotSettings.isBotVsBot || currentReviewPly == buttonAmount) {
         moveBtn->setChecked(true);
         currentReviewPly = movePly;
-    }
-    movesLayout->addWidget(moveBtn, currentRow, currentCol, Qt::AlignCenter);
-
-    if (color == BLACK) {
-        currentRow++;
     }
 
     buttonAmount++;
 }
 
 void InfoView::removeLastButFromDisplay() {
+    int r, c;
+    QPushButton* lastBtn = getLastButton(&r, &c);
+    if (!lastBtn) return;
 
-    if (buttonAmount < 1)
-        return;
+    moveButtonGroup->removeButton(lastBtn);
 
-    int lastIndex = movesLayout->count() - 1;
-    int row, col, rowSpan, colSpan;
-    movesLayout->getItemPosition(lastIndex, &row, &col, &rowSpan, &colSpan);
-
-    QLayoutItem* item = movesLayout->takeAt(lastIndex);
-    if (item) {
-        if (QWidget* widget = item->widget()) {
-            widget->deleteLater();
+    for (int i = 0; i < movesLayout->count(); ++i) {
+        if (movesLayout->itemAt(i)->widget() == lastBtn) {
+            QLayoutItem* item = movesLayout->takeAt(i);
+            delete item->widget();
+            delete item;
+            break;
         }
-        delete item;
-    }
-
-    if (col == 1) {
-        while (movesLayout->count() > 0) {
-            int nextIndex = movesLayout->count() - 1;
-            int r, c, rs, cs;
-            movesLayout->getItemPosition(nextIndex, &r, &c, &rs, &cs);
-
-            if (r == row) {
-                QLayoutItem* nextItem = movesLayout->takeAt(nextIndex);
-                if (nextItem) {
-                    if (QWidget* w = nextItem->widget()) {
-                        w->deleteLater();
-                    }
-                    delete nextItem;
-                }
-            } else {
-                break;
-            }
-        }
-    }
-    else{
-        currentRow--;
     }
 
     buttonAmount--;
 
-    for (int i = movesLayout->count() - 1; i >= 0; --i) {
-        QLayoutItem* foundItem = movesLayout->itemAt(i);
-        if (foundItem && foundItem->widget()) {
-            QPushButton* btn = qobject_cast<QPushButton*>(foundItem->widget());
-            if (btn) {
-                btn->setChecked(true);
-                currentReviewPly = btn->property("ply").toInt();
+    bool hasRemainingButton = false;
+    for (int col : {1, 2}) {
+        if (auto item = movesLayout->itemAtPosition(r, col)) {
+            if (qobject_cast<QPushButton*>(item->widget())) {
+                hasRemainingButton = true;
                 break;
             }
         }
     }
+
+    if (!hasRemainingButton) {
+        clearRowWidgets(r);
+        currentRow = qMax(0, r - 1);
+    } else {
+        currentRow = r;
+    }
+
+    if (auto nextLast = getLastButton()) {
+        nextLast->setChecked(true);
+        currentReviewPly = nextLast->property("ply").toInt();
+        QTimer::singleShot(10, this, [this]() { scrollToMove(currentReviewPly); });
+    } else {
+        currentReviewPly = 0;
+        currentRow = 0;
+    }
+
+    if (movesLayout->parentWidget()) {
+        movesLayout->parentWidget()->adjustSize();
+    }
 }
 
 void InfoView::updateInfoPanel() {
-
     int scoreLabelSize = qMax(14, panelCurrentWidth / 12);
     QFont f = scoreLabel->font();
     f.setPixelSize(scoreLabelSize);
@@ -363,34 +450,25 @@ void InfoView::updateInfoPanel() {
         if (QLayoutItem* item = movesLayout->itemAt(i)) {
             if (QWidget* widget = item->widget()) {
                 widget->setFont(resizeFontSize(widget->font()));
-
                 if (QPushButton* btn = qobject_cast<QPushButton*>(widget)) {
                     btn->setMinimumWidth(getCurrentFontMinWidth());
-
-                    int iconSizeVal = qMax(16, panelCurrentWidth / 22);
+                    int iconSizeVal = getCurrentIconSize();
                     btn->setIconSize(QSize(iconSizeVal, iconSizeVal));
                 }
             }
         }
     }
 
-    QFont mainButsFont = scoreLabel->font();
-    QFont resizedMainButFont = resizeFontSize(mainButsFont);
-
+    QFont resizedMainButFont = resizeFontSize(scoreLabel->font());
     btnGiveUp->setFont(resizedMainButFont);
     btnNewGame->setFont(resizedMainButFont);
     btnUndo->setFont(resizedMainButFont);
 
     if (gameRes != GameResult::GAME_DID_NOT_END) {
-
         int iSize = qMax(24, panelCurrentWidth / 7);
         QSize iconSize(iSize, iSize);
-
-        QIcon wIcon(":/resources/resources/white_king.png");
-        QIcon bIcon(":/resources/resources/black_king.png");
-
-        whiteKing->setPixmap(wIcon.pixmap(iconSize));
-        blackKing->setPixmap(bIcon.pixmap(iconSize));
+        whiteKing->setPixmap(QIcon(":/resources/resources/white_king.png").pixmap(iconSize));
+        blackKing->setPixmap(QIcon(":/resources/resources/black_king.png").pixmap(iconSize));
 
         QFont sf = statusLabel->font();
         sf.setPixelSize(qMax(10, panelCurrentWidth / 22));
@@ -399,28 +477,10 @@ void InfoView::updateInfoPanel() {
 }
 
 void InfoView::writeGameResultToDisplay(GameResult gr) {
-
     gameRes = gr;
-
-    switch(gr){
-    case GameResult::WHITE_WON:
-        scoreLabel->setText("1 - 0");
-        statusLabel->setText("Világos nyert");
-        break;
-
-    case GameResult::BLACK_WON:
-        scoreLabel->setText("0 - 1");
-        statusLabel->setText("Fekete nyert");
-        break;
-
-    case GameResult::DRAW:
-        scoreLabel->setText("½ - ½");
-        statusLabel->setText("Döntetlen");
-        break;
-
-    default:
-        break;
-    }
+    if (gr == GameResult::WHITE_WON) { scoreLabel->setText("1 - 0"); statusLabel->setText("Világos nyert"); }
+    else if (gr == GameResult::BLACK_WON) { scoreLabel->setText("0 - 1"); statusLabel->setText("Fekete nyert"); }
+    else if (gr == GameResult::DRAW) { scoreLabel->setText("½ - ½"); statusLabel->setText("Döntetlen"); }
 
     resultBox->setVisible(true);
     updateInfoPanel();
@@ -432,38 +492,24 @@ void InfoView::resizeEvent(QResizeEvent* event) {
     updateInfoPanel();
 }
 
-void InfoView::clearMoveDisplay()
-{
+void InfoView::clearMoveDisplay() {
     QLayoutItem* item;
     while ((item = movesLayout->takeAt(0)) != nullptr) {
-        if (QWidget* w = item->widget()) {
-            w->hide();
-            w->deleteLater();
-        }
+        if (QWidget* w = item->widget()) { w->hide(); w->deleteLater(); }
         delete item;
     }
-
     movesLayout->invalidate();
-
-    if (QWidget* contentWidget = movesLayout->parentWidget()) {
-        contentWidget->adjustSize();
-    }
+    if (QWidget* contentWidget = movesLayout->parentWidget()) contentWidget->adjustSize();
 
     resultBox->setVisible(false);
-
     currentRow = 0;
     buttonAmount = 0;
     currentReviewPly = 0;
+    gameRes = GameResult::GAME_DID_NOT_END;
 }
 
-void InfoView::openSettings()
-{
+void InfoView::openSettings() {
     AllSettings oldAllS = currentAllS;
-
     SettingsDialog dlg(currentAllS, this);
-
-    if (dlg.exec() == QDialog::Accepted) {
-
-        emit settingsChanged(oldAllS, currentAllS);
-    }
+    if (dlg.exec() == QDialog::Accepted) emit settingsChanged(oldAllS, currentAllS);
 }

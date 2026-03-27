@@ -169,7 +169,7 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
     bool boardConfigChanged = (newBs != oldBs);
 
     bool botVsBotChanged = newRs.isBotVsBot != oldRs.isBotVsBot;
-    bool botBsBotSearchTimeChanged = newRs.botVsBotSearchTimeMs != oldRs.botVsBotSearchTimeMs;
+    bool botSearchTimeChanged = newRs.botSearchTimeMs != oldRs.botSearchTimeMs;
     bool whiteRobotChanged = newRs.isWhiteRobot != oldRs.isWhiteRobot || newRs.whiteRobotDifficulty != oldRs.whiteRobotDifficulty;
     bool blackRobotChanged = newRs.isBlackRobot != oldRs.isBlackRobot || newRs.blackRobotDifficulty != oldRs.blackRobotDifficulty;
 
@@ -196,7 +196,6 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
             bm.setRobot(BLACK); bm.setDifficulty(BLACK, Difficulty::IMPOSSIBLE);
 
             bm.prepareImprovedBotVsOldBot();
-            bm.setSearchTime(newRs.botVsBotSearchTimeMs);
         }
 
         else if (whiteRobotChanged || blackRobotChanged || botVsBotGotTurnedOff) {
@@ -210,8 +209,8 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
             bm.setupBotsForNormalGame(currentSettings.robotSettings);
         }
 
-        if (botBsBotSearchTimeChanged) {
-            bm.setSearchTime(newRs.botVsBotSearchTimeMs);
+        if (botSearchTimeChanged) {
+            bm.setSearchTime(newRs.botSearchTimeMs);
         }
 
         updatePlayerPanelsIconAndLabel();
@@ -271,10 +270,6 @@ void ChessViewModel::loadFEN(std::string fen) {
 void ChessViewModel::startRobotGameLoop() {
     if (isRobotUnderSearch()) stopRobotSearch();
 
-    bm.prepareImprovedBotVsOldBot();
-    bm.setSearchTime(currentSettings.robotSettings.botVsBotSearchTimeMs);
-    updatePlayerPanelsIconAndLabel();
-
     simI = 0;
     simJ = 0;
     isInBotSimulation = true;
@@ -332,8 +327,8 @@ void ChessViewModel::swapRobots() {
 
 void ChessViewModel::updatePlayerPanelsIconAndLabel() {
 
-    bool isWhiteRobot = currentSettings.robotSettings.isWhiteRobot;
-    bool isBlackRobot = currentSettings.robotSettings.isBlackRobot;
+    bool isWhiteRobot = bm.isRobot(WHITE);
+    bool isBlackRobot = bm.isRobot(BLACK);
 
     QString whitePlayerName = isWhiteRobot ? QString::fromStdString(bm.getRobotNameWithDifficulty(WHITE)) : "Fehér játékos";
     QString whitePlayerIcontPath = isWhiteRobot ? ":/resources/resources/white_robot.png" : ":/resources/resources/white_pawn.png";

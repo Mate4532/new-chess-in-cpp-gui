@@ -1,129 +1,111 @@
 #include "settingsdialog.h"
 #include "BoardManager.h"
-
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QGridLayout>
 #include <QLabel>
 #include <QPushButton>
+#include <QIntValidator>
+#include <QFrame>
 
-    SettingsDialog::SettingsDialog(AllSettings& allSettings, QWidget *parent)
+SettingsDialog::SettingsDialog(AllSettings& allSettings, QWidget *parent)
     : allS(allSettings), QDialog(parent)
 {
     setWindowTitle("Beállítások");
+    setMinimumSize(450, 400);
+    resize(450, 400);
 
-    setMinimumSize(450, 350);
-    resize(450, 350);
-
-    setStyleSheet(R"(
-    QDialog { background-color: #312E2B; color: #eee; font-family: 'Segoe UI', sans-serif; }
-
-    QTabWidget::pane { border: 1px solid #555; background: #312E2B; }
-    QTabBar::tab { padding: 10px 20px; font-size: 14px; background: #262422; color: #888; }
-    QTabBar::tab:selected { background: #312E2B; color: white; border-top: 2px solid #B48866; }
-
-    QLabel {
-        color: #eee;
-        font-size: 15px;
-        padding: 2px;
-    }
-
-    QLineEdit {
-        background-color: #444;
-        color: white;
-        padding: 6px;
-        border: 1px solid #666;
-        border-radius: 4px;
-        font-size: 14px;
-        selection-background-color: #B48866;
-        selection-color: white;
-    }
-    QLineEdit:focus {
-        border: 1px solid #B48866;
-    }
-    QLineEdit:disabled {
-        color: #777;
-        background-color: #2a2a2a;
-        border: 1px solid #444;
-    }
-
-    QCheckBox { font-size: 15px; spacing: 10px; color: #eee; }
-    QCheckBox:disabled { color: #777; }
-    QCheckBox::indicator { width: 18px; height: 18px; border: 1px solid #888; border-radius: 3px; background: #444; }
-    QCheckBox::indicator:checked { background-color: #B48866; border: 1px solid #B48866; }
-    QCheckBox::indicator:unchecked:hover { border: 1px solid #aaa; }
-
-    QComboBox {
-        background-color: #444; color: white; padding: 6px;
-        border: 1px solid #666; border-radius: 4px; font-size: 14px;
-    }
-    QComboBox:disabled { color: #777; background-color: #2a2a2a; }
-    QComboBox::drop-down { border: none; }
-    QComboBox::down-arrow { image: none; border-left: 1px solid #555; width: 0px; }
-    QComboBox QAbstractItemView {
-        background-color: #444; color: white;
-        selection-background-color: #B48866; selection-color: white;
-        border: 1px solid #555;
-    }
-
-    QPushButton { background-color: #555; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-size: 14px; }
-    QPushButton:hover { background-color: #666; }
-    QPushButton:pressed { background-color: #444; }
-    QPushButton[text="Mentés"] { background-color: #B48866; font-weight: bold; }
-    QPushButton[text="Mentés"]:hover { background-color: #a37855; }
-)");
+    applyStyles();
 
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
-
     tabWidget = new QTabWidget();
     tabWidget->addTab(createRobotTab(), "Robotok");
     tabWidget->addTab(createBoardTab(), "Tábla");
-
     mainLayout->addWidget(tabWidget);
 
+    setupActionButtons(mainLayout);
+}
+
+void SettingsDialog::applyStyles() {
+    setStyleSheet(R"(
+        QDialog { background-color: #312E2B; color: #eee; font-family: 'Segoe UI', sans-serif; }
+        QTabWidget::pane {
+            border: 2px solid #262421;
+            background-color: #312E2B;
+        }
+        QTabBar::tab { padding: 10px 20px; font-size: 14px; background: #262422; color: #888; }
+        QTabBar::tab:selected { background: #312E2B; color: white; border-top: 2px solid #B48866; }
+        QLabel { color: #eee; font-size: 15px; padding: 2px; }
+        QLabel:disabled { color: #555; }
+        QLineEdit {
+            background-color: #444; color: white; padding: 6px; border: 1px solid #666;
+            border-radius: 4px; font-size: 14px; selection-background-color: #B48866; selection-color: white;
+        }
+        QLineEdit:focus { border: 1px solid #B48866; }
+        QLineEdit:disabled { color: #777; background-color: #2a2a2a; border: 1px solid #444; }
+        QCheckBox { font-size: 15px; spacing: 10px; color: #eee; }
+        QCheckBox:disabled { color: #777; }
+        QCheckBox::indicator { width: 18px; height: 18px; border: 1px solid #888; border-radius: 3px; background: #444; }
+        QCheckBox::indicator:checked { background-color: #B48866; border: 1px solid #B48866; }
+        QCheckBox::indicator:unchecked:hover { border: 1px solid #aaa; }
+        QComboBox { background-color: #444; color: white; padding: 6px; border: 1px solid #666; border-radius: 4px; font-size: 14px; }
+        QComboBox:disabled { color: #777; background-color: #2a2a2a; }
+        QComboBox::drop-down { border: none; }
+        QComboBox::down-arrow { image: none; border-left: 1px solid #555; width: 0px; }
+        QComboBox QAbstractItemView {
+            background-color: #444; color: white; selection-background-color: #B48866;
+            selection-color: white; border: 1px solid #555;
+        }
+        QPushButton { background-color: #555; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-size: 14px; }
+        QPushButton:hover { background-color: #666; }
+        QPushButton:pressed { background-color: #444; }
+        QPushButton[text="Mentés"] { background-color: #B48866; font-weight: bold; }
+        QPushButton[text="Mentés"]:hover { background-color: #a37855; }
+    )");
+}
+
+void SettingsDialog::setupActionButtons(QVBoxLayout* layout) {
     QHBoxLayout* btnLayout = new QHBoxLayout();
     btnLayout->addStretch();
+
     QPushButton* btnCancel = new QPushButton("Mégse");
     QPushButton* btnSave = new QPushButton("Mentés");
+
     btnLayout->addWidget(btnCancel);
     btnLayout->addWidget(btnSave);
-    mainLayout->addLayout(btnLayout);
+    layout->addLayout(btnLayout);
 
-    connect(btnSave, &QPushButton::clicked, this, [this]() {
-
-        RobotSettings& rs = allS.robotSettings;
-        BoardSettings& bs = allS.boardSettings;
-
-        rs.isWhiteRobot = checkWhiteRobot->isChecked();
-        rs.whiteRobotDifficulty = (Difficulty)comboWhiteDiff->currentIndex();
-
-        rs.isBlackRobot = checkBlackRobot->isChecked();
-        rs.blackRobotDifficulty = (Difficulty)comboBlackDiff->currentIndex();
-
-        rs.isBotVsBot = checkBotVsBot->isChecked();
-        rs.botVsBotSearchTimeMs = std::max(10, lineSearchTime->text().toInt());
-
-        allS.boardSettings.isBoardFlipped = checkBoardFlipped->isChecked();
-
-        accept();
-    });
+    connect(btnSave, &QPushButton::clicked, this, &SettingsDialog::onSaveClicked);
     connect(btnCancel, &QPushButton::clicked, this, &QDialog::reject);
+}
+
+void SettingsDialog::onSaveClicked() {
+    RobotSettings& rs = allS.robotSettings;
+
+    rs.isWhiteRobot = checkWhiteRobot->isChecked();
+    rs.whiteRobotDifficulty = (Difficulty)comboWhiteDiff->currentIndex();
+    rs.isBlackRobot = checkBlackRobot->isChecked();
+    rs.blackRobotDifficulty = (Difficulty)comboBlackDiff->currentIndex();
+    rs.isBotVsBot = checkBotVsBot->isChecked();
+    rs.botSearchTimeMs = std::max(10, lineSearchTime->text().toInt());
+
+    allS.boardSettings.isBoardFlipped = checkBoardFlipped->isChecked();
+
+    accept();
 }
 
 QWidget* SettingsDialog::createRobotTab() {
     QWidget* tab = new QWidget();
-
     QGridLayout* layout = new QGridLayout(tab);
-    layout->setSpacing(10);
-    layout->setContentsMargins(30, 30, 30, 30);
 
+    layout->setSpacing(5);
+    layout->setContentsMargins(30, 20, 30, 20);
+
+    RobotSettings& rs = allS.robotSettings;
     QStringList levels = {"Kezdő", "Haladó", "Nehéz", "Mester"};
-
-    RobotSettings rs = allS.robotSettings;
 
     checkBlackRobot = new QCheckBox("Fekete Robot");
     checkBlackRobot->setChecked(rs.isBlackRobot);
-
     comboBlackDiff = new QComboBox();
     comboBlackDiff->addItems(levels);
     comboBlackDiff->setCurrentIndex((int)rs.blackRobotDifficulty);
@@ -131,84 +113,99 @@ QWidget* SettingsDialog::createRobotTab() {
 
     checkWhiteRobot = new QCheckBox("Fehér Robot");
     checkWhiteRobot->setChecked(rs.isWhiteRobot);
-
     comboWhiteDiff = new QComboBox();
     comboWhiteDiff->addItems(levels);
     comboWhiteDiff->setCurrentIndex((int)rs.whiteRobotDifficulty);
     comboWhiteDiff->setEnabled(rs.isWhiteRobot);
 
-    checkBotVsBot = new QCheckBox("Robot vs Robot");
+    checkBotVsBot = new QCheckBox("Robot vs Robot mód");
     checkBotVsBot->setChecked(rs.isBotVsBot);
 
-    labelSearchTime = new QLabel("Gondolkodás idő");
+    QFrame* line = new QFrame();
+    line->setFrameShape(QFrame::NoFrame);
+    line->setFixedHeight(2);
+    line->setStyleSheet("background-color: #262421; margin-top: 10px; margin-bottom: 10px;");
 
-    QString botVsBotSearchString = QString::number(rs.botVsBotSearchTimeMs);
+    labelSearchTime = new QLabel("Max gondolkodási idő (ms):");
+    lineSearchTime = new QLineEdit(QString::number(rs.botSearchTimeMs));
+    lineSearchTime->setValidator(new QIntValidator(10, 10000, this));
+    lineSearchTime->setFixedWidth(80);
 
-    lineSearchTime = new QLineEdit();
-    lineSearchTime->setPlaceholderText(botVsBotSearchString);
-    lineSearchTime->setText(botVsBotSearchString);
-    lineSearchTime->setEnabled(rs.isBotVsBot);
-
-    connect(checkWhiteRobot, &QCheckBox::toggled, comboWhiteDiff, &QWidget::setEnabled);
-    connect(checkBlackRobot, &QCheckBox::toggled, comboBlackDiff, &QWidget::setEnabled);
-
-    connect(checkBotVsBot, &QCheckBox::toggled, this, [=](bool checked) {
-        lineSearchTime->setEnabled(checked);
-
-        if (checked) {
-
-            checkWhiteRobot->setChecked(true);
-            checkBlackRobot->setChecked(true);
-
-            checkWhiteRobot->setEnabled(false);
-            checkBlackRobot->setEnabled(false);
-            comboWhiteDiff->setEnabled(false);
-            comboBlackDiff->setEnabled(false);
-        } else {
-            checkWhiteRobot->setEnabled(true);
-            checkBlackRobot->setEnabled(true);
-            checkWhiteRobot->setChecked(false);
-            checkBlackRobot->setChecked(false);
-            comboWhiteDiff->setEnabled(checkWhiteRobot->isChecked());
-            comboBlackDiff->setEnabled(checkBlackRobot->isChecked());
-        }
-    });
-
-    if (rs.isBotVsBot) {
-        checkWhiteRobot->setChecked(true);
-        checkBlackRobot->setChecked(true);
-        checkWhiteRobot->setEnabled(false);
-        checkBlackRobot->setEnabled(false);
-        comboWhiteDiff->setEnabled(false);
-        comboBlackDiff->setEnabled(false);
-    }
+    setupRobotSignals();
 
     layout->addWidget(checkBlackRobot, 0, 0);
     layout->addWidget(comboBlackDiff, 0, 1);
+    layout->setRowMinimumHeight(0, 40);
+
     layout->addWidget(checkWhiteRobot, 1, 0);
     layout->addWidget(comboWhiteDiff, 1, 1);
-    layout->setRowMinimumHeight(2, 30);
-    layout->addWidget(checkBotVsBot, 3, 0);
-    layout->addWidget(labelSearchTime, 4, 0);
-    layout->addWidget(lineSearchTime, 4, 1);
+    layout->setRowMinimumHeight(1, 40);
 
-    layout->setRowMinimumHeight(0, 35);
+    layout->addWidget(checkBotVsBot, 2, 0, 1, 2);
+    layout->setRowMinimumHeight(2, 40);
+
+    layout->addWidget(line, 3, 0, 1, 2);
+    layout->setRowMinimumHeight(3, 30);
+
+    QHBoxLayout* timeContainer = new QHBoxLayout();
+    timeContainer->addWidget(labelSearchTime);
+    timeContainer->addWidget(lineSearchTime);
+    timeContainer->addStretch();
+
+    layout->addLayout(timeContainer, 4, 0, 1, 2);
+    layout->setRowMinimumHeight(4, 40);
+
+    if (rs.isBotVsBot) setBotVsBotUI(true);
+    updateSearchTimeEnable();
+
     layout->setRowStretch(5, 1);
-
     return tab;
+}
+
+void SettingsDialog::setupRobotSignals() {
+    connect(checkWhiteRobot, &QCheckBox::toggled, this, [this](bool checked){
+        comboWhiteDiff->setEnabled(checked);
+        updateSearchTimeEnable();
+    });
+    connect(checkBlackRobot, &QCheckBox::toggled, this, [this](bool checked){
+        comboBlackDiff->setEnabled(checked);
+        updateSearchTimeEnable();
+    });
+    connect(checkBotVsBot, &QCheckBox::toggled, this, [this](bool checked) {
+        setBotVsBotUI(checked);
+        updateSearchTimeEnable();
+    });
+}
+
+void SettingsDialog::updateSearchTimeEnable() {
+    bool anyBot = checkWhiteRobot->isChecked() ||
+                  checkBlackRobot->isChecked() ||
+                  checkBotVsBot->isChecked();
+    labelSearchTime->setEnabled(anyBot);
+    lineSearchTime->setEnabled(anyBot);
+}
+
+void SettingsDialog::setBotVsBotUI(bool active) {
+
+    bool setCheckBoxChecked = active ? true : false;
+    bool setComboboxEnabled = active ? false : true;
+
+    checkWhiteRobot->setChecked(setCheckBoxChecked);
+    checkBlackRobot->setChecked(setCheckBoxChecked);
+    checkWhiteRobot->setEnabled(setComboboxEnabled);
+    checkBlackRobot->setEnabled(setComboboxEnabled);
+    comboWhiteDiff->setEnabled(false);
+    comboBlackDiff->setEnabled(false);
 }
 
 QWidget* SettingsDialog::createBoardTab() {
     QWidget* tab = new QWidget();
-
     QGridLayout* layout = new QGridLayout(tab);
     layout->setSpacing(10);
     layout->setContentsMargins(30, 30, 30, 30);
 
-    BoardSettings& bs = allS.boardSettings;
-
     checkBoardFlipped = new QCheckBox("Sakktábla megfordítása");
-    checkBoardFlipped->setChecked(bs.isBoardFlipped);
+    checkBoardFlipped->setChecked(allS.boardSettings.isBoardFlipped);
 
     layout->addWidget(checkBoardFlipped);
     layout->setRowMinimumHeight(0, 35);
