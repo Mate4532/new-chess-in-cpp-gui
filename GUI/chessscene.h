@@ -40,6 +40,9 @@ public:
 
     void updateLayout();
 
+    static const std::unordered_map<PieceType, QString> whitePieceMap;
+    static const std::unordered_map<PieceType, QString> blackPieceMap;
+
 public slots:
     void onBoardChanged();
     void onPromotionEnded();
@@ -58,8 +61,6 @@ private:
     QPointF activeItemOriginalPos;
 
     std::unordered_map<QString, QPixmap> originalPixmaps;
-    static const std::unordered_map<PieceType, QString> whitePieceMap;
-    static const std::unordered_map<PieceType, QString> blackPieceMap;
 
     void sceneRectChanged(const QRectF &rect);
     void addPieceToBoard(PieceType type, Color color, int logicalFile, int logicalRank, bool isPromotion);

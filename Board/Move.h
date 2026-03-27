@@ -40,7 +40,7 @@ public:
         return square_to_coordinates[getFrom()] + square_to_coordinates[getTo()];
     }
 
-    std::string toHumanReadable() const {
+    std::string toHumanReadable(bool addPieceCharToString = true) const {
         MoveFlag flags = getFlags();
 
         if (flags == KINGSIDE_CASTLE) return "O-O";
@@ -69,7 +69,7 @@ public:
                 result += fromStr[0];
                 result += "x";
             }
-        } else {
+        } else if (addPieceCharToString) {
             result += pieceChar;
             if (isCapture) {
                 result += "x";

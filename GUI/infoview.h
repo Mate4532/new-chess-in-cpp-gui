@@ -29,7 +29,7 @@ signals:
     void settingsChanged(AllSettings& oldS, AllSettings& newS);
 
 public slots:
-    void addMoveToDisplay(int movePly, const QString& move, Color color);
+    void addMoveToDisplay(int movePly, const QString& move, Color color, PieceType movedPiece);
     void removeLastButFromDisplay();
     void writeGameResultToDisplay(GameResult gr);
     void clearMoveDisplay();
@@ -60,7 +60,7 @@ private:
     QPushButton* btnUndo;
     QPushButton* btnGiveUp;
 
-    QPushButton* createMoveButton(const QString& move, int movePly);
+    QPushButton* createMoveButton(const QString& move, int movePly, Color Piececolor, PieceType movedPiece);
 
     void updateInfoPanel();
 

@@ -45,6 +45,7 @@ public:
     inline bool getIsBoardFlipped() const { return isBoardFlipped; }
     inline void setIsBoardUnderPromotion(bool isUnderPromotion) { this->isUnderPromotion =  isUnderPromotion; }
     inline bool isBoardUnderPromoption() { return isUnderPromotion; }
+    inline bool isUnderReview() { return reviewingPly >= 0; }
 
     void loadSettings(AllSettings& allS);
 
@@ -58,7 +59,7 @@ signals:
     void gameEnded(GameResult gr);
     void robotSimulationEnded();
     void boardChanged();
-    void moveMade(int movePly, const QString& move, Color c);
+    void moveMade(int movePly, const QString& move, Color c, PieceType movedPiece);
     void removeLastButFromInfoDisplayRequest();
     void newGameStarted();
     void flipBoardToRequest(bool isFlipped);

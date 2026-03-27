@@ -1,4 +1,5 @@
 #include "infoview.h"
+#include "chessscene.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -18,27 +19,6 @@ QFont InfoView::resizeFontSize(QFont f) {
 int InfoView::getCurrentFontMinWidth() {
     int sSize = qMax(14, panelCurrentWidth / 15);
     return sSize * 3;
-}
-
-QPushButton* InfoView::createMoveButton(const QString& move, int movePly) {
-
-    QFont btnFont;
-    btnFont.setWeight(QFont::Bold);
-
-    QFont resizedBtnFont = resizeFontSize(btnFont);
-
-    QPushButton* moveBtn = new QPushButton(move);
-    moveBtn->setCheckable(true);
-    moveBtn->setStyleSheet(moveBtnStyle);
-    moveBtn->setCursor(Qt::PointingHandCursor);
-    moveBtn->setProperty("ply", movePly);
-    moveBtn->setFont(resizedBtnFont);
-    moveBtn->setMinimumWidth(getCurrentFontMinWidth());
-    moveBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-
-    moveButtonGroup->addButton(moveBtn);
-
-    return moveBtn;
 }
 
 InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWidget(parent)
@@ -227,7 +207,40 @@ InfoView::InfoView(AllSettings& allS, QWidget* parent) : currentAllS(allS), QWid
     updateInfoPanel();
 }
 
-void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color) {
+QPushButton* InfoView::createMoveButton(const QString& move, int movePly, Color pieceColor, PieceType movedPiece) {
+
+    QFont btnFont;
+    btnFont.setWeight(QFont::Bold);
+    QFont resizedBtnFont = resizeFontSize(btnFont);
+
+    QPushButton* moveBtn = new QPushButton(move);
+    moveBtn->setCheckable(true);
+    moveBtn->setStyleSheet(moveBtnStyle);
+    moveBtn->setCursor(Qt::PointingHandCursor);
+    moveBtn->setProperty("ply", movePly);
+    moveBtn->setFont(resizedBtnFont);
+    moveBtn->setMinimumWidth(getCurrentFontMinWidth());
+    moveBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    QString iconPath;
+    if (pieceColor == WHITE) {
+        iconPath = ChessScene::whitePieceMap.at(movedPiece);
+    } else {
+        iconPath = ChessScene::blackPieceMap.at(movedPiece);
+    }
+
+    int iconSizeVal = qMax(16, panelCurrentWidth / 16);
+    if (movedPiece != PAWN && movedPiece != KING) {
+        moveBtn->setIcon(QIcon(iconPath));
+        moveBtn->setIconSize(QSize(iconSizeVal, iconSizeVal));
+    }
+
+    moveButtonGroup->addButton(moveBtn);
+
+    return moveBtn;
+}
+
+void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color, PieceType movedPiece) {
 
     QFont labelFont;
     labelFont.setWeight(QFont::Bold);
@@ -261,7 +274,7 @@ void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color) {
         numLabel->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     }
 
-    QPushButton* moveBtn = createMoveButton(move, movePly);
+    QPushButton* moveBtn = createMoveButton(move, movePly, color, movedPiece);
     QString activeColor = (currentRow % 2 == 0) ? "#292725" : "#5C5C5C";
     moveBtn->setStyleSheet(moveBtnStyle + QString("QPushButton:checked { background-color: %1; }").arg(activeColor));
 
@@ -325,6 +338,18 @@ void InfoView::removeLastButFromDisplay() {
     }
 
     buttonAmount--;
+
+    for (int i = movesLayout->count() - 1; i >= 0; --i) {
+        QLayoutItem* foundItem = movesLayout->itemAt(i);
+        if (foundItem && foundItem->widget()) {
+            QPushButton* btn = qobject_cast<QPushButton*>(foundItem->widget());
+            if (btn) {
+                btn->setChecked(true);
+                currentReviewPly = btn->property("ply").toInt();
+                break;
+            }
+        }
+    }
 }
 
 void InfoView::updateInfoPanel() {
@@ -337,11 +362,13 @@ void InfoView::updateInfoPanel() {
     for (int i = 0; i < movesLayout->count(); ++i) {
         if (QLayoutItem* item = movesLayout->itemAt(i)) {
             if (QWidget* widget = item->widget()) {
-                QFont bf = resizeFontSize(widget->font());
-                widget->setFont(bf);
+                widget->setFont(resizeFontSize(widget->font()));
 
                 if (QPushButton* btn = qobject_cast<QPushButton*>(widget)) {
                     btn->setMinimumWidth(getCurrentFontMinWidth());
+
+                    int iconSizeVal = qMax(16, panelCurrentWidth / 22);
+                    btn->setIconSize(QSize(iconSizeVal, iconSizeVal));
                 }
             }
         }

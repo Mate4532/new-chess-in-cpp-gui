@@ -240,6 +240,8 @@ void Board::LoadFEN(std::string fen) {
     repetition_history.Push(boardStateHistory[m_ply].zobrist_hash, true);
     pieceHistory.push_back(getBoardMatrix());
     move_history.push_back(Move());
+
+    checkHistory.push_back(false);
 }
 
 void Board::loadNewGame() {
@@ -635,10 +637,14 @@ bool Board::MakeMove(Move move, bool in_search) {
     bool reset = (piece == PAWN) || (flags & CAPTURE_FLAG);
 
     if (!in_search) {
+        Square enemyKingSq = getKingSquare(enemy);
+        bool gaveCheck = isSquareAttacked(enemyKingSq, player);
+
         committedPly++;
         repetition_history.Push(newHash, reset);
         move_history.push_back(move);
         pieceHistory.push_back(getBoardMatrix());
+        checkHistory.push_back(gaveCheck);
     }
 
     Square kingSq = getKingSquare(player);
@@ -716,6 +722,7 @@ void Board::UndoMove(Move move, bool in_search) {
         repetition_history.TryPop();
         move_history.pop_back();
         pieceHistory.pop_back();
+        checkHistory.pop_back();
     }
 
     m_all_occupancy = m_side_occupancy[WHITE] | m_side_occupancy[BLACK];
@@ -934,6 +941,7 @@ void Board::ClearBoard() {
     repetition_history.Clear();
     move_history.clear();
     pieceHistory.clear();
+    checkHistory.clear();
 }
 
 MoveInfo Board::getMoveInfo(int ply) {

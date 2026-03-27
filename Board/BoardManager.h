@@ -74,5 +74,6 @@ public:
     inline std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix(int ply = -1) const { return board.getBoardMatrix(ply); }
     inline void getPieceCounts(int piecesOut[2][6], int ply = -1) { board.getPieceCounts(piecesOut, ply); }
     inline MoveInfo getMoveInfo(int ply = -1) { return board.getMoveInfo(ply); }
+    inline bool wasMoveCheck(int ply = -1) { return board.wasMoveCheck(ply); }
 
 };

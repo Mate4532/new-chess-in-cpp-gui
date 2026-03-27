@@ -39,6 +39,7 @@ private:
 	RepetitionTable repetition_history;
     std::vector<Move> move_history;
     std::vector<std::vector<std::vector<std::pair<PieceType, Color>>>> pieceHistory;
+    std::vector<bool> checkHistory;
 
     GameResult gr = GameResult::GAME_DID_NOT_END;
 
@@ -147,6 +148,12 @@ public:
             return Move();
         }
         return move_history[index];
+    }
+    inline const bool wasMoveCheck(int ply = -1) {
+        if (checkHistory.empty()) return false;
+        else if (ply == -1) return checkHistory.back();
+        else if (ply < 0) return false;
+        else return checkHistory[committedPly];
     }
 
     bool HasNonPawnMaterial(Color color) const;

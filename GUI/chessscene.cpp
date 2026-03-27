@@ -429,7 +429,7 @@ void ChessScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
             int toLogicalRank = 7 - visualRank;
             bool isMovePromotion = cvm->isMovePromotion(fromFile, fromRank, toFile, toLogicalRank);
             if (!isMovePromotion) cvm->movePiece(fromFile, fromRank, toFile, toLogicalRank);
-            else handlePromotion(fromFile, fromRank, toFile, toLogicalRank);
+            else if (!cvm->isUnderReview()) handlePromotion(fromFile, fromRank, toFile, toLogicalRank);
         }
 
         if (items().contains(activeItem)) {

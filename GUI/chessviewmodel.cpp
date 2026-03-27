@@ -141,8 +141,9 @@ void ChessViewModel::afterMoveBeenMade(Move m) {
         endGame();
 
     int ply = bm.getPly();
+    std::string checkString = bm.wasMoveCheck(ply) ? "+" : "";
 
-    emit moveMade(ply, QString::fromStdString(m.toHumanReadable()), lastMovedColor);
+    emit moveMade(ply, QString::fromStdString(m.toHumanReadable(false) + checkString), lastMovedColor, m.getPieceType());
 
     if (isGameRunning && bm.isRobotToMove())
         makeRobotMove();
@@ -427,6 +428,7 @@ void ChessViewModel::reviewHistory(int targetPly) {
         emit syncPiecesWithPanelsRequest(pieces);
     }
 }
+
 
 void ChessViewModel::reviewEnded() {
     reviewingPly = -1;
