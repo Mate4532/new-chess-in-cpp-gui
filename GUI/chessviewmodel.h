@@ -78,6 +78,9 @@ private:
     void afterMoveBeenMade(Move m);
     void swapRobots();
 
+    int minMsBeforeRobotMove = 500;
+    QElapsedTimer robotSearchTimer;
+
     void updatePlayerPanelsIconAndLabel();
     void updatePlayerPanelAtNewPos();
 

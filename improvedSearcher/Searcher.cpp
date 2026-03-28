@@ -652,15 +652,16 @@ std::vector<Move> Searcher::GetWhatIfPV(const std::vector<Move>& baseLine, Move 
     return resultPV;
 }
 
-Move Searcher::GetBestAmongTopMoves(int depth, int topN, int chanceToActivatePossBlunder, int blunderThreshold) {
+Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
     static std::mt19937 gen(now_ms());
     std::uniform_int_distribution<> dis(1, 100);
 
-    if (dis(gen) > chanceToActivatePossBlunder) {
+    PrepareSearcher();
+
+    if (settings.minNormalMovesAfterBlunder > movesWithoutBlunderOnPropuse || dis(gen) > settings.chanceToActivatePossBlunder) {
+        movesWithoutBlunderOnPropuse++;
         return IterativeDeepening();
     }
-
-    PrepareSearcher();
 
     MoveList moves;
     MoveGenerator::GenerateMoves(board, moves);
@@ -678,38 +679,32 @@ Move Searcher::GetBestAmongTopMoves(int depth, int topN, int chanceToActivatePos
         }
     }
 
-    if (lastCompletedScores.empty()) return Move();
+    if (lastCompletedScores.empty()) return IterativeDeepening();
 
-    int targetDepth = std::max(depth - 3, 3);
-
-    if (board.isDebugMode) {
-        std::cout << "info string --- Blunder Mode: Best move restricted unless alternatives exceed threshold (TargetDepth: " << targetDepth << ") ---" << std::endl;
-    }
+    int targetDepth = std::max(settings.maxDepth - 3, 3);
 
     for (int d = 1; d <= targetDepth; d++) {
         std::vector<ScoredMove> currentDepthScores;
         bool depthFinished = true;
 
         for (auto& sm : lastCompletedScores) {
-            if (!board.MakeMove(sm.m, true)) continue;
+            nnue_state[1].dirtyPiece.dirtyNum = 0;
+            nnue_state[1].accumulator.computedAccumulation = 0;
 
-            int score = -negamax(d - 1, -MATE_SCORE, MATE_SCORE, 0, Move(), false, false);
+            if (!board.MakeMove(sm.m, true)) continue;
+            int score = -negamax(d - 1, -MATE_SCORE, MATE_SCORE, 1, Move(), false, false);
             board.UndoMove(sm.m, true);
 
             if (stop) {
                 depthFinished = false;
-                std::cout << "info string --- Exceeded time, searched depth: " << d << ") ---" << std::endl;
                 break;
             }
-
             currentDepthScores.push_back({sm.m, score});
         }
 
-        if (depthFinished) {
-
+        if (depthFinished && !currentDepthScores.empty()) {
             std::sort(currentDepthScores.begin(), currentDepthScores.end(),
                       [](const ScoredMove& a, const ScoredMove& b) { return a.score > b.score; });
-
             lastCompletedScores = currentDepthScores;
             if (std::abs(lastCompletedScores[0].score) > MATE_SCORE_BOUND) break;
         } else {
@@ -720,8 +715,9 @@ Move Searcher::GetBestAmongTopMoves(int depth, int topN, int chanceToActivatePos
     isSearching = false;
 
     if (board.isDebugMode) {
-        std::cout << "info string --- Final Candidate Rank (Last Finished Depth) ---" << std::endl;
-        for (size_t i = 0; i < lastCompletedScores.size(); ++i) {
+        std::cout << "info string --- Top 10 Initial Candidates ---" << std::endl;
+        int printLimit = std::min((int)lastCompletedScores.size(), 10);
+        for (int i = 0; i < printLimit; ++i) {
             std::cout << "info string rank " << (i + 1)
             << ": " << lastCompletedScores[i].m.toAlgebraic()
             << " | score: " << (board.getSideToMove() == WHITE ? lastCompletedScores[i].score : -lastCompletedScores[i].score) << std::endl;
@@ -729,21 +725,67 @@ Move Searcher::GetBestAmongTopMoves(int depth, int topN, int chanceToActivatePos
     }
 
     int bestScore = lastCompletedScores[0].score;
-    int limit = std::min((int)lastCompletedScores.size(), topN);
+    int limit = settings.topNMoveOff ? (int)lastCompletedScores.size() : std::min((int)lastCompletedScores.size(), settings.topNmove);
 
     std::vector<int> validIndices;
+    validIndices.push_back(0);
+
+    if (board.isDebugMode && !lastCompletedScores.empty()) {
+        std::cout << "info string Removed best move: " << lastCompletedScores[0].m.toAlgebraic() << std::endl;
+    }
 
     for (int i = 1; i < limit; i++) {
-        if (std::abs(bestScore - lastCompletedScores[i].score) <= blunderThreshold) {
-            validIndices.push_back(i);
+        if (std::abs(bestScore - lastCompletedScores[i].score) <= settings.blunderThreshold) {
+
+            bool isEmbarrassingBlunder = false;
+
+            if (settings.preventEmbarrassingBlunders) {
+                Move candidateMove = lastCompletedScores[i].m;
+
+                if (board.MakeMove(candidateMove, true)) {
+                    MoveList enemyCaptures;
+                    MoveGenerator::GenerateMoves(board, enemyCaptures, true);
+
+                    for (int j = 0; j < enemyCaptures.size(); ++j) {
+                        Move enemyMove = enemyCaptures[j];
+                        if (enemyMove.getFlags() == EN_PASSANT) continue;
+
+                        PieceType capturedPiece = board.getPieceAt(enemyMove.getTo(), (Color)(board.getSideToMove() ^ 1));
+                        PieceType attackingPiece = enemyMove.getPieceType();
+                        if (capturedPiece >= KNIGHT && capturedPiece <= QUEEN) {
+                            int capturedPieceValue = Evaluation::GetPieceValue(capturedPiece);
+                            int attackingPieceValue = Evaluation::GetPieceValue(attackingPiece);
+                            if (attackingPiece == PAWN || capturedPieceValue > attackingPieceValue) {
+                                isEmbarrassingBlunder = true;
+                                break;
+                            }
+                            bool isProtectedByUs = board.isSquareAttacked(enemyMove.getTo(), (Color)(board.getSideToMove() ^ 1));
+                            if (!isProtectedByUs) {
+                                isEmbarrassingBlunder = true;
+                                break;
+                            }
+                        }
+                    }
+                    board.UndoMove(candidateMove, true);
+                }
+            }
+
+            if (!isEmbarrassingBlunder) {
+                validIndices.push_back(i);
+            } else if (board.isDebugMode) {
+                std::cout << "info string [FILTER] Removed embarrassing blunder: " << lastCompletedScores[i].m.toAlgebraic() << std::endl;
+            }
         }
     }
 
-    if (validIndices.empty()) {
-        if (board.isDebugMode) {
-            std::cout << "info string No safe blunders found! Forcing best move." << std::endl;
+    if (board.isDebugMode) {
+        std::cout << "info string --- Final Valid Candidates (After Filtering) ---" << std::endl;
+        for (int idx : validIndices) {
+            std::cout << "info string rank " << (idx + 1)
+            << ": " << lastCompletedScores[idx].m.toAlgebraic()
+            << " | score: " << (board.getSideToMove() == WHITE ? lastCompletedScores[idx].score : -lastCompletedScores[idx].score)
+            << (idx == 0 ? " (FILTERED BEST)" : "") << std::endl;
         }
-        return lastCompletedScores[0].m;
     }
 
     std::uniform_int_distribution<> topDis(0, validIndices.size() - 1);
@@ -751,21 +793,18 @@ Move Searcher::GetBestAmongTopMoves(int depth, int topN, int chanceToActivatePos
 
     if (board.isDebugMode) {
         std::cout << "info string Bot picked move: " << lastCompletedScores[chosenIndex].m.toAlgebraic()
-                  << " (rank " << (chosenIndex + 1) << ", score "
-                  << (board.getSideToMove() == WHITE ? lastCompletedScores[chosenIndex].score : -lastCompletedScores[chosenIndex].score)
-                  << ")" << std::endl;
+        << " (rank " << (chosenIndex + 1) << ")" << std::endl;
     }
 
-    return lastCompletedScores[chosenIndex].m;
-
-    return lastCompletedScores[chosenIndex].m;
+    movesWithoutBlunderOnPropuse = 0;
+    return lastCompletedScores[chosenIndex].m.isValid() ? lastCompletedScores[chosenIndex].m : lastCompletedScores[0].m;
 }
 
 Move Searcher::GetRobotMove() {
     Move m;
 
     if (currentSettings.areBlundersOnPurposeEnabled)
-        return GetBestAmongTopMoves(currentSettings.maxDepth, currentSettings.topNmove, currentSettings.chanceToActivatePossBlunder, currentSettings.blunderThreshold);
+        return GetBestAmongTopMoves(currentSettings);
 
     return IterativeDeepening();
 }
@@ -775,6 +814,7 @@ void Searcher::ClearSearcher() {
     ClearHistory();
     tt.Clear();
     repetitionTable.Clear();
+    movesWithoutBlunderOnPropuse = 0;
 }
 
 void Searcher::setDifficulty(Difficulty diff) {

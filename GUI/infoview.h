@@ -92,7 +92,6 @@ private:
         font-weight: bold;
         border: none;
         border-radius: 4px;
-        padding: 2px 5px;
     }
     QPushButton:hover { background-color: #4f4b47; color: #ffffff; }
     QPushButton:pressed { background-color: #262421; color: white; }

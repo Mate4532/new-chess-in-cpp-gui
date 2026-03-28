@@ -239,6 +239,8 @@ void ChessViewModel::makeRobotMove() {
     isUnderSearch = true;
     cachedMatrix = bm.getBoardMatrix();
 
+    robotSearchTimer.restart();
+
     robotThread = QThread::create([this]() {
         Move m = bm.MakeRobotMove();
         QMetaObject::invokeMethod(this, [this, m]() {
@@ -349,10 +351,24 @@ void ChessViewModel::updatePlayerPanelAtNewPos() {
 
 void ChessViewModel::onRobotMoveFinished(Move robotMove) {
     if (!isUnderSearch) return;
-    isUnderSearch = false;
 
-    if (robotMove.isValid() && isGameRunning) {
-        afterMoveBeenMade(robotMove);
+    qint64 elapsed = robotSearchTimer.elapsed();
+    qint64 remaining = minMsBeforeRobotMove - elapsed;
+
+    if (remaining > 0) {
+        QTimer::singleShot(remaining, this, [this, robotMove]() {
+            if (!isUnderSearch || !isGameRunning) return;
+
+            isUnderSearch = false;
+            if (robotMove.isValid()) {
+                afterMoveBeenMade(robotMove);
+            }
+        });
+    } else {
+        isUnderSearch = false;
+        if (robotMove.isValid() && isGameRunning) {
+            afterMoveBeenMade(robotMove);
+        }
     }
 }
 

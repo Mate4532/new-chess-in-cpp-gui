@@ -47,6 +47,7 @@ namespace ImprovedSearcher {
         void ClearKillers();
 
         SearcherSettings currentSettings = SearcherSettings::getSettings(Difficulty::IMPOSSIBLE);
+        int movesWithoutBlunderOnPropuse = 0;
 
     public:
 
@@ -65,7 +66,7 @@ namespace ImprovedSearcher {
 
         int see(Move m);
         Move IterativeDeepening();
-        Move GetBestAmongTopMoves(int depth, int topN, int changeToActivate, int blunderThreshold);
+        Move GetBestAmongTopMoves(const SearcherSettings& settings);
         Move GetRobotMove();
         void PrintPvLine(int depth);
         std::vector<Move> GetPVLine(int depth);

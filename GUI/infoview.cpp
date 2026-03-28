@@ -161,7 +161,7 @@ void InfoView::setupMoveListArea(QVBoxLayout* layout) {
 
     movesLayout = new QGridLayout(scrollContent);
     movesLayout->setAlignment(Qt::AlignTop);
-    movesLayout->setColumnStretch(0, 2);
+    movesLayout->setColumnStretch(0, 4);
     movesLayout->setColumnStretch(1, 5);
     movesLayout->setColumnStretch(2, 5);
     movesLayout->setSpacing(0);
@@ -311,8 +311,7 @@ QPushButton* InfoView::createMoveButton(const QString& move, int movePly, Color 
     moveBtn->setCursor(Qt::PointingHandCursor);
     moveBtn->setProperty("ply", movePly);
     moveBtn->setFont(resizeFontSize(btnFont));
-    moveBtn->setMinimumWidth(getCurrentFontMinWidth());
-    moveBtn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    moveBtn->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
     QString iconPath = (pieceColor == WHITE) ? ChessScene::whitePieceMap.at(movedPiece) : ChessScene::blackPieceMap.at(movedPiece);
     int iconSizeVal = getCurrentIconSize();
@@ -320,6 +319,9 @@ QPushButton* InfoView::createMoveButton(const QString& move, int movePly, Color 
     if (movedPiece != PAWN && movedPiece != KING) {
         moveBtn->setIcon(QIcon(iconPath));
         moveBtn->setIconSize(QSize(iconSizeVal, iconSizeVal));
+    }
+    else{
+        moveBtn->setStyleSheet(moveBtn->styleSheet() + "QPushButton { padding-left: 5px; padding-right: 5px; }");
     }
 
     moveButtonGroup->addButton(moveBtn);
@@ -366,7 +368,7 @@ void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color, P
 
         QLabel* numLabel = new QLabel(QString::number(movePly / 2 + 1) + ".");
         numLabel->setStyleSheet(numStyle);
-        numLabel->setAlignment(Qt::AlignCenter);
+        numLabel->setAlignment(Qt::AlignLeft);
         numLabel->setFont(resizeFontSize(numLabel->font()));
         movesLayout->addWidget(numLabel, row, 0);
     }
@@ -374,7 +376,7 @@ void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color, P
     QPushButton* moveBtn = createMoveButton(move, movePly, color, movedPiece);
 
     QString activeColor = "#5C5C5C";
-    moveBtn->setStyleSheet(moveBtnStyle + QString("QPushButton:checked { background-color: %1; }").arg(activeColor));
+    moveBtn->setStyleSheet(moveBtn->styleSheet() + QString("QPushButton:checked { background-color: %1; }").arg(activeColor));
 
     connect(moveBtn, &QPushButton::clicked, this, [this, moveBtn]() {
         currentReviewPly = moveBtn->property("ply").toInt();
@@ -382,7 +384,7 @@ void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color, P
         scrollToMove(currentReviewPly);
     });
 
-    movesLayout->addWidget(moveBtn, row, col, Qt::AlignCenter);
+    movesLayout->addWidget(moveBtn, row, col, Qt::AlignLeft | Qt::AlignVCenter);
     if (!currentAllS.robotSettings.isBotVsBot || currentReviewPly == buttonAmount) {
         moveBtn->setChecked(true);
         currentReviewPly = movePly;
@@ -451,7 +453,6 @@ void InfoView::updateInfoPanel() {
             if (QWidget* widget = item->widget()) {
                 widget->setFont(resizeFontSize(widget->font()));
                 if (QPushButton* btn = qobject_cast<QPushButton*>(widget)) {
-                    btn->setMinimumWidth(getCurrentFontMinWidth());
                     int iconSizeVal = getCurrentIconSize();
                     btn->setIconSize(QSize(iconSizeVal, iconSizeVal));
                 }
