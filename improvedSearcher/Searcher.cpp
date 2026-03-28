@@ -794,7 +794,9 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
 
     if (board.isDebugMode) {
         std::cout << "info string Bot picked move: " << lastCompletedScores[chosenIndex].m.toAlgebraic()
-                  << " (rank " << (chosenIndex + 1) << ", score " << lastCompletedScores[chosenIndex].score << ")" << std::endl;
+                  << " (rank " << (chosenIndex + 1) << ", score "
+                  << (board.getSideToMove() == WHITE ? lastCompletedScores[chosenIndex].score : -lastCompletedScores[chosenIndex].score)
+                  << ")" << std::endl;
     }
 
     movesWithoutBlunderOnPropuse = 0;
