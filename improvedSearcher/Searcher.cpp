@@ -774,10 +774,9 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
         }
     }
 
-    // BIZTONSÁGI JÁTÉK: Ha minden mást kiszűrtünk, vagy nincs más, csak a legjobb
     if (validIndices.empty()) {
-        if (lastCompletedScores.size() > 1) validIndices.push_back(1); // 2. legjobb
-        else validIndices.push_back(0); // Ha csak 1 legális lépés van, muszáj azt húzni
+        if (lastCompletedScores.size() > 1) validIndices.push_back(1);
+        else validIndices.push_back(0);
     }
 
     if (board.isDebugMode) {
@@ -795,7 +794,7 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
 
     if (board.isDebugMode) {
         std::cout << "info string Bot picked move: " << lastCompletedScores[chosenIndex].m.toAlgebraic()
-        << " (rank " << (chosenIndex + 1) << ")" << std::endl;
+        << " (rank " << (chosenIndex + 1) << ", score " << ")" << std::endl;
     }
 
     movesWithoutBlunderOnPropuse = 0;
