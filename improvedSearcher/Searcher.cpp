@@ -751,7 +751,9 @@ Move Searcher::GetBestAmongTopMoves(int depth, int topN, int chanceToActivatePos
 
     if (board.isDebugMode) {
         std::cout << "info string Bot picked move: " << lastCompletedScores[chosenIndex].m.toAlgebraic()
-                  << " (rank " << (chosenIndex + 1) << ", score " << lastCompletedScores[chosenIndex].score << ")" << std::endl;
+                  << " (rank " << (chosenIndex + 1) << ", score "
+                  << (board.getSideToMove() == WHITE ? lastCompletedScores[chosenIndex].score : -lastCompletedScores[chosenIndex].score)
+                  << ")" << std::endl;
     }
 
     return lastCompletedScores[chosenIndex].m;
