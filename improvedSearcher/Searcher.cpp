@@ -471,7 +471,6 @@ void Searcher::ClearKillers() {
 }
 
 Move Searcher::IterativeDeepening() {
-
     PrepareSearcher();
 
     int rawScore;
@@ -533,17 +532,12 @@ Move Searcher::IterativeDeepening() {
 
     if (board.isDebugMode) {
         std::cout << "Bestmove: " << bestMove.toAlgebraic()
-        << " score cp "
-        << (board.getSideToMove() == WHITE ? lastScore : -lastScore)
-        << std::endl;
-
-        std::vector<Move> baseLine = GetPVLine(50);
+        << " score cp " << (board.getSideToMove() == WHITE ? lastScore : -lastScore) << std::endl;
     }
 
     isSearching = false;
 
-    if (isStoppedManually)
-        return Move();
+    if (isStoppedManually) return Move();
 
     return bestMove;
 }
@@ -659,9 +653,6 @@ std::vector<Move> Searcher::GetWhatIfPV(const std::vector<Move>& baseLine, Move 
 }
 
 Move Searcher::GetBestAmongTopMoves(int depth, int topN, int chanceToActivatePossBlunder, int blunderThreshold) {
-
-    PrepareSearcher();
-
     static std::mt19937 gen(now_ms());
     std::uniform_int_distribution<> dis(1, 100);
 
@@ -669,63 +660,103 @@ Move Searcher::GetBestAmongTopMoves(int depth, int topN, int chanceToActivatePos
         return IterativeDeepening();
     }
 
+    PrepareSearcher();
+
     MoveList moves;
     MoveGenerator::GenerateMoves(board, moves);
 
+    Move dummyKillers[2] = { Move(), Move() };
+    MoveOrdering::SortMoves(board, moves, Move(), historyMoves, dummyKillers);
+
     struct ScoredMove { Move m; int score; };
-    std::vector<ScoredMove> scoredMoves;
+    std::vector<ScoredMove> lastCompletedScores;
 
     for (int i = 0; i < moves.size(); ++i) {
-        if (!board.MakeMove(moves[i], true)) continue;
+        if (board.MakeMove(moves[i], true)) {
+            lastCompletedScores.push_back({moves[i], 0});
+            board.UndoMove(moves[i], true);
+        }
+    }
 
-        int moveScore = 0;
-        moveScore = -negamax(std::max(depth - 3, 3), -MATE_SCORE, MATE_SCORE, 0, Move(), false, false);
+    if (lastCompletedScores.empty()) return Move();
 
-        if (stop) break;
+    int targetDepth = std::max(depth - 3, 3);
 
-        scoredMoves.push_back({moves[i], moveScore});
-        board.UndoMove(moves[i], true);
+    if (board.isDebugMode) {
+        std::cout << "info string --- Blunder Mode: Best move restricted unless alternatives exceed threshold (TargetDepth: " << targetDepth << ") ---" << std::endl;
+    }
+
+    for (int d = 1; d <= targetDepth; d++) {
+        std::vector<ScoredMove> currentDepthScores;
+        bool depthFinished = true;
+
+        for (auto& sm : lastCompletedScores) {
+            if (!board.MakeMove(sm.m, true)) continue;
+
+            int score = -negamax(d - 1, -MATE_SCORE, MATE_SCORE, 0, Move(), false, false);
+            board.UndoMove(sm.m, true);
+
+            if (stop) {
+                depthFinished = false;
+                std::cout << "info string --- Exceeded time, searched depth: " << d << ") ---" << std::endl;
+                break;
+            }
+
+            currentDepthScores.push_back({sm.m, score});
+        }
+
+        if (depthFinished) {
+
+            std::sort(currentDepthScores.begin(), currentDepthScores.end(),
+                      [](const ScoredMove& a, const ScoredMove& b) { return a.score > b.score; });
+
+            lastCompletedScores = currentDepthScores;
+            if (std::abs(lastCompletedScores[0].score) > MATE_SCORE_BOUND) break;
+        } else {
+            break;
+        }
     }
 
     isSearching = false;
 
-    if (scoredMoves.empty())
-        return IterativeDeepening();
-
-    std::sort(scoredMoves.begin(), scoredMoves.end(), [&](const ScoredMove& a, const ScoredMove& b) {
-        return a.score > b.score;
-    });
-
     if (board.isDebugMode) {
-        std::cout << "info string --- Candidate Moves Rank (No TT) ---" << std::endl;
-        for (size_t i = 0; i < std::min((size_t)10, scoredMoves.size()); ++i) {
+        std::cout << "info string --- Final Candidate Rank (Last Finished Depth) ---" << std::endl;
+        for (size_t i = 0; i < lastCompletedScores.size(); ++i) {
             std::cout << "info string rank " << (i + 1)
-            << ": " << scoredMoves[i].m.toAlgebraic()
-            << " | score: " << scoredMoves[i].score << std::endl;
+            << ": " << lastCompletedScores[i].m.toAlgebraic()
+            << " | score: " << (board.getSideToMove() == WHITE ? lastCompletedScores[i].score : -lastCompletedScores[i].score) << std::endl;
         }
     }
 
-    int limit = std::min((int)scoredMoves.size(), topN);
-    std::uniform_int_distribution<> topDis(0, limit - 1);
-    int chosenIndex = topDis(gen);
+    int bestScore = lastCompletedScores[0].score;
+    int limit = std::min((int)lastCompletedScores.size(), topN);
 
-    int bestScore = scoredMoves[0].score;
-    int chosenScore = scoredMoves[chosenIndex].score;
+    std::vector<int> validIndices;
 
-    if (std::abs(bestScore - chosenScore) >= blunderThreshold) {
+    for (int i = 1; i < limit; i++) {
+        if (std::abs(bestScore - lastCompletedScores[i].score) <= blunderThreshold) {
+            validIndices.push_back(i);
+        }
+    }
+
+    if (validIndices.empty()) {
         if (board.isDebugMode) {
-            std::cout << "info string Safety Net triggered! " << scoredMoves[chosenIndex].m.toAlgebraic()
-            << " (diff " << std::abs(bestScore - chosenScore) << ") was too much loss. Forcing best move." << std::endl;
+            std::cout << "info string No safe blunders found! Forcing best move." << std::endl;
         }
-        return scoredMoves[0].m;
+        return lastCompletedScores[0].m;
     }
+
+    std::uniform_int_distribution<> topDis(0, validIndices.size() - 1);
+    int chosenIndex = validIndices[topDis(gen)];
 
     if (board.isDebugMode) {
-        std::cout << "info string Bot picked move: " << scoredMoves[chosenIndex].m.toAlgebraic()
-        << " (rank " << (chosenIndex + 1) << ")" << std::endl;
+        std::cout << "info string Bot picked move: " << lastCompletedScores[chosenIndex].m.toAlgebraic()
+                  << " (rank " << (chosenIndex + 1) << ", score " << lastCompletedScores[chosenIndex].score << ")" << std::endl;
     }
 
-    return scoredMoves[chosenIndex].m;
+    return lastCompletedScores[chosenIndex].m;
+
+    return lastCompletedScores[chosenIndex].m;
 }
 
 Move Searcher::GetRobotMove() {

@@ -14,13 +14,13 @@ struct SearcherSettings {
     static SearcherSettings getSettings(Difficulty diff) {
         switch (diff) {
         case Difficulty::EASY:
-            return { 6, true, true, 60, 8, 900 };
+            return { 6, true, true, 40, 8, 900 };
 
         case Difficulty::MEDIUM:
-            return { 6, true, true, 40, 5, 400 };
+            return { 6, true, true, 30, 6, 500 };
 
         case Difficulty::HARD:
-            return { 9, true, true, 20, 3, 200 };
+            return { 9, true, true, 20, 4, 300 };
 
         case Difficulty::IMPOSSIBLE:
             return { 128, false, false, 0, 0, 0 };
