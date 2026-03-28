@@ -29,6 +29,10 @@ public:
     QFont resizeFontSize(QFont f);
     int getCurrentFontMinWidth();
     int getCurrentIconSize();
+
+public slots:
+    void onReviewEnded(int ply);
+
 signals:
     void newGameRequested();
     void undoRequested(int amount = 1);

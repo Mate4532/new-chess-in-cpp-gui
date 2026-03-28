@@ -20,6 +20,13 @@ public:
         IsPromotionKey
     };
 
+    struct DraggingState{
+        bool wasDragging;
+        int file;
+        int rank;
+        QPointF lastScenePos;
+    };
+
     explicit ChessScene(QObject* parent = nullptr);
 
     static constexpr double CHESSBOARD_OFFSET_LEFT_PX = 47;
@@ -38,6 +45,11 @@ public:
     bool scenePosToSquare(const QPointF& pos, int& file, int& visualRank) const;
     QRectF getSquareRect(int col, int row, bool fromBoardCoordinates) const;
 
+    ChessScene::DraggingState captureDraggingState();
+    void renderBoard();
+    void restoreDraggingState(const DraggingState& state);
+    QGraphicsPixmapItem* findPieceAt(int file, int rank);
+    void refreshHoverEffect();
     void updateLayout();
 
     static const std::unordered_map<PieceType, QString> whitePieceMap;

@@ -251,18 +251,81 @@ void ChessScene::drawPieces() {
     }
 }
 
-void ChessScene::updateLayout()
+void ChessScene::restoreDraggingState(const DraggingState& state)
 {
-    if (!cvm) return;
+    QGraphicsPixmapItem* newActiveItem = findPieceAt(state.file, state.rank);
+
+    if (newActiveItem) {
+        activeItem = newActiveItem;
+        activeItemOriginalPos = getSquareRect(state.file, state.rank, true).topLeft();
+        activeItem->setZValue(100);
+        activeItem->setPos(state.lastScenePos - activeItem->boundingRect().center());
+    }
+}
+
+QGraphicsPixmapItem* ChessScene::findPieceAt(int file, int rank)
+{
+    for (QGraphicsItem* item : items()) {
+        auto* pixmapItem = dynamic_cast<QGraphicsPixmapItem*>(item);
+        if (pixmapItem && pixmapItem->zValue() >= 5) {
+            if (pixmapItem->data(FileKey).toInt() == file &&
+                pixmapItem->data(RankKey).toInt() == rank) {
+                return pixmapItem;
+            }
+        }
+    }
+    return nullptr;
+}
+
+ChessScene::DraggingState ChessScene::captureDraggingState()
+{
+    DraggingState state;
+    state.wasDragging = (activeItem != nullptr);
+
+    if (state.wasDragging) {
+        state.file = activeItem->data(FileKey).toInt();
+        state.rank = activeItem->data(RankKey).toInt();
+        state.lastScenePos = activeItem->pos() + activeItem->boundingRect().center();
+    }
+    return state;
+}
+
+void ChessScene::renderBoard()
+{
     clear();
     activeItem = nullptr;
     hoverHighlightItem = nullptr;
+
     drawMovedPieceBackground();
     drawPieces();
+
     if (cvm->isBoardUnderPromoption()) {
         highlightPromotionSquares();
         drawPromotionPieces();
     }
+}
+
+void ChessScene::refreshHoverEffect()
+{
+    if (views().isEmpty()) return;
+
+    QGraphicsView* view = views().first();
+    QPointF currentScenePos = view->mapToScene(view->mapFromGlobal(QCursor::pos()));
+    updateHoverHighlight(currentScenePos);
+}
+
+void ChessScene::updateLayout()
+{
+    if (!cvm) return;
+
+    DraggingState state = captureDraggingState();
+
+    renderBoard();
+
+    if (state.wasDragging) {
+        restoreDraggingState(state);
+    }
+    refreshHoverEffect();
 }
 
 void ChessScene::onBoardChanged() {

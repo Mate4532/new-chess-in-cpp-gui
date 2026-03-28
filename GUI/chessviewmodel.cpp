@@ -443,4 +443,5 @@ void ChessViewModel::reviewHistory(int targetPly) {
 
 void ChessViewModel::reviewEnded() {
     reviewingPly = -1;
+    emit reviewEndedRequest(bm.getPly());
 }

@@ -66,6 +66,7 @@ signals:
     void playerPanelsUpdateRequest(QString playerName, QString playerIconPath, Color playerColor);
     void syncPiecesWithPanelsRequest(int pieces[2][6]);
     void endPromotion();
+    void reviewEndedRequest(int currentPly);
 
 private:
     BoardManager& bm;

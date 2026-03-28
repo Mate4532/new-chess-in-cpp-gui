@@ -493,6 +493,7 @@ void InfoView::resizeEvent(QResizeEvent* event) {
     updateInfoPanel();
 }
 
+
 void InfoView::clearMoveDisplay() {
     QLayoutItem* item;
     while ((item = movesLayout->takeAt(0)) != nullptr) {
@@ -507,6 +508,28 @@ void InfoView::clearMoveDisplay() {
     buttonAmount = 0;
     currentReviewPly = 0;
     gameRes = GameResult::GAME_DID_NOT_END;
+}
+
+void InfoView::onReviewEnded(int ply) {
+    currentReviewPly = ply;
+
+    if (ply <= 0) {
+        moveButtonGroup->setExclusive(false);
+        if (QAbstractButton* checked = moveButtonGroup->checkedButton()) {
+            checked->setChecked(false);
+        }
+        moveButtonGroup->setExclusive(true);
+    } else {
+        const QList<QAbstractButton*> buttons = moveButtonGroup->buttons();
+        for (QAbstractButton* btn : buttons) {
+            if (btn->property("ply").toInt() == ply) {
+                btn->setChecked(true);
+                break;
+            }
+        }
+    }
+
+    scrollToMove(ply);
 }
 
 void InfoView::openSettings() {

@@ -731,36 +731,32 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
     validIndices.push_back(0);
 
     if (board.isDebugMode && !lastCompletedScores.empty()) {
-        std::cout << "info string Removed best move: " << lastCompletedScores[0].m.toAlgebraic() << std::endl;
+        std::cout << "info string [FILTER] Removed best move: " << lastCompletedScores[0].m.toAlgebraic() << std::endl;
     }
 
     for (int i = 1; i < limit; i++) {
         if (std::abs(bestScore - lastCompletedScores[i].score) <= settings.blunderThreshold) {
-
             bool isEmbarrassingBlunder = false;
 
             if (settings.preventEmbarrassingBlunders) {
                 Move candidateMove = lastCompletedScores[i].m;
-
                 if (board.MakeMove(candidateMove, true)) {
                     MoveList enemyCaptures;
                     MoveGenerator::GenerateMoves(board, enemyCaptures, true);
 
-                    for (int j = 0; j < enemyCaptures.size(); ++j) {
-                        Move enemyMove = enemyCaptures[j];
+                    for (const auto& enemyMove : enemyCaptures) {
                         if (enemyMove.getFlags() == EN_PASSANT) continue;
 
                         PieceType capturedPiece = board.getPieceAt(enemyMove.getTo(), (Color)(board.getSideToMove() ^ 1));
                         PieceType attackingPiece = enemyMove.getPieceType();
+
                         if (capturedPiece >= KNIGHT && capturedPiece <= QUEEN) {
-                            int capturedPieceValue = Evaluation::GetPieceValue(capturedPiece);
-                            int attackingPieceValue = Evaluation::GetPieceValue(attackingPiece);
-                            if (attackingPiece == PAWN || capturedPieceValue > attackingPieceValue) {
-                                isEmbarrassingBlunder = true;
-                                break;
-                            }
                             bool isProtectedByUs = board.isSquareAttacked(enemyMove.getTo(), (Color)(board.getSideToMove() ^ 1));
-                            if (!isProtectedByUs) {
+
+                            int valCap = Evaluation::GetPieceValue(capturedPiece);
+                            int valAtk = Evaluation::GetPieceValue(attackingPiece);
+
+                            if (!isProtectedByUs || attackingPiece == PAWN || valCap > valAtk) {
                                 isEmbarrassingBlunder = true;
                                 break;
                             }
@@ -776,6 +772,12 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
                 std::cout << "info string [FILTER] Removed embarrassing blunder: " << lastCompletedScores[i].m.toAlgebraic() << std::endl;
             }
         }
+    }
+
+    // BIZTONSÁGI JÁTÉK: Ha minden mást kiszűrtünk, vagy nincs más, csak a legjobb
+    if (validIndices.empty()) {
+        if (lastCompletedScores.size() > 1) validIndices.push_back(1); // 2. legjobb
+        else validIndices.push_back(0); // Ha csak 1 legális lépés van, muszáj azt húzni
     }
 
     if (board.isDebugMode) {
