@@ -307,7 +307,7 @@ void ChessScene::renderBoard()
 
 void ChessScene::refreshHoverEffect()
 {
-    if (views().isEmpty()) return;
+    if (views().isEmpty() || activeItem == nullptr) return;
 
     QGraphicsView* view = views().first();
     QPointF currentScenePos = view->mapToScene(view->mapFromGlobal(QCursor::pos()));

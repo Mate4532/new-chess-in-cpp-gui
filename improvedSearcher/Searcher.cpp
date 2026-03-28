@@ -658,7 +658,7 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
 
     PrepareSearcher();
 
-    if (settings.minNormalMovesAfterBlunder > movesWithoutBlunderOnPropuse || dis(gen) > settings.chanceToActivatePossBlunder) {
+    if (settings.minNormalMovesAfterBlunder >= movesWithoutBlunderOnPropuse || dis(gen) > settings.chanceToActivatePossBlunder) {
         movesWithoutBlunderOnPropuse++;
         return IterativeDeepening();
     }
@@ -728,7 +728,6 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
     int limit = settings.topNMoveOff ? (int)lastCompletedScores.size() : std::min((int)lastCompletedScores.size(), settings.topNmove);
 
     std::vector<int> validIndices;
-    validIndices.push_back(0);
 
     if (board.isDebugMode && !lastCompletedScores.empty()) {
         std::cout << "info string [FILTER] Removed best move: " << lastCompletedScores[0].m.toAlgebraic() << std::endl;
@@ -769,14 +768,19 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
             if (!isEmbarrassingBlunder) {
                 validIndices.push_back(i);
             } else if (board.isDebugMode) {
-                std::cout << "info string [FILTER] Removed embarrassing blunder: " << lastCompletedScores[i].m.toAlgebraic() << std::endl;
+                std::cout << "info string [FILTER] Removed: embarrassing blunder: " << lastCompletedScores[i].m.toAlgebraic() << std::endl;
             }
+        }
+        else {
+            std::cout << "info string [FILTER] Removed: out of threshold: " << lastCompletedScores[i].m.toAlgebraic() << std::endl;
         }
     }
 
     if (validIndices.empty()) {
-        if (lastCompletedScores.size() > 1) validIndices.push_back(1);
-        else validIndices.push_back(0);
+        if (board.isDebugMode) {
+            std::cout << "info string [FALLBACK] No safe suboptimal moves found. Using best move." << std::endl;
+        }
+        validIndices.push_back(0);
     }
 
     if (board.isDebugMode) {

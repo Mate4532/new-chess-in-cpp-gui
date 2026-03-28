@@ -23,7 +23,7 @@ struct SearcherSettings {
             return { 6, true, true, 40, 8, true, 500, 1, true };
 
         case Difficulty::HARD:
-            return { 9, true, true, 30, 6, true, 400, 1, true };
+            return { 9, true, true, 30, 6, true, 300, 2, true };
 
         case Difficulty::IMPOSSIBLE:
             return { 128, false, false, 0, 0, true, 0, 0, true };

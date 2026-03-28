@@ -6,8 +6,8 @@ using namespace ImprovedEvaluation;
 int Evaluation::GetPieceValue(PieceType p) {
     switch (p) {
     case PAWN:   return 100;
-    case KNIGHT: return 320;
-    case BISHOP: return 330;
+    case KNIGHT: return 300;
+    case BISHOP: return 300;
     case ROOK:   return 500;
     case QUEEN:  return 900;
     case KING:   return 10000;
