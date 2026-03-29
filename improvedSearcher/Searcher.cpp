@@ -733,26 +733,27 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
         std::cout << "info string [FILTER] Removed best move: " << lastCompletedScores[0].m.toAlgebraic() << std::endl;
     }
 
-    for (int i = 0; i < std::min((int)lastCompletedScores.size(), 3); i++) {
-        Move m = lastCompletedScores[i].m;
-        bool isCap = (m.getFlags() & CAPTURE_FLAG);
-        Color us = board.getSideToMove();
-        Color enemy = (Color)(us ^ 1);
+    if (settings.takeFreePieces) {
+        for (int i = 0; i < std::min((int)lastCompletedScores.size(), 3); i++) {
+            Move m = lastCompletedScores[i].m;
+            bool isCap = (m.getFlags() & CAPTURE_FLAG);
+            Color us = board.getSideToMove();
+            Color enemy = (Color)(us ^ 1);
 
-        if (isCap) {
-            PieceType capPiece = board.getPieceAt(m.getTo(), enemy);
-            PieceType atkPiece = m.getPieceType();
-            bool isProtected = board.isSquareAttacked(m.getTo(), enemy);
+            if (isCap) {
+                PieceType capPiece = board.getPieceAt(m.getTo(), enemy);
+                PieceType atkPiece = m.getPieceType();
+                bool isProtected = board.isSquareAttacked(m.getTo(), enemy);
 
-            int valCap = Evaluation::GetPieceValue(capPiece);
-            int valAtk = Evaluation::GetPieceValue(atkPiece);
+                int valCap = Evaluation::GetPieceValue(capPiece);
+                int valAtk = Evaluation::GetPieceValue(atkPiece);
 
-            if (!isProtected && valAtk <= valCap) {
-                if (board.isDebugMode) {
-                    std::cout << "info string [FREE PIECE] Found in 1 depth, top move: " << m.toAlgebraic() << std::endl;
+                if (!isProtected) {
+                    if (board.isDebugMode) {
+                        std::cout << "info string [FREE PIECE] Found in 1 depth, top move: " << m.toAlgebraic() << std::endl;
+                    }
+                    return lastCompletedScores[i].m;
                 }
-                movesWithoutBlunderOnPropuse = 0;
-                return lastCompletedScores[0].m;
             }
         }
     }
