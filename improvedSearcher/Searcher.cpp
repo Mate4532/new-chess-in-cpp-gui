@@ -733,29 +733,54 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
         std::cout << "info string [FILTER] Removed best move: " << lastCompletedScores[0].m.toAlgebraic() << std::endl;
     }
 
+    for (int i = 0; i < std::min((int)lastCompletedScores.size(), 3); i++) {
+        Move m = lastCompletedScores[i].m;
+        bool isCap = (m.getFlags() & CAPTURE_FLAG);
+        Color us = board.getSideToMove();
+        Color enemy = (Color)(us ^ 1);
+
+        if (isCap) {
+            PieceType capPiece = board.getPieceAt(m.getTo(), enemy);
+            PieceType atkPiece = m.getPieceType();
+            bool isProtected = board.isSquareAttacked(m.getTo(), enemy);
+
+            int valCap = Evaluation::GetPieceValue(capPiece);
+            int valAtk = Evaluation::GetPieceValue(atkPiece);
+
+            if (!isProtected && valAtk <= valCap) {
+                if (board.isDebugMode) {
+                    std::cout << "info string [FREE PIECE] Found in 1 depth, top move: " << m.toAlgebraic() << std::endl;
+                }
+                movesWithoutBlunderOnPropuse = 0;
+                return lastCompletedScores[0].m;
+            }
+        }
+    }
+
     for (int i = 1; i < limit; i++) {
         if (std::abs(bestScore - lastCompletedScores[i].score) <= settings.blunderThreshold) {
             bool isEmbarrassingBlunder = false;
 
             if (settings.preventEmbarrassingBlunders) {
                 Move candidateMove = lastCompletedScores[i].m;
-                if (board.MakeMove(candidateMove, true)) {
+                Color us = board.getSideToMove();
+
+                if (!isEmbarrassingBlunder && board.MakeMove(candidateMove, true)) {
                     MoveList enemyCaptures;
                     MoveGenerator::GenerateMoves(board, enemyCaptures, true);
 
                     for (const auto& enemyMove : enemyCaptures) {
                         if (enemyMove.getFlags() == EN_PASSANT) continue;
 
-                        PieceType capturedPiece = board.getPieceAt(enemyMove.getTo(), (Color)(board.getSideToMove() ^ 1));
-                        PieceType attackingPiece = enemyMove.getPieceType();
+                        PieceType myCapturedPiece = board.getPieceAt(enemyMove.getTo(), us);
+                        PieceType enemyAttackingPiece = enemyMove.getPieceType();
 
-                        if (capturedPiece >= KNIGHT && capturedPiece <= QUEEN) {
-                            bool isProtectedByUs = board.isSquareAttacked(enemyMove.getTo(), (Color)(board.getSideToMove() ^ 1));
+                        if (myCapturedPiece >= KNIGHT && myCapturedPiece <= QUEEN) {
+                            bool isProtectedByUs = board.isSquareAttacked(enemyMove.getTo(), us);
+                            int valMyPiece = Evaluation::GetPieceValue(myCapturedPiece);
+                            int valEnemyPiece = Evaluation::GetPieceValue(enemyAttackingPiece);
 
-                            int valCap = Evaluation::GetPieceValue(capturedPiece);
-                            int valAtk = Evaluation::GetPieceValue(attackingPiece);
-
-                            if (!isProtectedByUs || attackingPiece == PAWN || valCap > valAtk) {
+                            if (!isProtectedByUs || enemyAttackingPiece == PAWN || valMyPiece > valEnemyPiece) {
                                 isEmbarrassingBlunder = true;
                                 break;
                             }

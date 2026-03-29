@@ -223,9 +223,9 @@ void InfoView::setupNavigationArea(QVBoxLayout* layout) {
             color: #aaaaaa;
             border: none;
             border-radius: 4px;
-            font-size: 24px;
+            font-size: 26px;
             font-weight: bold;
-            padding-bottom: 4px;
+            padding-bottom: 6px;
             min-width: 50px;
         }
         QPushButton:hover {
