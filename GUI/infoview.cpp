@@ -398,8 +398,10 @@ void InfoView::removeLastButFromDisplay() {
     QPushButton* lastBtn = getLastButton(&r, &c);
     if (!lastBtn) return;
 
+    // Törlés a gombcsoportból
     moveButtonGroup->removeButton(lastBtn);
 
+    // Eltávolítás a layoutból és törlés
     for (int i = 0; i < movesLayout->count(); ++i) {
         if (movesLayout->itemAt(i)->widget() == lastBtn) {
             QLayoutItem* item = movesLayout->takeAt(i);
@@ -411,16 +413,23 @@ void InfoView::removeLastButFromDisplay() {
 
     buttonAmount--;
 
+    // ELLENŐRZÉS: Maradt-e még gomb ebben a sorban?
+    // (A háttérkeret és a sorszám nem gomb, azokat nem számoljuk)
     bool hasRemainingButton = false;
-    for (int col : {1, 2}) {
-        if (auto item = movesLayout->itemAtPosition(r, col)) {
-            if (qobject_cast<QPushButton*>(item->widget())) {
+    for (int i = 0; i < movesLayout->count(); ++i) {
+        int row, col, rowSpan, colSpan;
+        movesLayout->getItemPosition(i, &row, &col, &rowSpan, &colSpan);
+
+        if (row == r) {
+            QWidget* w = movesLayout->itemAt(i)->widget();
+            if (qobject_cast<QPushButton*>(w)) {
                 hasRemainingButton = true;
                 break;
             }
         }
     }
 
+    // Ha teljesen üres a sor (nincs benne gomb), takarítjuk a sorszámot és a hátteret
     if (!hasRemainingButton) {
         clearRowWidgets(r);
         currentRow = qMax(0, r - 1);
@@ -428,10 +437,10 @@ void InfoView::removeLastButFromDisplay() {
         currentRow = r;
     }
 
+    // Aktuális kijelölés frissítése az új utolsó gombra
     if (auto nextLast = getLastButton()) {
         nextLast->setChecked(true);
         currentReviewPly = nextLast->property("ply").toInt();
-        QTimer::singleShot(10, this, [this]() { scrollToMove(currentReviewPly); });
     } else {
         currentReviewPly = 0;
         currentRow = 0;
