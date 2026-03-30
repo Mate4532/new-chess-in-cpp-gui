@@ -681,11 +681,12 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
 
     if (lastCompletedScores.empty()) return IterativeDeepening();
 
-    int targetDepth = std::max(settings.maxDepth - 3, 3);
+    int targetDepth = std::max(settings.maxDepth - 2, 3);
 
     for (int d = 1; d <= targetDepth; d++) {
         std::vector<ScoredMove> currentDepthScores;
         bool depthFinished = true;
+        Color us = board.getSideToMove();
 
         for (auto& sm : lastCompletedScores) {
             nnue_state[1].dirtyPiece.dirtyNum = 0;
@@ -699,12 +700,15 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
                 depthFinished = false;
                 break;
             }
-            currentDepthScores.push_back({sm.m, score});
+
+            int realScore = us == WHITE ? score : -score;
+
+            currentDepthScores.push_back({sm.m, realScore});
         }
 
         if (depthFinished && !currentDepthScores.empty()) {
             std::sort(currentDepthScores.begin(), currentDepthScores.end(),
-                      [](const ScoredMove& a, const ScoredMove& b) { return a.score > b.score; });
+                      [us](const ScoredMove& a, const ScoredMove& b) { return us == WHITE ? a.score > b.score : a.score < b.score; });
             lastCompletedScores = currentDepthScores;
             if (std::abs(lastCompletedScores[0].score) > MATE_SCORE_BOUND) break;
         } else {
@@ -720,7 +724,7 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
         for (int i = 0; i < printLimit; ++i) {
             std::cout << "info string rank " << (i + 1)
             << ": " << lastCompletedScores[i].m.toAlgebraic()
-            << " | score: " << (board.getSideToMove() == WHITE ? lastCompletedScores[i].score : -lastCompletedScores[i].score) << std::endl;
+            << " | score: " << lastCompletedScores[i].score << std::endl;
         }
     }
 
@@ -750,9 +754,10 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
 
                 if (!isProtected) {
                     if (board.isDebugMode) {
-                        std::cout << "info string [FREE PIECE] Found in 1 depth, top move: " << m.toAlgebraic() << std::endl;
+                        std::cout << "info string [FREE PIECE] Found in 1 depth, best move made: " << m.toAlgebraic()
+                                  << " (rank 1 | score " << lastCompletedScores[0].score << ")" << std::endl;
                     }
-                    return lastCompletedScores[i].m;
+                    return lastCompletedScores[0].m;
                 }
             }
         }
@@ -812,10 +817,8 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
     if (board.isDebugMode) {
         std::cout << "info string --- Final Valid Candidates (After Filtering) ---" << std::endl;
         for (int idx : validIndices) {
-            std::cout << "info string rank " << (idx + 1)
-            << ": " << lastCompletedScores[idx].m.toAlgebraic()
-            << " | score: " << (board.getSideToMove() == WHITE ? lastCompletedScores[idx].score : -lastCompletedScores[idx].score)
-            << (idx == 0 ? " (FILTERED BEST)" : "") << std::endl;
+            std::cout << "info string rank " << (idx + 1) << ": " << lastCompletedScores[idx].m.toAlgebraic()
+                      << " | score: " << lastCompletedScores[idx].score << (idx == 0 ? " (FILTERED BEST)" : "") << std::endl;
         }
     }
 
@@ -824,9 +827,8 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
 
     if (board.isDebugMode) {
         std::cout << "info string Bot picked move: " << lastCompletedScores[chosenIndex].m.toAlgebraic()
-                  << " (rank " << (chosenIndex + 1) << ", score "
-                  << (board.getSideToMove() == WHITE ? lastCompletedScores[chosenIndex].score : -lastCompletedScores[chosenIndex].score)
-                  << ")" << std::endl;
+                  << " (rank " << (chosenIndex + 1) << " | score "
+                  << lastCompletedScores[chosenIndex].score << ")" << std::endl;
     }
 
     movesWithoutBlunderOnPropuse = 0;

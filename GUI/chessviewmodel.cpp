@@ -23,7 +23,7 @@ void ChessViewModel::startGame() {
 
     bm.setupBotsForNormalGame(currentSettings.robotSettings);
 
-    loadBeginnerFEN();
+    loadFEN(currentSettings.boardSettings.beginnerPosFEN);
     isGameRunning = true;
 
     if (bm.isRobotToMove()) {
@@ -73,12 +73,13 @@ bool ChessViewModel::isRobotUnderSearch() const {
 void ChessViewModel::stopRobotSearch() {
     if (!isUnderSearch) return;
 
-    isUnderSearch = false;
     bm.stopRobotCalculation();
 
     if (robotThread->isRunning()){
         robotThread->wait();
     }
+
+    isUnderSearch = false;
 }
 
 void ChessViewModel::currentPlayerGaveUp() {
@@ -176,7 +177,9 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
     bool botVsBotGotTurnedOn = newRs.isBotVsBot && !oldRs.isBotVsBot;
     bool botVsBotGotTurnedOff = !newRs.isBotVsBot && oldRs.isBotVsBot;
 
-    bool mustStartNewGame = botVsBotChanged || whiteRobotChanged || blackRobotChanged;
+    bool FENChanged = newBs.beginnerPosFEN != oldBs.beginnerPosFEN;
+
+    bool mustStartNewGame = botVsBotChanged || whiteRobotChanged || blackRobotChanged || FENChanged;
 
     if (mustStartNewGame) {
         endGame();
@@ -224,7 +227,7 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
     }
 
     if (mustStartNewGame) {
-        loadBeginnerFEN();
+        loadFEN(newBs.beginnerPosFEN);
     }
 }
 

@@ -23,7 +23,6 @@ struct Magic {
 
 class Board {
 private:
-    const std::string newPosFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     uint64_t m_bitboards[2][PIECE_TYPE_COUNT] = { {0} };
     uint8_t piece_count[2][PIECE_TYPE_COUNT] = { {0} };

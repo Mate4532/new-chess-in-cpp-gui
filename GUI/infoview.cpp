@@ -262,7 +262,7 @@ void InfoView::setupActionButtons(QVBoxLayout* layout) {
 
     connect(btnNewGame, &QPushButton::clicked, this, [this]() {
         static QElapsedTimer timer;
-        if (currentAllS.robotSettings.isBotVsBot && timer.isValid() && !timer.hasExpired(500)) return;
+        if (timer.isValid() && !timer.hasExpired(500)) return;
         timer.restart();
         emit newGameRequested();
     });
@@ -398,10 +398,8 @@ void InfoView::removeLastButFromDisplay() {
     QPushButton* lastBtn = getLastButton(&r, &c);
     if (!lastBtn) return;
 
-    // Törlés a gombcsoportból
     moveButtonGroup->removeButton(lastBtn);
 
-    // Eltávolítás a layoutból és törlés
     for (int i = 0; i < movesLayout->count(); ++i) {
         if (movesLayout->itemAt(i)->widget() == lastBtn) {
             QLayoutItem* item = movesLayout->takeAt(i);
@@ -413,8 +411,6 @@ void InfoView::removeLastButFromDisplay() {
 
     buttonAmount--;
 
-    // ELLENŐRZÉS: Maradt-e még gomb ebben a sorban?
-    // (A háttérkeret és a sorszám nem gomb, azokat nem számoljuk)
     bool hasRemainingButton = false;
     for (int i = 0; i < movesLayout->count(); ++i) {
         int row, col, rowSpan, colSpan;
@@ -429,7 +425,6 @@ void InfoView::removeLastButFromDisplay() {
         }
     }
 
-    // Ha teljesen üres a sor (nincs benne gomb), takarítjuk a sorszámot és a hátteret
     if (!hasRemainingButton) {
         clearRowWidgets(r);
         currentRow = qMax(0, r - 1);
@@ -437,7 +432,6 @@ void InfoView::removeLastButFromDisplay() {
         currentRow = r;
     }
 
-    // Aktuális kijelölés frissítése az új utolsó gombra
     if (auto nextLast = getLastButton()) {
         nextLast->setChecked(true);
         currentReviewPly = nextLast->property("ply").toInt();

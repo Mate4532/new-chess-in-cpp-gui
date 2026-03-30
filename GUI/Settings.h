@@ -23,6 +23,7 @@ struct RobotSettings {
 
 struct BoardSettings {
     bool isBoardFlipped = false;
+    std::string beginnerPosFEN = "";
 
     bool operator!=(const BoardSettings& other) const {
         return isBoardFlipped != other.isBoardFlipped;

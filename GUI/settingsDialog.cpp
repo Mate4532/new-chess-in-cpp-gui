@@ -29,36 +29,42 @@ SettingsDialog::SettingsDialog(AllSettings& allSettings, QWidget *parent)
 void SettingsDialog::applyStyles() {
     setStyleSheet(R"(
         QDialog { background-color: #312E2B; color: #eee; font-family: 'Segoe UI', sans-serif; }
-        QTabWidget::pane {
-            border: 2px solid #262421;
-            background-color: #312E2B;
-        }
+
+        QTabWidget::pane { border: 2px solid #262421; background-color: #312E2B; }
+
         QTabBar::tab { padding: 10px 20px; font-size: 14px; background: #262422; color: #888; }
         QTabBar::tab:selected { background: #312E2B; color: white; border-top: 2px solid #B48866; }
+
         QLabel { color: #eee; font-size: 15px; padding: 2px; }
         QLabel:disabled { color: #555; }
-        QLineEdit {
+
+        QLineEdit, QTextEdit {
             background-color: #444; color: white; padding: 6px; border: 1px solid #666;
             border-radius: 4px; font-size: 14px; selection-background-color: #B48866; selection-color: white;
         }
         QLineEdit:focus { border: 1px solid #B48866; }
         QLineEdit:disabled { color: #777; background-color: #2a2a2a; border: 1px solid #444; }
+
         QCheckBox { font-size: 15px; spacing: 10px; color: #eee; }
         QCheckBox:disabled { color: #777; }
         QCheckBox::indicator { width: 18px; height: 18px; border: 1px solid #888; border-radius: 3px; background: #444; }
         QCheckBox::indicator:checked { background-color: #B48866; border: 1px solid #B48866; }
         QCheckBox::indicator:unchecked:hover { border: 1px solid #aaa; }
+
         QComboBox { background-color: #444; color: white; padding: 6px; border: 1px solid #666; border-radius: 4px; font-size: 14px; }
         QComboBox:disabled { color: #777; background-color: #2a2a2a; }
         QComboBox::drop-down { border: none; }
         QComboBox::down-arrow { image: none; border-left: 1px solid #555; width: 0px; }
+
         QComboBox QAbstractItemView {
             background-color: #444; color: white; selection-background-color: #B48866;
             selection-color: white; border: 1px solid #555;
         }
+
         QPushButton { background-color: #555; color: white; border: none; padding: 8px 16px; border-radius: 4px; font-size: 14px; }
         QPushButton:hover { background-color: #666; }
         QPushButton:pressed { background-color: #444; }
+
         QPushButton[text="Mentés"] { background-color: #B48866; font-weight: bold; }
         QPushButton[text="Mentés"]:hover { background-color: #a37855; }
     )");
@@ -81,6 +87,8 @@ void SettingsDialog::setupActionButtons(QVBoxLayout* layout) {
 
 void SettingsDialog::onSaveClicked() {
     RobotSettings& rs = allS.robotSettings;
+    BoardSettings& bs = allS.boardSettings;
+
 
     rs.isWhiteRobot = checkWhiteRobot->isChecked();
     rs.whiteRobotDifficulty = (Difficulty)comboWhiteDiff->currentIndex();
@@ -89,7 +97,8 @@ void SettingsDialog::onSaveClicked() {
     rs.isBotVsBot = checkBotVsBot->isChecked();
     rs.botSearchTimeMs = std::max(10, lineSearchTime->text().toInt());
 
-    allS.boardSettings.isBoardFlipped = checkBoardFlipped->isChecked();
+    bs.isBoardFlipped = checkBoardFlipped->isChecked();
+    bs.beginnerPosFEN = beginnerPosFENTextEdit->toPlainText().toStdString();
 
     accept();
 }
@@ -201,15 +210,46 @@ void SettingsDialog::setBotVsBotUI(bool active) {
 QWidget* SettingsDialog::createBoardTab() {
     QWidget* tab = new QWidget();
     QGridLayout* layout = new QGridLayout(tab);
-    layout->setSpacing(10);
-    layout->setContentsMargins(30, 30, 30, 30);
+
+    layout->setSpacing(5);
+    layout->setContentsMargins(30, 20, 30, 20);
+
+    QFrame* line = new QFrame();
+    line->setFrameShape(QFrame::NoFrame);
+    line->setFixedHeight(2);
+    line->setStyleSheet("background-color: #262421; margin-top: 10px; margin-bottom: 10px;");
 
     checkBoardFlipped = new QCheckBox("Sakktábla megfordítása");
     checkBoardFlipped->setChecked(allS.boardSettings.isBoardFlipped);
 
-    layout->addWidget(checkBoardFlipped);
-    layout->setRowMinimumHeight(0, 35);
-    layout->setRowStretch(1, 1);
+    layout->addWidget(checkBoardFlipped, 0, 0);
+    layout->setRowMinimumHeight(0, 40);
 
+    layout->addWidget(line, 1, 0, 1, 2);
+    layout->setRowMinimumHeight(1, 30);
+
+    beginnerPosLabel = new QLabel("Kezdő pozíció");
+    beginnerPosFENTextEdit = new QTextEdit(QString::fromStdString(allS.boardSettings.beginnerPosFEN));
+
+    beginnerPosFENTextEdit->setAcceptRichText(false);
+    beginnerPosFENTextEdit->setLineWrapMode(QTextEdit::WidgetWidth);
+    beginnerPosFENTextEdit->setFixedHeight(70);
+    beginnerPosFENTextEdit->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+
+    layout->addWidget(beginnerPosLabel, 2, 0);
+    layout->setRowMinimumHeight(2, 40);
+
+    layout->addWidget(beginnerPosFENTextEdit, 3, 0, 1, 2);
+    layout->setRowMinimumHeight(3, 80);
+
+    setBeginnerFenBtn = new QPushButton("Kezdő pozíció visszaállítása");
+    layout->addWidget(setBeginnerFenBtn, 4, 0, 1, 2);
+    layout->setRowMinimumHeight(4, 40);
+
+    connect(setBeginnerFenBtn, &QPushButton::clicked, this, [this](){
+        beginnerPosFENTextEdit->setPlainText(QString::fromStdString(newPosFen));
+    });
+
+    layout->setRowStretch(5, 1);
     return tab;
 }

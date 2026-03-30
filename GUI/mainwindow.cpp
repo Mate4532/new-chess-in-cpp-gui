@@ -33,6 +33,8 @@ MainWindow::MainWindow(QWidget* parent)
     chessView->setScene(chessScene);
     chessScene->setViewModel(chessViewModel);
 
+    allS.boardSettings.beginnerPosFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
     infoContainer = new InfoView(allS);
 
     PlayerPanel* whitePlayer = new PlayerPanel(WHITE, "Fehér játékos", ":/resources/resources/white_pawn.png");

@@ -4,6 +4,8 @@
 
 #define MAX_PLY 2048
 
+const std::string newPosFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
 enum GameResult : uint8_t {
     WHITE_WON,
     BLACK_WON,

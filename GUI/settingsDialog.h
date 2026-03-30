@@ -10,6 +10,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QVBoxLayout>
+#include <QTextEdit>
 
 class SettingsDialog : public QDialog
 {
@@ -22,7 +23,6 @@ private slots:
     void onSaveClicked();
 
 private:
-    // UI építő és segéd metódusok
     void applyStyles();
     void setupActionButtons(QVBoxLayout* layout);
     void setupRobotSignals();
@@ -32,13 +32,10 @@ private:
     QWidget* createRobotTab();
     QWidget* createBoardTab();
 
-    // Adat referencia
     AllSettings& allS;
 
-    // UI elemek
     QTabWidget* tabWidget;
 
-    // Robot Tab elemek
     QCheckBox* checkWhiteRobot;
     QComboBox* comboWhiteDiff;
     QCheckBox* checkBlackRobot;
@@ -48,7 +45,10 @@ private:
     QLabel* labelSearchTime;
     QLineEdit *lineSearchTime;
 
-    // Tábla Tab elemek
+    QLabel* beginnerPosLabel;
+    QTextEdit* beginnerPosFENTextEdit;
+    QPushButton* setBeginnerFenBtn;
+
     QCheckBox* checkBoardFlipped;
 };
 
