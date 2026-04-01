@@ -21,7 +21,7 @@ struct SearcherSettings {
             return { 6, true, true, 40, 15, true, 900, 1, false, false };
 
         case Difficulty::MEDIUM:
-            return { 9, true, true, 30, 10, false, 500, 2, true, true };
+            return { 6, true, true, 30, 10, false, 500, 2, true, true };
 
         case Difficulty::HARD:
             return { 9, true, true, 20, 8, false, 300, 2, true, true };

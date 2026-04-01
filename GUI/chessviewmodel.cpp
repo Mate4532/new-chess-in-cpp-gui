@@ -73,13 +73,16 @@ bool ChessViewModel::isRobotUnderSearch() const {
 void ChessViewModel::stopRobotSearch() {
     if (!isUnderSearch) return;
 
+    isUnderSearch = false;
+    currentSearchId++;
+
     bm.stopRobotCalculation();
 
-    if (robotThread->isRunning()){
+    if (robotThread) {
         robotThread->wait();
+        delete robotThread;
+        robotThread = nullptr;
     }
-
-    isUnderSearch = false;
 }
 
 void ChessViewModel::currentPlayerGaveUp() {
@@ -239,19 +242,30 @@ void ChessViewModel::refreshView() {
 void ChessViewModel::makeRobotMove() {
     if (isUnderSearch || !isGameRunning) return;
 
+    if (robotThread) {
+        if (robotThread->isRunning()) {
+            bm.stopRobotCalculation();
+            robotThread->wait();
+        }
+        delete robotThread;
+        robotThread = nullptr;
+    }
+
     isUnderSearch = true;
     cachedMatrix = bm.getBoardMatrix();
-
     robotSearchTimer.restart();
 
-    robotThread = QThread::create([this]() {
+    currentSearchId++;
+    int searchIdForThisThread = currentSearchId;
+
+    robotThread = QThread::create([this, searchIdForThisThread]() {
         Move m = bm.MakeRobotMove();
-        QMetaObject::invokeMethod(this, [this, m]() {
-            this->onRobotMoveFinished(m);
+
+        QMetaObject::invokeMethod(this, [this, m, searchIdForThisThread]() {
+            this->onRobotMoveFinished(m, searchIdForThisThread);
         }, Qt::QueuedConnection);
     });
 
-    connect(robotThread, &QThread::finished, robotThread, &QObject::deleteLater);
     robotThread->start();
 }
 
@@ -352,15 +366,18 @@ void ChessViewModel::updatePlayerPanelAtNewPos() {
 }
 
 
-void ChessViewModel::onRobotMoveFinished(Move robotMove) {
-    if (!isUnderSearch) return;
+void ChessViewModel::onRobotMoveFinished(Move robotMove, int searchId) {
+
+    if (this->currentSearchId != searchId || !isUnderSearch) return;
 
     qint64 elapsed = robotSearchTimer.elapsed();
     qint64 remaining = minMsBeforeRobotMove - elapsed;
 
     if (remaining > 0) {
-        QTimer::singleShot(remaining, this, [this, robotMove]() {
-            if (!isUnderSearch || !isGameRunning) return;
+        QTimer::singleShot(remaining, this, [this, robotMove, searchId]() {
+            if (this->currentSearchId != searchId || !isUnderSearch || !isGameRunning) {
+                return;
+            }
 
             isUnderSearch = false;
             if (robotMove.isValid()) {

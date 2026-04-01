@@ -29,7 +29,7 @@ public:
     void makeRobotMove();
     void stopRobotGameLoop();
     void startRobotGameLoop();
-    void onRobotMoveFinished(Move m);
+    void onRobotMoveFinished(Move m, int searchId);
 
     void undoMove();
     MoveInfo getMoveInfo();
@@ -88,7 +88,9 @@ private:
     QThread* robotThread = nullptr;
     int simI = 0;
     int simJ = 0;
+    int currentSearchId = 0;
     QString currentSimFen;
+
     std::vector<std::vector<std::pair<PieceType, Color>>> cachedMatrix;
 
     bool isUnderPromotion = false;
