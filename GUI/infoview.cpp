@@ -345,7 +345,9 @@ void InfoView::clearRowWidgets(int row) {
         movesLayout->getItemPosition(i, &r, &c, &rs, &cs);
         if (r == row) {
             if (auto item = movesLayout->takeAt(i)) {
-                if (item->widget()) item->widget()->deleteLater();
+                if (QWidget* w = item->widget()) {
+                    w->deleteLater();
+                }
                 delete item;
             }
         }
@@ -353,10 +355,11 @@ void InfoView::clearRowWidgets(int row) {
 }
 
 void InfoView::addMoveToDisplay(int movePly, const QString& move, Color color, PieceType movedPiece) {
-    int row = (movePly + 1) / 2;
-    int col = (color == WHITE) ? 1 : 2;
 
-    currentRow = row;
+    bool blackStarted = (color == BLACK && movePly % 2 != 0) || (color == WHITE && movePly % 2 == 0);
+
+    int row = blackStarted ? (movePly / 2 + 1) : ((movePly + 1) / 2);
+    int col = (color == WHITE) ? 1 : 2;
 
     if (!movesLayout->itemAtPosition(row, 0)) {
         if (row % 2 == 1) {
@@ -403,7 +406,10 @@ void InfoView::removeLastButFromDisplay() {
     for (int i = 0; i < movesLayout->count(); ++i) {
         if (movesLayout->itemAt(i)->widget() == lastBtn) {
             QLayoutItem* item = movesLayout->takeAt(i);
-            delete item->widget();
+            if (QWidget* w = item->widget()) {
+                w->hide();
+                w->deleteLater();
+            }
             delete item;
             break;
         }
@@ -441,6 +447,7 @@ void InfoView::removeLastButFromDisplay() {
     }
 
     if (movesLayout->parentWidget()) {
+        movesLayout->invalidate();
         movesLayout->parentWidget()->adjustSize();
     }
 }
