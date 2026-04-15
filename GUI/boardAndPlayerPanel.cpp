@@ -140,6 +140,25 @@ void BoardAndPlayerPanel::syncPiecesWithPanels(int pieces[2][6]) {
     updateMaterialScoreBasedOnPieces(pieces);
 }
 
+void BoardAndPlayerPanel::onTimerChanged(Color playerColor, QString timerStr) {
+    if (playerColor == WHITE) whitePlayer->setTimerText(timerStr);
+    else blackPlayer->setTimerText(timerStr);
+}
+
+void BoardAndPlayerPanel::onSetTimerVisibility(Color playerColor, bool isVisible) {
+    if (playerColor == WHITE) whitePlayer->setTimerVisibility(isVisible);
+    else blackPlayer->setTimerVisibility(isVisible);
+}
+
+void BoardAndPlayerPanel::onActivateTimerColorAndDisableOther(Color timerToActivate) {
+    whitePlayer->setTimerActive(timerToActivate == WHITE);
+    blackPlayer->setTimerActive(timerToActivate == BLACK);
+}
+
+void BoardAndPlayerPanel::onDisableTimers() {
+    whitePlayer->setTimerActive(false);
+    blackPlayer->setTimerActive(false);
+}
 
 int BoardAndPlayerPanel::getMaterialScore(std::vector<PieceType> pieces) {
 

@@ -19,6 +19,18 @@ private:
 	bool is_white_player;
 	bool is_black_player;
 
+    Color activeClockColor = WHITE;
+    long long whiteTimeLeftMs = 0;
+    long long blackTimeLeftMs = 0;
+    long long incrementMs = 0;
+    GameMode gameMode = GameMode::UNLIMITED_THINKING_TIME;
+    RobotTimeUsageMode rtum = RobotTimeUsageMode::FIXED_TIME;
+
+    std::chrono::steady_clock::time_point turnStartTime;
+    bool isClockRunning = false;
+
+    void setRobotTimeUsageMode(RobotTimeUsageMode rtum);
+
 public:
     const std::string OPENING_PATH = "assets/openings.txt";
 
@@ -45,6 +57,11 @@ public:
     void writeGameResult();
     void startGameLoop();
 
+    void startTurnClock();
+    void stopTurnClock();
+    long long getWhiteTimeRemaining() const;
+    long long getBlackTimeRemaining() const;
+
     void setPlayer(Color c);
     void setRobot(Color c);
     void ClearSearchers();
@@ -52,8 +69,13 @@ public:
     void prepareImprovedBotVsOldBot();
     void SwapRobots();
     void setDifficulty(Color c, Difficulty d);
-    void setSearchTime(int t);
+    void setFixedTimePerMove(long long timePerMoveMs);
+    void setTournementTime(long long tournementTimeMs, long long incrementMs = 0);
+    void updateRobotTournementTime();
+    void setGameMode(GameMode gm);
     void stopRobotCalculation();
+
+    void updateClocks(long long elapsedMs);
 
     void currentPlayerGaveUp() { board.currentPlayerGaveUp(); }
 
@@ -75,5 +97,8 @@ public:
     inline void getPieceCounts(int piecesOut[2][6], int ply = -1) { board.getPieceCounts(piecesOut, ply); }
     inline MoveInfo getMoveInfo(int ply = -1) { return board.getMoveInfo(ply); }
     inline bool wasMoveCheck(int ply = -1) { return board.wasMoveCheck(ply); }
+    inline long long getWhiteTimeLeft() const { return whiteTimeLeftMs; }
+    inline long long getBlackTimeLeft() const { return blackTimeLeftMs; }
+    inline Color getActiveClockColor() const { return activeClockColor; }
 
 };

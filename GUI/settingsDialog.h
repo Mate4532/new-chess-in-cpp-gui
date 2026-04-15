@@ -31,6 +31,7 @@ private:
 
     QWidget* createRobotTab();
     QWidget* createBoardTab();
+    QWidget* createTimeControlTab();
 
     AllSettings& allS;
 
@@ -41,15 +42,22 @@ private:
     QCheckBox* checkBlackRobot;
     QComboBox* comboBlackDiff;
     QCheckBox* checkBotVsBot;
-
     QLabel* labelSearchTime;
     QLineEdit *lineSearchTime;
+    QLabel* labelSearchTimeWarning;
 
     QLabel* beginnerPosLabel;
     QTextEdit* beginnerPosFENTextEdit;
     QPushButton* setBeginnerFenBtn;
-
     QCheckBox* checkBoardFlipped;
+
+    QComboBox* comboTimeMode = nullptr;
+    QWidget* widgetTournamentTime;
+    QLabel* labelTourTime;
+    QLineEdit* lineTourTimeMin;
+    QLabel* labelIncrement;
+    QLineEdit* lineIncrementSec;
+    void updateTimeUI();
 };
 
 #endif // SETTINGSDIALOG_H

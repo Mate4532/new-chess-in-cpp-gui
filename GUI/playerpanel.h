@@ -4,17 +4,17 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include "Utils.h"
+#include "playerinfo.h"
 
 class PlayerPanel : public QHBoxLayout{
 private:
     Color playerColor;
-    QString playerName;
-    QString playerIconPath;
 
     QLabel* playerLabel;
     QLabel* playerIconLabel;
     QLabel* materialScoreLabel;
     QWidget* piecesContainer;
+    QLabel* timerLabel;
 
     std::vector<QLabel*> takenPiecesLabels;
 
@@ -32,13 +32,16 @@ private:
     void preloadPixmaps();
 
 public:
-    PlayerPanel(Color playerColor, QString playerName, QString playerIcon, QWidget* parent = nullptr);
+    PlayerPanel(PlayerInfo& player, bool isTimerLabelVisible, QWidget* parent = nullptr);
     void setPlayerName(QString playerName);
     void setPlayerIcon(QString iconPath);
     void setLeftMargin(int pixels);
     void updateMaterialScore(int scoreDiff);
     void updatePanel();
     void syncPiecesWithPanel(int pieces[6]);
+    void setTimerVisibility(bool isVisible);
+    void setTimerActive(bool isActive);
+    void setTimerText(const QString& timeStr);
     void clearPanel();
 
     int getMaterialScore();

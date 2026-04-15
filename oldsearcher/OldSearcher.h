@@ -16,6 +16,7 @@ private:
     static constexpr int TT_SIZE_MB = 128;
 
     Difficulty currentDiff = Difficulty::IMPOSSIBLE;
+    RobotTimeUsageMode rtum = RobotTimeUsageMode::FIXED_TIME;
 
     Board& board;
     OldTT::TranspositionTable tt;
@@ -24,12 +25,18 @@ private:
     int negamax(int depth, int alpha, int beta, int ply, Move prev_move = Move(), bool prev_was_capture = false, bool allowNull = false);
     int quiescence(int alpha, int beta);
 
+    std::atomic<long long> fixedTimePerMoveMs{1000};
+    std::atomic<long long> timeLeftMs{300000};
+    std::atomic<long long> incrementMs{0};
+
+    long long softTimeLimit = 0;
+    long long hardTimeLimit = 0;
+
     int max_depth = 128;
-    int robot_thinking_time_ms = 1000;
 
     long long startTime = 0;
-    std::atomic<bool> stop;
-    bool isStoppedManually;
+    std::atomic<bool> stop{false};
+    std::atomic<bool> isStoppedManually{false};
     std::atomic<uint64_t> nodes;
 
     int historyMoves[2][MAX_KILLER_HISTORY][MAX_KILLER_HISTORY];
@@ -54,7 +61,8 @@ public:
         OldLMR::LMR::Init();
     }
 
-    void setSearchTime(int t) { robot_thinking_time_ms = t; }
+    void setFixedTimePerMove(long long timeMs);
+    void setTournamentTime(long long timeLeft, long long increment = 0);
     void stopSearch();
 
     int see(Move m);
@@ -65,13 +73,14 @@ public:
     void PrintWhatIfPV(const std::vector<Move>& baseLine, Move alternativeMove, int depth);
     std::vector<Move> GetWhatIfPV(const std::vector<Move>& baseLine, Move alternativeMove, int depth);
 
-    inline bool IsMateScore(int score) {
-        return std::abs(score) >= MATE_SCORE_BOUND;
-    }
+    inline bool IsMateScore(int score) { return std::abs(score) >= MATE_SCORE_BOUND;}
+
+    inline void setTimeUsageMode(const RobotTimeUsageMode& rtum) {this->rtum = rtum; }
+    void updateTournementTime(long long timeLeftMs) { this->timeLeftMs = timeLeftMs; }
 
     void ClearSearcher();
 
-    void setDifficulty(Difficulty diff);
+    void setDifficulty(const Difficulty& diff);
     inline bool isUnderSearch() { return isSearching; }
 
     SearcherType getType() const;

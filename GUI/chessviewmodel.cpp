@@ -4,6 +4,8 @@
 ChessViewModel::ChessViewModel(BoardManager& b, QObject* parent)
     : QObject(parent), bm(b)
 {
+    clockTimer = new QTimer(this);
+    connect(clockTimer, &QTimer::timeout, this, &ChessViewModel::handleClockTick);
 }
 
 void ChessViewModel::startGame() {
@@ -26,6 +28,10 @@ void ChessViewModel::startGame() {
     loadFEN(currentSettings.boardSettings.beginnerPosFEN);
     isGameRunning = true;
 
+    if (currentSettings.timeSettings.gm == GameMode::TOURNAMENT_MODE) {
+        startClock();
+    }
+
     if (bm.isRobotToMove()) {
         makeRobotMove();
     }
@@ -36,6 +42,7 @@ void ChessViewModel::loadNewGame() {
 
     isBeginnerPos = true;
     bm.resetForNewGame();
+    resetClock();
 
     emit newGameStarted();
     reviewEnded();
@@ -53,6 +60,7 @@ void ChessViewModel::endGame() {
         emit endPromotion();
 
     isGameRunning = false;
+    stopClock();
     GameResult gr = bm.getGameResult();
     if (!isInBotSimulation) {
         emit gameEnded(gr);
@@ -131,9 +139,6 @@ void ChessViewModel::afterMoveBeenMade(Move m) {
 
     emit boardChanged();
 
-    Color currentPlayer = bm.getSideToMove();
-    Color lastMovedColor = (Color)(currentPlayer ^ 1);
-
     int pieces[2][6];
 
     if (bm.wasMoveCapture(m) || bm.wasMovePromotion(m)) {
@@ -147,7 +152,11 @@ void ChessViewModel::afterMoveBeenMade(Move m) {
     int ply = bm.getPly();
     std::string checkString = bm.wasMoveCheck(ply) ? "+" : "";
 
+    Color currentPlayer = bm.getSideToMove();
+    Color lastMovedColor = (Color)(currentPlayer ^ 1);
+
     emit moveMade(ply, QString::fromStdString(m.toHumanReadable(false) + checkString), lastMovedColor, m.getPieceType());
+    emit activateTimerColorAndDisableOther(bm.getActiveClockColor());
 
     if (isGameRunning && bm.isRobotToMove())
         makeRobotMove();
@@ -168,9 +177,12 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
     RobotSettings& newRs = newS.robotSettings;
     BoardSettings& oldBs = oldS.boardSettings;
     BoardSettings& newBs = newS.boardSettings;
+    TimeSettings& oldTs = oldS.timeSettings;
+    TimeSettings& newTs = newS.timeSettings;
 
-    bool robotConfigChanged = (newRs != oldRs);
-    bool boardConfigChanged = (newBs != oldBs);
+    bool robotConfigChanged = newRs != oldRs;
+    bool boardConfigChanged = newBs != oldBs;
+    bool timeConfigChanged = newTs != oldTs;
 
     bool botVsBotChanged = newRs.isBotVsBot != oldRs.isBotVsBot;
     bool botSearchTimeChanged = newRs.botSearchTimeMs != oldRs.botSearchTimeMs;
@@ -182,7 +194,10 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
 
     bool FENChanged = newBs.beginnerPosFEN != oldBs.beginnerPosFEN;
 
-    bool mustStartNewGame = botVsBotChanged || whiteRobotChanged || blackRobotChanged || FENChanged;
+    bool tournementModeGotTurnedOn = newTs.gm != oldTs.gm && newTs.gm == GameMode::TOURNAMENT_MODE;
+    bool tournementTimeChanged = newTs.tournamentTimeMin != oldTs.tournamentTimeMin;
+
+    bool mustStartNewGame = botVsBotChanged || whiteRobotChanged || blackRobotChanged || FENChanged || timeConfigChanged;
 
     if (mustStartNewGame) {
         endGame();
@@ -216,9 +231,10 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
         }
 
         if (botSearchTimeChanged) {
-            bm.setSearchTime(newRs.botSearchTimeMs);
+            bm.setFixedTimePerMove(newRs.botSearchTimeMs);
         }
 
+        bm.setGameMode(newTs.gm);
         updatePlayerPanelsIconAndLabel();
     }
 
@@ -227,6 +243,19 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
         if (oldS.boardSettings.isBoardFlipped != newS.boardSettings.isBoardFlipped)
             flipBoardToRequest(isBoardFlipped);
         emit boardChanged();
+    }
+
+    if (timeConfigChanged) {
+        bm.setGameMode(newTs.gm);
+
+        bool isTimerVisible = newTs.gm == GameMode::TOURNAMENT_MODE;
+        setTimerVisibility(WHITE, isTimerVisible);
+        setTimerVisibility(BLACK, isTimerVisible);
+
+        if (newTs.gm == GameMode::TOURNAMENT_MODE)
+            currentMsBeforeRobotMove = minMsBeforeRobotMove;
+        else
+            currentMsBeforeRobotMove = baseMsBeforeRobotMove;
     }
 
     if (mustStartNewGame) {
@@ -317,6 +346,10 @@ void ChessViewModel::runNextSimGame() {
     loadFEN(currentSimFen.toStdString());
     isGameRunning = true;
 
+    if (currentSettings.timeSettings.gm == GameMode::TOURNAMENT_MODE) {
+        startClock();
+    }
+
     emit boardChanged();
 
     connect(this, &ChessViewModel::robotSimulationEnded, this, &ChessViewModel::advanceSimulation);
@@ -344,6 +377,43 @@ void ChessViewModel::swapRobots() {
     updatePlayerPanelsIconAndLabel();
 }
 
+void ChessViewModel::handleClockTick() {
+    if (!isGameRunning || reviewingPly != -1) return;
+
+    qint64 wTime = bm.getWhiteTimeRemaining();
+    qint64 bTime = bm.getBlackTimeRemaining();
+
+    emit timerChanged(WHITE, formatTime(wTime));
+    emit timerChanged(BLACK, formatTime(bTime));
+
+    if (wTime <= 0 || bTime <= 0) {
+        clockTimer->stop();
+        endGame();
+    }
+}
+
+void ChessViewModel::startClock() {
+    clockTimer->start(clockPullTimeMs);
+    bm.startTurnClock();
+    emit activateTimerColorAndDisableOther(bm.getActiveClockColor());
+}
+
+void ChessViewModel::stopClock() {
+    clockTimer->stop();
+    bm.stopTurnClock();
+}
+
+void ChessViewModel::resetClock() {
+    TimeSettings ts = currentSettings.timeSettings;
+
+    bm.setTournementTime(ts.getTournementTimeMs(), ts.getIncrementMs());
+    QString timerString = formatTime(ts.getTournementTimeMs());
+    tournementModeStarted();
+    timerChanged(WHITE, timerString);
+    timerChanged(BLACK, timerString);
+    emit disableTimers();
+}
+
 void ChessViewModel::updatePlayerPanelsIconAndLabel() {
 
     bool isWhiteRobot = bm.isRobot(WHITE);
@@ -365,13 +435,43 @@ void ChessViewModel::updatePlayerPanelAtNewPos() {
     emit syncPiecesWithPanelsRequest(allPieces);
 }
 
+QString ChessViewModel::formatTime(qint64 remainingMs) const {
+    if (remainingMs < 0) {
+        remainingMs = 0;
+    }
+
+    qint64 totalSeconds = remainingMs / 1000;
+    qint64 minutes = totalSeconds / 60;
+    qint64 seconds = totalSeconds % 60;
+
+    if (minutes >= 60) {
+        qint64 hours = minutes / 60;
+        minutes = minutes % 60;
+        return QString("%1:%2:%3")
+            .arg(hours)
+            .arg(minutes, 2, 10, QChar('0'))
+            .arg(seconds, 2, 10, QChar('0'));
+    }
+
+    if (totalSeconds < 10) {
+        qint64 tenths = (remainingMs % 1000) / 100;
+        return QString("%1:%2.%3")
+            .arg(minutes)
+            .arg(seconds, 2, 10, QChar('0'))
+            .arg(tenths);
+    }
+
+    return QString("%1:%2")
+        .arg(minutes, 2, 10, QChar('0'))
+        .arg(seconds, 2, 10, QChar('0'));
+}
 
 void ChessViewModel::onRobotMoveFinished(Move robotMove, int searchId) {
 
     if (this->currentSearchId != searchId || !isUnderSearch) return;
 
     qint64 elapsed = robotSearchTimer.elapsed();
-    qint64 remaining = minMsBeforeRobotMove - elapsed;
+    qint64 remaining = currentMsBeforeRobotMove - elapsed;
 
     if (remaining > 0) {
         QTimer::singleShot(remaining, this, [this, robotMove, searchId]() {

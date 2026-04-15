@@ -21,6 +21,7 @@ SettingsDialog::SettingsDialog(AllSettings& allSettings, QWidget *parent)
     tabWidget = new QTabWidget();
     tabWidget->addTab(createRobotTab(), "Robotok");
     tabWidget->addTab(createBoardTab(), "Tábla");
+    tabWidget->addTab(createTimeControlTab(), "Időkontroll");
     mainLayout->addWidget(tabWidget);
 
     setupActionButtons(mainLayout);
@@ -88,6 +89,7 @@ void SettingsDialog::setupActionButtons(QVBoxLayout* layout) {
 void SettingsDialog::onSaveClicked() {
     RobotSettings& rs = allS.robotSettings;
     BoardSettings& bs = allS.boardSettings;
+    TimeSettings& ts = allS.timeSettings;
 
 
     rs.isWhiteRobot = checkWhiteRobot->isChecked();
@@ -99,6 +101,11 @@ void SettingsDialog::onSaveClicked() {
 
     bs.isBoardFlipped = checkBoardFlipped->isChecked();
     bs.beginnerPosFEN = beginnerPosFENTextEdit->toPlainText().toStdString();
+
+    ts.gm = comboTimeMode->currentIndex() == 0 ? GameMode::UNLIMITED_THINKING_TIME : GameMode::TOURNAMENT_MODE;
+    ts.rtum = comboTimeMode->currentIndex() == 0 ? RobotTimeUsageMode::FIXED_TIME : RobotTimeUsageMode::TOURNEMENT_TIME;
+    ts.tournamentTimeMin = std::max(1, lineTourTimeMin->text().toInt());
+    ts.incrementSec = std::max(0, lineIncrementSec->text().toInt());
 
     accept();
 }
@@ -140,6 +147,10 @@ QWidget* SettingsDialog::createRobotTab() {
     lineSearchTime->setValidator(new QIntValidator(10, 10000, this));
     lineSearchTime->setFixedWidth(80);
 
+    labelSearchTimeWarning = new QLabel("<i>Torna mód miatt letiltva.</i>");
+    labelSearchTimeWarning->setStyleSheet("color: #B48866; font-size: 13px;");
+    labelSearchTimeWarning->setVisible(false);
+
     setupRobotSignals();
 
     layout->addWidget(checkBlackRobot, 0, 0);
@@ -156,13 +167,19 @@ QWidget* SettingsDialog::createRobotTab() {
     layout->addWidget(line, 3, 0, 1, 2);
     layout->setRowMinimumHeight(3, 30);
 
+    QVBoxLayout* timeVLayout = new QVBoxLayout();
+    timeVLayout->setSpacing(2);
+
     QHBoxLayout* timeContainer = new QHBoxLayout();
     timeContainer->addWidget(labelSearchTime);
     timeContainer->addWidget(lineSearchTime);
     timeContainer->addStretch();
 
-    layout->addLayout(timeContainer, 4, 0, 1, 2);
-    layout->setRowMinimumHeight(4, 40);
+    timeVLayout->addLayout(timeContainer);
+    timeVLayout->addWidget(labelSearchTimeWarning);
+
+    layout->addLayout(timeVLayout, 4, 0, 1, 2);
+    layout->setRowMinimumHeight(4, 50);
 
     if (rs.isBotVsBot) setBotVsBotUI(true);
     updateSearchTimeEnable();
@@ -190,8 +207,20 @@ void SettingsDialog::updateSearchTimeEnable() {
     bool anyBot = checkWhiteRobot->isChecked() ||
                   checkBlackRobot->isChecked() ||
                   checkBotVsBot->isChecked();
-    labelSearchTime->setEnabled(anyBot);
-    lineSearchTime->setEnabled(anyBot);
+
+    bool isFixedTime = true;
+    if (comboTimeMode) {
+        isFixedTime = (comboTimeMode->currentIndex() == 0);
+    }
+
+    labelSearchTime->setEnabled(anyBot && isFixedTime);
+    lineSearchTime->setEnabled(anyBot && isFixedTime);
+
+    if (anyBot && !isFixedTime) {
+        labelSearchTimeWarning->setVisible(true);
+    } else {
+        labelSearchTimeWarning->setVisible(false);
+    }
 }
 
 void SettingsDialog::setBotVsBotUI(bool active) {
@@ -252,4 +281,63 @@ QWidget* SettingsDialog::createBoardTab() {
 
     layout->setRowStretch(5, 1);
     return tab;
+}
+
+QWidget* SettingsDialog::createTimeControlTab() {
+    QWidget* tab = new QWidget();
+    QVBoxLayout* mainLayout = new QVBoxLayout(tab);
+    mainLayout->setSpacing(15);
+    mainLayout->setContentsMargins(30, 20, 30, 20);
+
+    TimeSettings& ts = allS.timeSettings;
+
+    QHBoxLayout* modeLayout = new QHBoxLayout();
+    QLabel* labelMode = new QLabel("Játékmód:");
+    comboTimeMode = new QComboBox();
+    comboTimeMode->addItems({"Végtelen gondolkodási idő", "Torna mód"});
+    comboTimeMode->setCurrentIndex(ts.rtum == RobotTimeUsageMode::FIXED_TIME ? 0 : 1);
+
+    modeLayout->addWidget(labelMode);
+    modeLayout->addWidget(comboTimeMode);
+    mainLayout->addLayout(modeLayout);
+
+    QFrame* line = new QFrame();
+    line->setFrameShape(QFrame::HLine);
+    line->setStyleSheet("background-color: #262421; margin-top: 5px; margin-bottom: 5px;");
+    mainLayout->addWidget(line);
+
+    widgetTournamentTime = new QWidget();
+    QGridLayout* tourLayout = new QGridLayout(widgetTournamentTime);
+    tourLayout->setContentsMargins(0, 0, 0, 0);
+    tourLayout->setSpacing(10);
+
+    labelTourTime = new QLabel("Alapidő (perc):");
+    lineTourTimeMin = new QLineEdit(QString::number(ts.tournamentTimeMin));
+    lineTourTimeMin->setValidator(new QIntValidator(1, 180, this));
+    lineTourTimeMin->setFixedWidth(100);
+
+    labelIncrement = new QLabel("Bónuszidő lépésenként (mp):");
+    lineIncrementSec = new QLineEdit(QString::number(ts.incrementSec));
+    lineIncrementSec->setValidator(new QIntValidator(0, 60, this));
+    lineIncrementSec->setFixedWidth(100);
+
+    tourLayout->addWidget(labelTourTime, 0, 0);
+    tourLayout->addWidget(lineTourTimeMin, 0, 1);
+    tourLayout->addWidget(labelIncrement, 1, 0);
+    tourLayout->addWidget(lineIncrementSec, 1, 1);
+
+    mainLayout->addWidget(widgetTournamentTime);
+    mainLayout->addStretch();
+
+    connect(comboTimeMode, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &SettingsDialog::updateTimeUI);
+    updateTimeUI();
+
+    return tab;
+}
+
+void SettingsDialog::updateTimeUI() {
+    bool isTournement = (comboTimeMode->currentIndex() == 1);
+    widgetTournamentTime->setVisible(isTournement);
+
+    updateSearchTimeEnable();
 }

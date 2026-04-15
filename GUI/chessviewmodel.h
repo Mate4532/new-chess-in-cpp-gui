@@ -67,6 +67,11 @@ signals:
     void syncPiecesWithPanelsRequest(int pieces[2][6]);
     void endPromotion();
     void reviewEndedRequest(int currentPly);
+    void tournementModeStarted();
+    void timerChanged(Color playerColor, QString timerStr);
+    void setTimerVisibility(Color playerColor, bool isVisible);
+    void activateTimerColorAndDisableOther(Color timerColor);
+    void disableTimers();
 
 private:
     BoardManager& bm;
@@ -79,11 +84,21 @@ private:
     void afterMoveBeenMade(Move m);
     void swapRobots();
 
-    int minMsBeforeRobotMove = 500;
+    QTimer* clockTimer;
+    int clockPullTimeMs = 100;
+    void handleClockTick();
+    void startClock();
+    void stopClock();
+    void resetClock();
+
+    int minMsBeforeRobotMove = 50;
+    int baseMsBeforeRobotMove = 500;
+    int currentMsBeforeRobotMove = baseMsBeforeRobotMove;
     QElapsedTimer robotSearchTimer;
 
     void updatePlayerPanelsIconAndLabel();
     void updatePlayerPanelAtNewPos();
+    QString formatTime(qint64 remainingMs) const;
 
     QThread* robotThread = nullptr;
     int simI = 0;

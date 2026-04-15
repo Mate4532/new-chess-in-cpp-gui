@@ -1,5 +1,4 @@
-#include "playerpanel.h"
-#include <QLabel>
+#include "Playerpanel.h"
 
 const std::unordered_map<PieceType, QString> PlayerPanel::whitePieceMap = {
     {PieceType::PAWN, ":/resources/resources/white_pawn.png"},
@@ -19,10 +18,9 @@ const std::unordered_map<PieceType, QString> PlayerPanel::blackPieceMap = {
     {PieceType::KING, ":/resources/resources/black_king.png"},
     };
 
-PlayerPanel::PlayerPanel(Color playerColor, QString playerName, QString iconPath, QWidget* parent) : QHBoxLayout(parent) {
+PlayerPanel::PlayerPanel(PlayerInfo& player, bool isTimerLabelVisible, QWidget* parent) : QHBoxLayout(parent) {
 
-    this->playerColor = playerColor;
-
+    playerColor = player.getPlayerColor();
     preloadPixmaps();
 
     this->setSpacing(0);
@@ -33,6 +31,8 @@ PlayerPanel::PlayerPanel(Color playerColor, QString playerName, QString iconPath
     piecesContainer = new QWidget();
     materialScoreLabel = new QLabel();
     piecesContainer->setFixedHeight(25);
+
+    timerLabel = new QLabel("00:00");
 
     playerLabel->setStyleSheet(R"(
         QLabel {
@@ -55,15 +55,26 @@ PlayerPanel::PlayerPanel(Color playerColor, QString playerName, QString iconPath
         }
     )");
 
+    setTimerActive(false);
+
+    QSizePolicy sp = timerLabel->sizePolicy();
+    sp.setRetainSizeWhenHidden(true);
+    timerLabel->setSizePolicy(sp);
+
+    timerLabel->setAlignment(Qt::AlignCenter);
+    timerLabel->setVisible(isTimerLabelVisible);
 
     this->addWidget(playerIconLabel, 0, Qt::AlignCenter);
     this->addWidget(playerLabel, 0, Qt::AlignCenter);
     this->addWidget(piecesContainer, 0, Qt::AlignCenter);
     this->addWidget(materialScoreLabel, 0, Qt::AlignCenter);
+
     this->addStretch();
 
-    setPlayerName(playerName);
-    setPlayerIcon(iconPath);
+    this->addWidget(timerLabel, 0, Qt::AlignRight | Qt::AlignVCenter);
+
+    setPlayerName(player.getPlayerName());
+    setPlayerIcon(player.getPlayerIcon());
 }
 
 void PlayerPanel::setPlayerName(QString newName) {
@@ -206,6 +217,50 @@ void PlayerPanel::syncPiecesWithPanel(int pieces[6]) {
     }
 
     updatePanel();
+}
+
+void PlayerPanel::setTimerVisibility(bool isVisible) {
+    if (timerLabel) {
+        timerLabel->setVisible(isVisible);
+    }
+}
+
+void PlayerPanel::setTimerActive(bool isActive) {
+    if (!timerLabel) return;
+
+    if (isActive) {
+        timerLabel->setStyleSheet(R"(
+            QLabel {
+                background-color: #f0f0f0;
+                color: #262421;
+                font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+                font-size: 20px;
+                font-weight: 800;
+                border-radius: 6px;
+                padding: 8px 18px;
+                margin-right: 15px;
+            }
+        )");
+    } else {
+        timerLabel->setStyleSheet(R"(
+            QLabel {
+                background-color: #5c5c5c;
+                color: #b0b0b0;
+                font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+                font-size: 20px;
+                font-weight: 800;
+                border-radius: 6px;
+                padding: 8px 18px;
+                margin-right: 15px;
+            }
+        )");
+    }
+}
+
+void PlayerPanel::setTimerText(const QString& timeStr) {
+    if (timerLabel) {
+        timerLabel->setText(timeStr);
+    }
 }
 
 void PlayerPanel::clearPanel() {

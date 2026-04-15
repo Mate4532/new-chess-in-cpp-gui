@@ -18,6 +18,15 @@ inline long long now_ms() {
                std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
+void Searcher::setFixedTimePerMove(long long timeMs) {
+    fixedTimePerMoveMs = timeMs;
+}
+
+void Searcher::setTournamentTime(long long timeLeft, long long increment) {
+    this->timeLeftMs = timeLeft;
+    this->incrementMs = increment;
+}
+
 void Searcher::stopSearch() {
     stop = true;
     isStoppedManually = true;
@@ -67,7 +76,7 @@ int Searcher::see(Move m) {
 int Searcher::quiescence(int alpha, int beta) {
     nodes++;
 
-    if ((nodes & 2047) == 0 && now_ms() - startTime >= robot_thinking_time_ms)
+    if ((nodes & 2047) == 0 && now_ms() - startTime >= hardTimeLimit)
         stop = true;
     if (stop) return alpha;
 
@@ -105,7 +114,7 @@ int Searcher::quiescence(int alpha, int beta) {
 int Searcher::negamax(int depth, int alpha, int beta, int ply, Move prev_move, bool prev_was_capture, bool allowNull) {
 
     nodes++;
-    if ((nodes & 2047) == 0 && now_ms() - startTime >= robot_thinking_time_ms)
+    if ((nodes & 2047) == 0 && now_ms() - startTime >= hardTimeLimit)
         stop = true;
     if (stop)
         return alpha;
@@ -317,6 +326,28 @@ Move Searcher::IterativeDeepening() {
     isSearching = true;
     nodes = 0;
 
+    if (rtum == RobotTimeUsageMode::FIXED_TIME) {
+        softTimeLimit = fixedTimePerMoveMs;
+        hardTimeLimit = fixedTimePerMoveMs;
+    }
+    else {
+        int movesToGo = 40;
+        softTimeLimit = timeLeftMs / movesToGo;
+        softTimeLimit += (incrementMs * 8) / 10;
+
+        if (softTimeLimit >= timeLeftMs) {
+            softTimeLimit = std::max((long long)100, timeLeftMs - 200);
+        }
+        if (softTimeLimit < 100) {
+            softTimeLimit = 100;
+        }
+
+        hardTimeLimit = softTimeLimit * 3;
+        if (hardTimeLimit >= timeLeftMs) {
+            hardTimeLimit = std::max((long long)100, timeLeftMs - 200);
+        }
+    }
+
     repetitionTable.Init(board);
     repetitionTable.Push(board.getHash(), false);
     AgeHistory();
@@ -327,6 +358,8 @@ Move Searcher::IterativeDeepening() {
     Move tmpMove;
 
     Move bestMove;
+    Move previousBestMove;
+    int stableBestMoveCount = 0;
     int lastScore = 0;
 
     for (int depth = 1; depth <= max_depth; depth++) {
@@ -360,9 +393,40 @@ Move Searcher::IterativeDeepening() {
             bestMove = tmpMove;
         }
 
-        if (stop) break;
+        long long timeSpent = now_ms() - startTime;
 
+        if (bestMove == previousBestMove) {
+            stableBestMoveCount++;
+        } else {
+            stableBestMoveCount = 0;
+            previousBestMove = bestMove;
+        }
+
+        bool inCrisis = (depth > 3 && score < lastScore - 50);
         lastScore = score;
+
+        if (IsMateScore(score)) break;
+
+        if (rtum == RobotTimeUsageMode::FIXED_TIME) {
+            if (timeSpent >= fixedTimePerMoveMs) {
+                break;
+            }
+        }
+        else {
+            if (!inCrisis && stableBestMoveCount >= 3 && timeSpent >= (softTimeLimit * 0.6)) {
+                break;
+            }
+
+            if (timeSpent >= softTimeLimit && !inCrisis) {
+                break;
+            }
+
+            if (timeSpent * 2.5 > hardTimeLimit) {
+                break;
+            }
+        }
+
+        if (stop) break;
 
         if (board.isDebugMode) {
             std::cout << "info depth " << depth << " score ";
@@ -519,7 +583,7 @@ void Searcher::ClearSearcher() {
     repetitionTable.Clear();
 }
 
-void Searcher::setDifficulty(Difficulty diff) {
+void Searcher::setDifficulty(const Difficulty& diff) {
     switch (diff) {
     case Difficulty::EASY:
         max_depth = 5;

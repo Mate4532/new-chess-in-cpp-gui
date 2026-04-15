@@ -164,6 +164,15 @@ enum class Difficulty {
     IMPOSSIBLE
 };
 
+enum GameMode {
+    UNLIMITED_THINKING_TIME,
+    TOURNAMENT_MODE
+};
+
+enum RobotTimeUsageMode {
+    FIXED_TIME, TOURNEMENT_TIME
+};
+
 const int basePieceCounts[PieceType::PIECE_TYPE_COUNT] = { 8, 2, 2, 2, 1, 1 };
 
 struct MoveInfo {

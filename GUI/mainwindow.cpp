@@ -37,10 +37,15 @@ MainWindow::MainWindow(QWidget* parent)
 
     infoContainer = new InfoView(allS);
 
-    PlayerPanel* whitePlayer = new PlayerPanel(WHITE, "Fehér játékos", ":/resources/resources/white_pawn.png");
-    PlayerPanel* blackPlayer = new PlayerPanel(BLACK, "Fekete játékos", ":/resources/resources/black_pawn.png");
+    PlayerInfo whitePlayer(WHITE, "Fehér játékos", ":/resources/resources/white_pawn.png");
+    PlayerInfo blackPlayer(BLACK, "Fekete játékos", ":/resources/resources/black_pawn.png");
 
-    bapp = new BoardAndPlayerPanel(whitePlayer, blackPlayer, chessView);
+    bool isPlayerPanelTimerVisible = allS.timeSettings.gm == GameMode::TOURNAMENT_MODE;
+
+    PlayerPanel* whitePlayerPanel = new PlayerPanel(whitePlayer, isPlayerPanelTimerVisible);
+    PlayerPanel* blackPlayerPanel = new PlayerPanel(blackPlayer, isPlayerPanelTimerVisible);
+
+    bapp = new BoardAndPlayerPanel(whitePlayerPanel, blackPlayerPanel, chessView);
 
     connect(chessViewModel, &ChessViewModel::boardChanged, chessScene, &ChessScene::onBoardChanged);
     connect(chessViewModel, &ChessViewModel::endPromotion, chessScene, &ChessScene::onPromotionEnded);
@@ -55,6 +60,10 @@ MainWindow::MainWindow(QWidget* parent)
     connect(chessViewModel, &ChessViewModel::flipBoardToRequest, bapp, &BoardAndPlayerPanel::flipPlayerPanels);
     connect(chessViewModel, &ChessViewModel::playerPanelsUpdateRequest, bapp, &BoardAndPlayerPanel::playerPanelChanged);
     connect(chessViewModel, &ChessViewModel::syncPiecesWithPanelsRequest, bapp, &BoardAndPlayerPanel::syncPiecesWithPanels);
+    connect(chessViewModel, &ChessViewModel::timerChanged, bapp, &BoardAndPlayerPanel::onTimerChanged);
+    connect(chessViewModel, &ChessViewModel::setTimerVisibility, bapp, &BoardAndPlayerPanel::onSetTimerVisibility);
+    connect(chessViewModel, &ChessViewModel::activateTimerColorAndDisableOther, bapp, &BoardAndPlayerPanel::onActivateTimerColorAndDisableOther);
+    connect(chessViewModel, &ChessViewModel::disableTimers, bapp, &BoardAndPlayerPanel::onDisableTimers);
 
     connect(infoContainer, &InfoView::reviewRequested, chessViewModel, &ChessViewModel::reviewHistory);
     connect(infoContainer, &InfoView::settingsChanged, chessViewModel, &ChessViewModel::updateSettings);

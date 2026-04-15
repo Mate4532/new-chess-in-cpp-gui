@@ -61,15 +61,20 @@ void BoardManager::goPerft(int perftDepth) {
 
 void BoardManager::resetForNewGame() {
     ClearSearchers();
+    isClockRunning = false;
+    whiteTimeLeftMs = 0;
+    blackTimeLeftMs = 0;
+    activeClockColor = board.getSideToMove();
 }
 
 void BoardManager::loadBeginnerFEN() {
     board.loadNewGame();
+    activeClockColor = board.getSideToMove();
 }
-
 
 void BoardManager::loadFEN(std::string randomFEN) {
     board.LoadFEN(randomFEN);
+    activeClockColor = board.getSideToMove();
 }
 
 std::string BoardManager::getRandomOpening() {
@@ -161,8 +166,20 @@ Move BoardManager::getMove(int fromX, int fromY, int toX, int toY, PieceType pro
 }
 
 bool BoardManager::MakeMove(Move m) {
+    stopTurnClock();
 
-    return board.MakeMove(m);
+    bool success = board.MakeMove(m);
+
+    activeClockColor = board.getSideToMove();
+
+    if (success && gameMode == GameMode::TOURNAMENT_MODE) {
+        if (activeClockColor == BLACK) whiteTimeLeftMs += incrementMs;
+        else blackTimeLeftMs += incrementMs;
+
+        startTurnClock();
+    }
+
+    return success;
 }
 
 void BoardManager::undoMove(int plyToUndo) {
@@ -175,6 +192,10 @@ void BoardManager::undoMove(int plyToUndo) {
 }
 
 Move BoardManager::MakeRobotMove() {
+
+    if (gameMode == GameMode::TOURNAMENT_MODE)
+        updateRobotTournementTime();
+
     Move robot_move;
     std::cout << (board.getSideToMove() == WHITE ? (whiteRobot->getName() + " (feher) ") : (blackRobot->getName() + " (fekete) ")) <<"gondolkodik..." << std::endl;
     if (board.isDebugMode) {
@@ -182,7 +203,7 @@ Move BoardManager::MakeRobotMove() {
         // std::cout << "Hash kereses elott: " << board.getHash() << std::endl;
         robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetRobotMove() : blackRobot->GetRobotMove();
 
-        uint64_t hash_after = board.getHash();
+        //uint64_t hash_after = board.getHash();
         // std::cout << "Hash kereses utan: " << hash_after << std::endl;
         // std::cout << "Repetition_history merete: " << board.getRepetitionHash().size() << std::endl;
         // if (hash_before != hash_after) {
@@ -195,7 +216,7 @@ Move BoardManager::MakeRobotMove() {
     if (!robot_move.isValid())
         return Move();
 
-    board.MakeMove(robot_move);
+    MakeMove(robot_move);
     std::cout << "Robot lepese: " + robot_move.toAlgebraic() << std::endl;
 
     return robot_move;
@@ -220,6 +241,8 @@ bool BoardManager::didGameEnd() {
 }
 
 GameResult BoardManager::getGameResult(){
+    if (whiteTimeLeftMs <= 0) return GameResult::BLACK_WON;
+    if (blackTimeLeftMs <= 0) return GameResult::WHITE_WON;
     return board.getGameResult();
 }
 
@@ -332,6 +355,41 @@ void BoardManager::startGameLoop() {
     }
 }
 
+void BoardManager::startTurnClock() {
+    turnStartTime = std::chrono::steady_clock::now();
+    isClockRunning = true;
+}
+
+void BoardManager::stopTurnClock() {
+    if (!isClockRunning) return;
+
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - turnStartTime).count();
+
+    if (board.getSideToMove() == WHITE) whiteTimeLeftMs -= elapsed;
+    else blackTimeLeftMs -= elapsed;
+
+    isClockRunning = false;
+}
+
+long long BoardManager::getWhiteTimeRemaining() const {
+    if (isClockRunning && activeClockColor == WHITE && gameMode == GameMode::TOURNAMENT_MODE) {
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - turnStartTime).count();
+        return std::max(0LL, whiteTimeLeftMs - elapsed);
+    }
+    return whiteTimeLeftMs;
+}
+
+long long BoardManager::getBlackTimeRemaining() const {
+    if (isClockRunning && activeClockColor == BLACK && gameMode == GameMode::TOURNAMENT_MODE) {
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - turnStartTime).count();
+        return std::max(0LL, blackTimeLeftMs - elapsed);
+    }
+    return blackTimeLeftMs;
+}
+
 void BoardManager::setPlayer(Color c) {
     if (c == WHITE) {
         is_white_player = true;
@@ -407,13 +465,64 @@ void BoardManager::setDifficulty(Color c, Difficulty d) {
     else if (blackRobot != nullptr) blackRobot->setDifficulty(d);
 }
 
-void BoardManager::setSearchTime(int t) {
-    if (whiteRobot != nullptr) whiteRobot->setSearchTime(t);
-    if (blackRobot != nullptr )blackRobot->setSearchTime(t);
+void BoardManager::setRobotTimeUsageMode(RobotTimeUsageMode rtum) {
+    if (whiteRobot != nullptr) whiteRobot->setTimeUsageMode(rtum);
+    if (blackRobot != nullptr) blackRobot->setTimeUsageMode(rtum);
+}
+
+void BoardManager::setFixedTimePerMove(long long timePerMoveMs) {
+    if (whiteRobot != nullptr) whiteRobot->setFixedTimePerMove(timePerMoveMs);
+    if (blackRobot != nullptr)blackRobot->setFixedTimePerMove(timePerMoveMs);
+}
+
+void BoardManager::updateRobotTournementTime() {
+    if (whiteRobot != nullptr) whiteRobot->updateTournementTime(getWhiteTimeRemaining());
+    if (blackRobot != nullptr) blackRobot->updateTournementTime(getBlackTimeRemaining());
+}
+
+void BoardManager::setTournementTime(long long tournementTimeMs, long long incrementMs) {
+    this->whiteTimeLeftMs = tournementTimeMs;
+    this->blackTimeLeftMs = tournementTimeMs;
+    this->incrementMs = incrementMs;
+
+    if (whiteRobot != nullptr) whiteRobot->setTournamentTime(tournementTimeMs, incrementMs);
+    if (blackRobot != nullptr) blackRobot->setTournamentTime(tournementTimeMs, incrementMs);
+}
+
+void BoardManager::setGameMode(GameMode gm) {
+    this->gameMode = gm;
+
+    switch(gm) {
+    case GameMode::UNLIMITED_THINKING_TIME:
+        rtum = RobotTimeUsageMode::FIXED_TIME;
+        break;
+
+    case GameMode::TOURNAMENT_MODE:
+        rtum = RobotTimeUsageMode::TOURNEMENT_TIME;
+        break;
+
+    default:
+        rtum = RobotTimeUsageMode::FIXED_TIME;
+        break;
+    }
+
+    setRobotTimeUsageMode(rtum);
 }
 
 void BoardManager::stopRobotCalculation() {
     if (whiteRobot != nullptr && whiteRobot->isUnderSearch()) whiteRobot->stopSearch();
     if (blackRobot != nullptr && blackRobot->isUnderSearch()) blackRobot->stopSearch();
+}
+
+void BoardManager::updateClocks(long long elapsedMs) {
+    if (gameMode != GameMode::TOURNAMENT_MODE) return;
+
+    if (activeClockColor == WHITE) {
+        whiteTimeLeftMs -= elapsedMs;
+        if (whiteTimeLeftMs < 0) whiteTimeLeftMs = 0;
+    } else {
+        blackTimeLeftMs -= elapsedMs;
+        if (blackTimeLeftMs < 0) blackTimeLeftMs = 0;
+    }
 }
 
