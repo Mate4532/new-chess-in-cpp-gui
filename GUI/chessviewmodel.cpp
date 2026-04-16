@@ -421,6 +421,8 @@ void ChessViewModel::updatePlayerPanelsIconAndLabel() {
 }
 
 void ChessViewModel::updatePlayerPanelAtNewPos() {
+    if (isUnderReview()) return;
+
     int allPieces[2][6];
     bm.getPieceCounts(allPieces);
     emit syncPiecesWithPanelsRequest(allPieces);
@@ -555,7 +557,6 @@ void ChessViewModel::reviewHistory(int targetPly) {
         updatePlayerPanelAtReview();
     }
 }
-
 
 void ChessViewModel::reviewEnded() {
     reviewingPly = -1;
