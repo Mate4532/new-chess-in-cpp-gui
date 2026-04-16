@@ -64,17 +64,15 @@ void BoardManager::resetForNewGame() {
     isClockRunning = false;
     whiteTimeLeftMs = 0;
     blackTimeLeftMs = 0;
-    activeClockColor = board.getSideToMove();
+    timeLeftAtPly.clear();
 }
 
 void BoardManager::loadBeginnerFEN() {
-    board.loadNewGame();
-    activeClockColor = board.getSideToMove();
+    loadFEN(newPosFen);
 }
 
-void BoardManager::loadFEN(std::string randomFEN) {
-    board.LoadFEN(randomFEN);
-    activeClockColor = board.getSideToMove();
+void BoardManager::loadFEN(std::string FEN) {
+    board.LoadFEN(FEN);
 }
 
 std::string BoardManager::getRandomOpening() {
@@ -170,12 +168,11 @@ bool BoardManager::MakeMove(Move m) {
 
     bool success = board.MakeMove(m);
 
-    activeClockColor = board.getSideToMove();
-
     if (success && gameMode == GameMode::TOURNAMENT_MODE) {
-        if (activeClockColor == BLACK) whiteTimeLeftMs += incrementMs;
+        if (board.getSideToMove() == BLACK) whiteTimeLeftMs += incrementMs;
         else blackTimeLeftMs += incrementMs;
 
+        saveRemainingTime();
         startTurnClock();
     }
 
@@ -184,10 +181,21 @@ bool BoardManager::MakeMove(Move m) {
 
 void BoardManager::undoMove(int plyToUndo) {
 
+    stopTurnClock();
+
     for (int i = 0; i < plyToUndo; ++i) {
         if (board.getPly() > 0) {
             board.UndoMove(board.getLastMove());
         }
+    }
+
+    if (gameMode == GameMode::TOURNAMENT_MODE) {
+        int currentPly = board.getPly();
+        std::pair<long long, long long> timeRemainingAtPly = timeLeftAtPly[currentPly];
+        whiteTimeLeftMs = timeRemainingAtPly.first;
+        blackTimeLeftMs = timeRemainingAtPly.second;
+        timeLeftAtPly.pop_back();
+        startTurnClock();
     }
 }
 
@@ -372,22 +380,13 @@ void BoardManager::stopTurnClock() {
     isClockRunning = false;
 }
 
-long long BoardManager::getWhiteTimeRemaining() const {
-    if (isClockRunning && activeClockColor == WHITE && gameMode == GameMode::TOURNAMENT_MODE) {
+long long BoardManager::getTimeRemaining(Color player) const {
+    if (isClockRunning && board.getSideToMove() == player && gameMode == GameMode::TOURNAMENT_MODE) {
         auto now = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - turnStartTime).count();
-        return std::max(0LL, whiteTimeLeftMs - elapsed);
+        return std::max(0LL, (player == WHITE ? whiteTimeLeftMs : blackTimeLeftMs) - elapsed);
     }
-    return whiteTimeLeftMs;
-}
-
-long long BoardManager::getBlackTimeRemaining() const {
-    if (isClockRunning && activeClockColor == BLACK && gameMode == GameMode::TOURNAMENT_MODE) {
-        auto now = std::chrono::steady_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - turnStartTime).count();
-        return std::max(0LL, blackTimeLeftMs - elapsed);
-    }
-    return blackTimeLeftMs;
+    return player == WHITE ? whiteTimeLeftMs : blackTimeLeftMs;
 }
 
 void BoardManager::setPlayer(Color c) {
@@ -476,8 +475,8 @@ void BoardManager::setFixedTimePerMove(long long timePerMoveMs) {
 }
 
 void BoardManager::updateRobotTournementTime() {
-    if (whiteRobot != nullptr) whiteRobot->updateTournementTime(getWhiteTimeRemaining());
-    if (blackRobot != nullptr) blackRobot->updateTournementTime(getBlackTimeRemaining());
+    if (whiteRobot != nullptr) whiteRobot->updateTournementTime(getTimeRemaining(WHITE));
+    if (blackRobot != nullptr) blackRobot->updateTournementTime(getTimeRemaining(BLACK));
 }
 
 void BoardManager::setTournementTime(long long tournementTimeMs, long long incrementMs) {
@@ -487,6 +486,8 @@ void BoardManager::setTournementTime(long long tournementTimeMs, long long incre
 
     if (whiteRobot != nullptr) whiteRobot->setTournamentTime(tournementTimeMs, incrementMs);
     if (blackRobot != nullptr) blackRobot->setTournamentTime(tournementTimeMs, incrementMs);
+
+    saveRemainingTime();
 }
 
 void BoardManager::setGameMode(GameMode gm) {
@@ -517,12 +518,17 @@ void BoardManager::stopRobotCalculation() {
 void BoardManager::updateClocks(long long elapsedMs) {
     if (gameMode != GameMode::TOURNAMENT_MODE) return;
 
-    if (activeClockColor == WHITE) {
+    if (board.getSideToMove() == WHITE) {
         whiteTimeLeftMs -= elapsedMs;
         if (whiteTimeLeftMs < 0) whiteTimeLeftMs = 0;
     } else {
         blackTimeLeftMs -= elapsedMs;
         if (blackTimeLeftMs < 0) blackTimeLeftMs = 0;
     }
+}
+
+void BoardManager::saveRemainingTime() {
+    std::pair<long long, long long> timeRemains(whiteTimeLeftMs, blackTimeLeftMs);
+    timeLeftAtPly.push_back(timeRemains);
 }
 

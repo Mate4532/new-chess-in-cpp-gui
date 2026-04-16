@@ -19,10 +19,10 @@ private:
 	bool is_white_player;
 	bool is_black_player;
 
-    Color activeClockColor = WHITE;
     long long whiteTimeLeftMs = 0;
     long long blackTimeLeftMs = 0;
     long long incrementMs = 0;
+    std::vector<std::pair<long long, long long>> timeLeftAtPly;
     GameMode gameMode = GameMode::UNLIMITED_THINKING_TIME;
     RobotTimeUsageMode rtum = RobotTimeUsageMode::FIXED_TIME;
 
@@ -30,6 +30,7 @@ private:
     bool isClockRunning = false;
 
     void setRobotTimeUsageMode(RobotTimeUsageMode rtum);
+    void saveRemainingTime();
 
 public:
     const std::string OPENING_PATH = "assets/openings.txt";
@@ -41,7 +42,7 @@ public:
 	void goPerft(int perftDepth);
     void resetForNewGame();
     void loadBeginnerFEN();
-    void loadFEN(std::string randomFEN);
+    void loadFEN(std::string FEN);
     std::string getRandomOpening();
     Move getBestMoveOnBoard() { return board.getSideToMove() == WHITE ? whiteRobot->GetRobotMove() : blackRobot->GetRobotMove(); }
     Move MakeRobotMove();
@@ -51,7 +52,6 @@ public:
     Move getMove(int fromX, int fromY, int toX, int toY, PieceType promotionPiece);
     bool MakeMove(Move m);
     void undoMove(int plyToUndo);
-    void undoLastMove();
     bool didGameEnd();
     GameResult getGameResult();
     void writeGameResult();
@@ -59,8 +59,7 @@ public:
 
     void startTurnClock();
     void stopTurnClock();
-    long long getWhiteTimeRemaining() const;
-    long long getBlackTimeRemaining() const;
+    long long getTimeRemaining(Color player) const;
 
     void setPlayer(Color c);
     void setRobot(Color c);
@@ -83,7 +82,7 @@ public:
 
     inline int getPly() { return board.getPly(); }
     inline int getFullMoveNumber() { return board.getFullMoveNumber(); }
-    inline Color getSideToMove() { return board.getSideToMove(); }
+    inline Color getSideToMove(int ply = -1) { return board.getSideToMove(ply); }
     inline bool wasMoveCapture(Move m) { return m.getFlags() & MoveFlag::CAPTURE_FLAG; }
     inline bool wasMovePromotion(Move m) { return m.getFlags() & MoveFlag::PROMOTION_FLAG; }
     inline PieceType getPromotionPiece(Move m) { return Board::GetPromotionPiece(m); }
@@ -97,8 +96,10 @@ public:
     inline void getPieceCounts(int piecesOut[2][6], int ply = -1) { board.getPieceCounts(piecesOut, ply); }
     inline MoveInfo getMoveInfo(int ply = -1) { return board.getMoveInfo(ply); }
     inline bool wasMoveCheck(int ply = -1) { return board.wasMoveCheck(ply); }
-    inline long long getWhiteTimeLeft() const { return whiteTimeLeftMs; }
-    inline long long getBlackTimeLeft() const { return blackTimeLeftMs; }
-    inline Color getActiveClockColor() const { return activeClockColor; }
+    inline long long getTimeLeft(Color player, int ply = -1) const {
+        if (ply == -1)
+            return player == WHITE ? whiteTimeLeftMs : blackTimeLeftMs;
+        return player == WHITE ? timeLeftAtPly[ply].first : timeLeftAtPly[ply].second;
+    }
 
 };

@@ -242,6 +242,7 @@ void Board::LoadFEN(std::string fen) {
     move_history.push_back(Move());
 
     checkHistory.push_back(false);
+    playerToMoveHistory.push_back(m_side_to_move);
 }
 
 void Board::loadNewGame() {
@@ -645,6 +646,7 @@ bool Board::MakeMove(Move move, bool in_search) {
         move_history.push_back(move);
         pieceHistory.push_back(getBoardMatrix());
         checkHistory.push_back(gaveCheck);
+        playerToMoveHistory.push_back(m_side_to_move);
     }
 
     Square kingSq = getKingSquare(player);
@@ -723,6 +725,7 @@ void Board::UndoMove(Move move, bool in_search) {
         move_history.pop_back();
         pieceHistory.pop_back();
         checkHistory.pop_back();
+        playerToMoveHistory.pop_back();
     }
 
     m_all_occupancy = m_side_occupancy[WHITE] | m_side_occupancy[BLACK];
@@ -942,6 +945,7 @@ void Board::ClearBoard() {
     move_history.clear();
     pieceHistory.clear();
     checkHistory.clear();
+    playerToMoveHistory.clear();
 }
 
 MoveInfo Board::getMoveInfo(int ply) {

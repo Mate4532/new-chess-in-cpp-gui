@@ -39,6 +39,7 @@ private:
     std::vector<Move> move_history;
     std::vector<std::vector<std::vector<std::pair<PieceType, Color>>>> pieceHistory;
     std::vector<bool> checkHistory;
+    std::vector<Color> playerToMoveHistory;
 
     GameResult gr = GameResult::GAME_DID_NOT_END;
 
@@ -95,8 +96,8 @@ public:
     inline uint64_t getPieceBitboard(Color c, PieceType p) const {
         return m_bitboards[c][p];
     }
-    inline Color getSideToMove() const {
-        return m_side_to_move;
+    inline Color getSideToMove(int ply = -1) const {
+        return playerToMoveHistory[ply == -1 ? committedPly : ply];
     }
     inline Square getKingSquare(Color c) const {
         return (Square)GetLSB(m_bitboards[c][KING]);
@@ -125,8 +126,8 @@ public:
     inline uint16_t getFullMoveNumber() const {
         return boardStateHistory[m_ply].full_move_number;
     }
-    inline uint64_t getHash(int i = -1) const {
-        return boardStateHistory[i == -1 ? m_ply : i].zobrist_hash;
+    inline uint64_t getHash(int ply = -1) const {
+        return boardStateHistory[ply == -1 ? m_ply : ply].zobrist_hash;
     }
     inline std::vector<uint64_t> getRepetitionHash() const {
         return repetition_history.getHashes();

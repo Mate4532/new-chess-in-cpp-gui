@@ -98,6 +98,7 @@ private:
 
     void updatePlayerPanelsIconAndLabel();
     void updatePlayerPanelAtNewPos();
+    void updatePlayerPanelAtReview();
     QString formatTime(qint64 remainingMs) const;
 
     QThread* robotThread = nullptr;

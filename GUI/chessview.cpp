@@ -6,8 +6,8 @@
 ChessView::ChessView(QWidget* parent) : QGraphicsView(parent),
     background(":/resources/resources/chessboard.png")
 {
-    setMinimumHeight(WHOLE_CHESSBOARD_WIDTH_PX / 2);
-    setMinimumWidth(WHOLE_CHESSBOARD_HEIGHT_PX / 2);
+    //setMinimumHeight(WHOLE_CHESSBOARD_WIDTH_PX / 2);
+    //setMinimumWidth(WHOLE_CHESSBOARD_HEIGHT_PX / 2);
     setRenderHint(QPainter::SmoothPixmapTransform);
     setRenderHint(QPainter::Antialiasing);
 

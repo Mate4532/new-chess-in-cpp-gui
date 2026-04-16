@@ -228,8 +228,9 @@ void PlayerPanel::setTimerVisibility(bool isVisible) {
 void PlayerPanel::setTimerActive(bool isActive) {
     if (!timerLabel) return;
 
-    if (isActive) {
-        timerLabel->setStyleSheet(R"(
+    if (playerColor == WHITE) {
+        if (isActive) {
+            timerLabel->setStyleSheet(R"(
             QLabel {
                 background-color: #f0f0f0;
                 color: #262421;
@@ -241,11 +242,11 @@ void PlayerPanel::setTimerActive(bool isActive) {
                 margin-right: 15px;
             }
         )");
-    } else {
-        timerLabel->setStyleSheet(R"(
+        } else {
+            timerLabel->setStyleSheet(R"(
             QLabel {
-                background-color: #5c5c5c;
-                color: #b0b0b0;
+                background-color: #7a7a7a;
+                color: #c0c0c0;
                 font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
                 font-size: 20px;
                 font-weight: 800;
@@ -254,8 +255,38 @@ void PlayerPanel::setTimerActive(bool isActive) {
                 margin-right: 15px;
             }
         )");
+        }
+    } else {
+        if (isActive) {
+            timerLabel->setStyleSheet(R"(
+            QLabel {
+                background-color: #262421;
+                color: #f0f0f0;
+                font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+                font-size: 20px;
+                font-weight: 800;
+                border-radius: 6px;
+                padding: 8px 18px;
+                margin-right: 15px;
+            }
+        )");
+        } else {
+            timerLabel->setStyleSheet(R"(
+            QLabel {
+                background-color: #1a1a1a;
+                color: #6e6e6e;
+                font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+                font-size: 20px;
+                font-weight: 800;
+                border-radius: 6px;
+                padding: 8px 18px;
+                margin-right: 15px;
+            }
+        )");
+        }
     }
 }
+
 
 void PlayerPanel::setTimerText(const QString& timeStr) {
     if (timerLabel) {

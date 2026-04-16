@@ -92,7 +92,6 @@ MainWindow::MainWindow(QWidget* parent)
     )");
 
     resize(width(), height());
-    calculateDynamicMinimumSize();
 }
 
 void MainWindow::resizeEvent(QResizeEvent* event) {
@@ -113,24 +112,6 @@ void MainWindow::resizeEvent(QResizeEvent* event) {
     int finalInfoW = (finalBoardW * RATIO_INFO) / RATIO_BOARD;
 
     infoContainer->setMaximumWidth(finalInfoW);
-}
-
-void MainWindow::calculateDynamicMinimumSize() {
-    QSize bappMin = bapp->getMinimumOptimalSize();
-    int infoMinW = InfoView::MIN_WIDTH;
-
-    int boardWidthBasedOnInfo = (infoMinW * 10) / 3;
-
-    int finalMinBoardW = qMax(bappMin.width(), boardWidthBasedOnInfo);
-    int finalMinInfoW = (finalMinBoardW * 3) / 10;
-
-    QMargins m = centralWidget()->layout()->contentsMargins();
-    int spacing = centralWidget()->layout()->spacing();
-
-    int totalMinW = finalMinBoardW + finalMinInfoW + m.left() + m.right() + spacing;
-    int totalMinH = bappMin.height() + m.top() + m.bottom();
-
-    this->setMinimumSize(totalMinW, totalMinH);
 }
 
 MainWindow::~MainWindow() = default;

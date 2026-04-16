@@ -139,12 +139,7 @@ void ChessViewModel::afterMoveBeenMade(Move m) {
 
     emit boardChanged();
 
-    int pieces[2][6];
-
-    if (bm.wasMoveCapture(m) || bm.wasMovePromotion(m)) {
-        bm.getPieceCounts(pieces);
-        syncPiecesWithPanelsRequest(pieces);
-    }
+    updatePlayerPanelAtNewPos();
 
     if (bm.didGameEnd())
         endGame();
@@ -156,7 +151,6 @@ void ChessViewModel::afterMoveBeenMade(Move m) {
     Color lastMovedColor = (Color)(currentPlayer ^ 1);
 
     emit moveMade(ply, QString::fromStdString(m.toHumanReadable(false) + checkString), lastMovedColor, m.getPieceType());
-    emit activateTimerColorAndDisableOther(bm.getActiveClockColor());
 
     if (isGameRunning && bm.isRobotToMove())
         makeRobotMove();
@@ -193,9 +187,6 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
     bool botVsBotGotTurnedOff = !newRs.isBotVsBot && oldRs.isBotVsBot;
 
     bool FENChanged = newBs.beginnerPosFEN != oldBs.beginnerPosFEN;
-
-    bool tournementModeGotTurnedOn = newTs.gm != oldTs.gm && newTs.gm == GameMode::TOURNAMENT_MODE;
-    bool tournementTimeChanged = newTs.tournamentTimeMin != oldTs.tournamentTimeMin;
 
     bool mustStartNewGame = botVsBotChanged || whiteRobotChanged || blackRobotChanged || FENChanged || timeConfigChanged;
 
@@ -380,8 +371,8 @@ void ChessViewModel::swapRobots() {
 void ChessViewModel::handleClockTick() {
     if (!isGameRunning || reviewingPly != -1) return;
 
-    qint64 wTime = bm.getWhiteTimeRemaining();
-    qint64 bTime = bm.getBlackTimeRemaining();
+    qint64 wTime = bm.getTimeRemaining(WHITE);
+    qint64 bTime = bm.getTimeRemaining(BLACK);
 
     emit timerChanged(WHITE, formatTime(wTime));
     emit timerChanged(BLACK, formatTime(bTime));
@@ -395,7 +386,7 @@ void ChessViewModel::handleClockTick() {
 void ChessViewModel::startClock() {
     clockTimer->start(clockPullTimeMs);
     bm.startTurnClock();
-    emit activateTimerColorAndDisableOther(bm.getActiveClockColor());
+    emit activateTimerColorAndDisableOther(bm.getSideToMove());
 }
 
 void ChessViewModel::stopClock() {
@@ -433,6 +424,16 @@ void ChessViewModel::updatePlayerPanelAtNewPos() {
     int allPieces[2][6];
     bm.getPieceCounts(allPieces);
     emit syncPiecesWithPanelsRequest(allPieces);
+    emit activateTimerColorAndDisableOther(bm.getSideToMove());
+}
+
+void ChessViewModel::updatePlayerPanelAtReview() {
+    int allPieces[2][6];
+    bm.getPieceCounts(allPieces, reviewingPly);
+    emit syncPiecesWithPanelsRequest(allPieces);
+    emit activateTimerColorAndDisableOther(bm.getSideToMove(reviewingPly));
+    emit timerChanged(WHITE, formatTime(bm.getTimeLeft(WHITE, reviewingPly)));
+    emit timerChanged(BLACK, formatTime(bm.getTimeLeft(BLACK, reviewingPly)));
 }
 
 QString ChessViewModel::formatTime(qint64 remainingMs) const {
@@ -494,7 +495,7 @@ void ChessViewModel::onRobotMoveFinished(Move robotMove, int searchId) {
 
 void ChessViewModel::undoMove() {
 
-    if (!isGameRunning || isInBotSimulation)
+    if (!isGameRunning || isInBotSimulation || bm.getPly() <= 0)
         return;
 
     reviewEnded();
@@ -512,10 +513,7 @@ void ChessViewModel::undoMove() {
 
     bm.undoMove(plyToUndo);
     emit boardChanged();
-
-    int pieces[2][6];
-    bm.getPieceCounts(pieces);
-    emit syncPiecesWithPanelsRequest(pieces);
+    updatePlayerPanelAtNewPos();
 
     if (bm.isRobotToMove())
         makeRobotMove();
@@ -554,9 +552,7 @@ void ChessViewModel::reviewHistory(int targetPly) {
             reviewingPly = targetPly;
         emit boardChanged();
 
-        int pieces[2][6];
-        bm.getPieceCounts(pieces, reviewingPly);
-        emit syncPiecesWithPanelsRequest(pieces);
+        updatePlayerPanelAtReview();
     }
 }
 

@@ -32,8 +32,6 @@ private:
 
     AllSettings allS;
 
-    void calculateDynamicMinimumSize();
-
     const int RATIO_BOARD = 10;
     const int RATIO_INFO = 3;
     const int TOTAL_RATIO = RATIO_BOARD + RATIO_INFO;

@@ -294,7 +294,7 @@ QWidget* SettingsDialog::createTimeControlTab() {
     QHBoxLayout* modeLayout = new QHBoxLayout();
     QLabel* labelMode = new QLabel("Játékmód:");
     comboTimeMode = new QComboBox();
-    comboTimeMode->addItems({"Végtelen gondolkodási idő", "Torna mód"});
+    comboTimeMode->addItems({"Óra nélküli", "Torna mód"});
     comboTimeMode->setCurrentIndex(ts.rtum == RobotTimeUsageMode::FIXED_TIME ? 0 : 1);
 
     modeLayout->addWidget(labelMode);
