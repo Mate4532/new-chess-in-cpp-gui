@@ -308,7 +308,7 @@ void BoardManager::startGameLoop() {
 
         board.PrintBoard(is_white_player, is_black_player);
 
-		std::cout << (board.getSideToMove() == WHITE ? "Feher" : "Fekete") << " van lepesben!" << std::endl;
+        std::cout << (board.getSideToMove() == WHITE ? "Feher" : "Fekete") << " van lepesben!" << std::endl;
         std::cout << "Add meg a lepest (pl. e2e4): ";
         std::getline(std::cin >> std::ws, userInput);
 
@@ -374,14 +374,14 @@ void BoardManager::stopTurnClock() {
     auto now = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - turnStartTime).count();
 
-    if (board.getSideToMove() == WHITE) whiteTimeLeftMs -= elapsed;
+    if (board.getCommittedSideToMove() == WHITE) whiteTimeLeftMs -= elapsed;
     else blackTimeLeftMs -= elapsed;
 
     isClockRunning = false;
 }
 
 long long BoardManager::getTimeRemaining(Color player) const {
-    if (isClockRunning && board.getSideToMove() == player && gameMode == GameMode::TOURNAMENT_MODE) {
+    if (isClockRunning && board.getCommittedSideToMove() == player && gameMode == GameMode::TOURNAMENT_MODE) {
         auto now = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - turnStartTime).count();
         return std::max(0LL, (player == WHITE ? whiteTimeLeftMs : blackTimeLeftMs) - elapsed);

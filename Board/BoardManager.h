@@ -82,7 +82,7 @@ public:
 
     inline int getPly() { return board.getPly(); }
     inline int getFullMoveNumber() { return board.getFullMoveNumber(); }
-    inline Color getSideToMove(int ply = -1) { return board.getSideToMove(ply); }
+    inline Color getSideToMove(int ply = -1) { return board.getCommittedSideToMove(ply); }
     inline bool wasMoveCapture(Move m) { return m.getFlags() & MoveFlag::CAPTURE_FLAG; }
     inline bool wasMovePromotion(Move m) { return m.getFlags() & MoveFlag::PROMOTION_FLAG; }
     inline PieceType getPromotionPiece(Move m) { return Board::GetPromotionPiece(m); }
@@ -90,8 +90,8 @@ public:
     inline PieceType getLastCapturedPieceType() { return board.getLastCapturePieceType(); }
     inline Move getMove(int ply = -1) { return board.getMove(ply); }
     inline bool isRobot(Color c) const { return (c == WHITE && is_white_robot) || (c == BLACK && is_black_robot);}
-    inline bool isEnemyRobot() const { return (isRobot((Color)(board.getSideToMove() ^ 1)));}
-    inline bool isRobotToMove() const { return (is_white_robot && board.getSideToMove() == WHITE) || (is_black_robot && board.getSideToMove() == BLACK); }
+    inline bool isEnemyRobot() const { return (isRobot((Color)(board.getCommittedSideToMove() ^ 1)));}
+    inline bool isRobotToMove() const { return (is_white_robot && board.getCommittedSideToMove() == WHITE) || (is_black_robot && board.getSideToMove() == BLACK); }
     inline std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix(int ply = -1) const { return board.getBoardMatrix(ply); }
     inline void getPieceCounts(int piecesOut[2][6], int ply = -1) { board.getPieceCounts(piecesOut, ply); }
     inline MoveInfo getMoveInfo(int ply = -1) { return board.getMoveInfo(ply); }

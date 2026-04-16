@@ -96,8 +96,11 @@ public:
     inline uint64_t getPieceBitboard(Color c, PieceType p) const {
         return m_bitboards[c][p];
     }
-    inline Color getSideToMove(int ply = -1) const {
+    inline Color getCommittedSideToMove(int ply = -1) const {
         return playerToMoveHistory[ply == -1 ? committedPly : ply];
+    }
+    inline Color getSideToMove() const {
+        return m_side_to_move;
     }
     inline Square getKingSquare(Color c) const {
         return (Square)GetLSB(m_bitboards[c][KING]);
