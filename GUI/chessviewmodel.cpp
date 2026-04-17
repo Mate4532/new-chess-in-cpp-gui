@@ -104,19 +104,19 @@ void ChessViewModel::currentPlayerGaveUp() {
     endGame();
 }
 
-void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType promotionPiece) {
+bool ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType promotionPiece) {
 
-    if (reviewingPly != -1) {
+    if (isUnderReview()) {
         reviewEnded();
         emit boardChanged();
-        return;
+        return false;
     }
 
     if (!isGameRunning && isBeginnerPos && !bm.isRobotToMove())
         startGame();
 
     if (isRobotUnderSearch() || !isGameRunning)
-        return;
+        return false;
 
     if (isBeginnerPos)
         isBeginnerPos = false;
@@ -130,6 +130,8 @@ void ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType
         if (isMoveLegal)
             afterMoveBeenMade(m);
     }
+
+    return isMoveValid;
 }
 
 void ChessViewModel::afterMoveBeenMade(Move m) {
@@ -240,8 +242,7 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
         bm.setGameMode(newTs.gm);
 
         bool isTimerVisible = newTs.gm == GameMode::TOURNAMENT_MODE;
-        setTimerVisibility(WHITE, isTimerVisible);
-        setTimerVisibility(BLACK, isTimerVisible);
+        setTimersVisible();
 
         if (newTs.gm == GameMode::TOURNAMENT_MODE)
             currentMsBeforeRobotMove = minMsBeforeRobotMove;
@@ -439,11 +440,19 @@ void ChessViewModel::updatePlayerPanelAtReview() {
 }
 
 QString ChessViewModel::formatTime(qint64 remainingMs) const {
-    if (remainingMs < 0) {
-        remainingMs = 0;
+    if (remainingMs <= 0) {
+        return "0:00.0";
     }
 
-    qint64 totalSeconds = remainingMs / 1000;
+    qint64 displayMs;
+
+    if (remainingMs <= 10000) {
+        displayMs = ((remainingMs + 99) / 100) * 100;
+    } else {
+        displayMs = ((remainingMs + 999) / 1000) * 1000;
+    }
+
+    qint64 totalSeconds = displayMs / 1000;
     qint64 minutes = totalSeconds / 60;
     qint64 seconds = totalSeconds % 60;
 
@@ -456,8 +465,8 @@ QString ChessViewModel::formatTime(qint64 remainingMs) const {
             .arg(seconds, 2, 10, QChar('0'));
     }
 
-    if (totalSeconds < 10) {
-        qint64 tenths = (remainingMs % 1000) / 100;
+    if (displayMs < 10000) {
+        qint64 tenths = (displayMs % 1000) / 100;
         return QString("%1:%2.%3")
             .arg(minutes)
             .arg(seconds, 2, 10, QChar('0'))
@@ -532,7 +541,7 @@ MoveInfo ChessViewModel::getMoveInfo() {
 
 std::vector<std::vector<std::pair<PieceType, Color>>> ChessViewModel::getBoardMatrix() const {
 
-    if (reviewingPly >= 0) {
+    if (isUnderReview()) {
         return bm.getBoardMatrix(reviewingPly);
     }
     if (isUnderSearch) {
@@ -561,4 +570,16 @@ void ChessViewModel::reviewHistory(int targetPly) {
 void ChessViewModel::reviewEnded() {
     reviewingPly = -1;
     emit reviewEndedRequest(bm.getPly());
+}
+
+std::pair<int, int> ChessViewModel::getKingInCheckCoords() {
+    int targetPly = isUnderReview() ? reviewingPly : bm.getPly();
+
+    if (!bm.wasMoveCheck(targetPly)) {
+        return {-1, -1};
+    }
+
+    Color sideInCheck = bm.getSideToMove(targetPly);
+
+    return bm.getKingSquare(sideInCheck, targetPly);
 }

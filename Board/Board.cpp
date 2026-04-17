@@ -243,6 +243,7 @@ void Board::LoadFEN(std::string fen) {
 
     checkHistory.push_back(false);
     playerToMoveHistory.push_back(m_side_to_move);
+    legalMovesHistory.push_back(generateCurrentLegalMoves());
 }
 
 void Board::loadNewGame() {
@@ -647,6 +648,7 @@ bool Board::MakeMove(Move move, bool in_search) {
         pieceHistory.push_back(getBoardMatrix());
         checkHistory.push_back(gaveCheck);
         playerToMoveHistory.push_back(m_side_to_move);
+        legalMovesHistory.push_back(generateCurrentLegalMoves());
     }
 
     Square kingSq = getKingSquare(player);
@@ -726,6 +728,7 @@ void Board::UndoMove(Move move, bool in_search) {
         pieceHistory.pop_back();
         checkHistory.pop_back();
         playerToMoveHistory.pop_back();
+        legalMovesHistory.pop_back();
     }
 
     m_all_occupancy = m_side_occupancy[WHITE] | m_side_occupancy[BLACK];
@@ -912,6 +915,21 @@ void Board::getPieceCounts(int piecesOut[2][6], int ply) {
     }
 }
 
+MoveList Board::generateCurrentLegalMoves() {
+    MoveList moves;
+    MoveList validMoves;
+    MoveGenerator::GenerateMoves(*this, moves);
+
+    for (Move m : moves) {
+        if (MakeMove(m, true)) {
+            UndoMove(m, true);
+            validMoves.push_back(m);
+        }
+    }
+
+    return validMoves;
+}
+
 void Board::currentPlayerGaveUp() {
     if (gr != GameResult::GAME_DID_NOT_END)
         return;
@@ -946,6 +964,7 @@ void Board::ClearBoard() {
     pieceHistory.clear();
     checkHistory.clear();
     playerToMoveHistory.clear();
+    legalMovesHistory.clear();
 }
 
 MoveInfo Board::getMoveInfo(int ply) {

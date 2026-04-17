@@ -61,7 +61,7 @@ MainWindow::MainWindow(QWidget* parent)
     connect(chessViewModel, &ChessViewModel::playerPanelsUpdateRequest, bapp, &BoardAndPlayerPanel::playerPanelChanged);
     connect(chessViewModel, &ChessViewModel::syncPiecesWithPanelsRequest, bapp, &BoardAndPlayerPanel::syncPiecesWithPanels);
     connect(chessViewModel, &ChessViewModel::timerChanged, bapp, &BoardAndPlayerPanel::onTimerChanged);
-    connect(chessViewModel, &ChessViewModel::setTimerVisibility, bapp, &BoardAndPlayerPanel::onSetTimerVisibility);
+    connect(chessViewModel, &ChessViewModel::setTimersVisible, bapp, &BoardAndPlayerPanel::onSetTimersVisible);
     connect(chessViewModel, &ChessViewModel::activateTimerColorAndDisableOther, bapp, &BoardAndPlayerPanel::onActivateTimerColorAndDisableOther);
     connect(chessViewModel, &ChessViewModel::disableTimers, bapp, &BoardAndPlayerPanel::onDisableTimers);
 

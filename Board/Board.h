@@ -37,6 +37,7 @@ private:
 
 	RepetitionTable repetition_history;
     std::vector<Move> move_history;
+    std::vector<MoveList> legalMovesHistory;
     std::vector<std::vector<std::vector<std::pair<PieceType, Color>>>> pieceHistory;
     std::vector<bool> checkHistory;
     std::vector<Color> playerToMoveHistory;
@@ -138,6 +139,9 @@ public:
     inline uint16_t getPly() const {
         return committedPly;
     }
+    inline MoveList getCurrentLegalMoves() const {
+        return legalMovesHistory[committedPly];
+    }
     inline const Move getLastMove() {
         return move_history.empty() ? Move() : move_history.back();
     }
@@ -154,9 +158,9 @@ public:
     }
     inline const bool wasMoveCheck(int ply = -1) {
         if (checkHistory.empty()) return false;
-        else if (ply == -1) return checkHistory.back();
-        else if (ply < 0) return false;
-        else return checkHistory[committedPly];
+        if (ply == -1) return checkHistory.back();
+        if (ply < 0) return false;
+        return checkHistory[ply];
     }
 
     bool HasNonPawnMaterial(Color color) const;
@@ -178,6 +182,7 @@ public:
     void PrintBoard(bool is_white_player = true, bool is_black_player = true) const;
     std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix(int ply = -1) const;
     void getPieceCounts(int piecesOut[2][6], int ply = -1);
+    MoveList generateCurrentLegalMoves();
 
     void currentPlayerGaveUp();
     GameResult getGameResult();

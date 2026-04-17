@@ -21,7 +21,7 @@ public:
     };
 
     struct DraggingState{
-        bool wasDragging;
+        bool wasItemActive;
         int file;
         int rank;
         QPointF lastScenePos;
@@ -72,13 +72,21 @@ private:
     QGraphicsRectItem* hoverHighlightItem = nullptr;
     QPointF activeItemOriginalPos;
 
+    bool wasPieceDragged = false;
+    bool isReclickingActiveItem = false;
+    QColor baseHighlightColor = QColor(246, 246, 105, 150);
+
     std::unordered_map<QString, QPixmap> originalPixmaps;
+    std::vector<std::pair<int, int>> currentLegalMoves;
 
     void sceneRectChanged(const QRectF &rect);
     void addPieceToBoard(PieceType type, Color color, int logicalFile, int logicalRank, bool isPromotion);
     void drawPromotionPieces();
     void drawMovedPieceBackground();
     void drawPieces();
+    void highlightSelectedPiece();
+    void drawLegalMoveDots();
+    void drawCheckHighlight();
 
     void updateHoverHighlight(const QPointF& scenePos);
     void handlePromotion(int fromX, int fromY, int toX, int toY);

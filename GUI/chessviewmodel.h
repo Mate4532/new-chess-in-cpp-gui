@@ -25,7 +25,7 @@ public:
 
     void stopRobotSearch();
 
-    void movePiece(int fromX, int fromY, int toX, int toY, PieceType promotionPiece = PieceType::PIECE_NONE);
+    bool movePiece(int fromX, int fromY, int toX, int toY, PieceType promotionPiece = PieceType::PIECE_NONE);
     void makeRobotMove();
     void stopRobotGameLoop();
     void startRobotGameLoop();
@@ -42,10 +42,14 @@ public:
     bool isMovePromotion(int fromX, int fromY, int toX, int toY);
     bool isRobotUnderSearch() const;
 
+    std::pair<int, int> getKingInCheckCoords();
+
     inline bool getIsBoardFlipped() const { return isBoardFlipped; }
     inline void setIsBoardUnderPromotion(bool isUnderPromotion) { this->isUnderPromotion =  isUnderPromotion; }
     inline bool isBoardUnderPromoption() { return isUnderPromotion; }
-    inline bool isUnderReview() { return reviewingPly >= 0; }
+    inline bool isUnderReview() const { return reviewingPly >= 0; }
+    inline bool showLegalMoves() const { return currentSettings.boardSettings.showLegalMoves; }
+    std::vector<std::pair<int, int>> getLegalMovesForPiece(int file, int rank) { return bm.getLegalMovesForPiece(file, rank); }
 
     void loadSettings(AllSettings& allS);
 
@@ -69,8 +73,8 @@ signals:
     void reviewEndedRequest(int currentPly);
     void tournementModeStarted();
     void timerChanged(Color playerColor, QString timerStr);
-    void setTimerVisibility(Color playerColor, bool isVisible);
     void activateTimerColorAndDisableOther(Color timerColor);
+    void setTimersVisible();
     void disableTimers();
 
 private:
@@ -91,7 +95,7 @@ private:
     void stopClock();
     void resetClock();
 
-    int minMsBeforeRobotMove = 50;
+    int minMsBeforeRobotMove = 0;
     int baseMsBeforeRobotMove = 500;
     int currentMsBeforeRobotMove = baseMsBeforeRobotMove;
     QElapsedTimer robotSearchTimer;

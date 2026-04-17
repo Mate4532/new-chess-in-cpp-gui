@@ -24,28 +24,31 @@ struct RobotSettings {
 struct BoardSettings {
     bool isBoardFlipped = false;
     std::string beginnerPosFEN = newPosFen;
+    bool showLegalMoves = true;
 
     bool operator!=(const BoardSettings& other) const {
         return isBoardFlipped != other.isBoardFlipped ||
-                beginnerPosFEN != other.beginnerPosFEN;
+               beginnerPosFEN != other.beginnerPosFEN ||
+               showLegalMoves != other.showLegalMoves;
     }
 };
 
 struct TimeSettings {
     GameMode gm = GameMode::UNLIMITED_THINKING_TIME;
     RobotTimeUsageMode rtum = RobotTimeUsageMode::FIXED_TIME;
-    int tournamentTimeMin = 5;
-    int incrementSec = 0;
+
+    int tournamentTimeSec = 5 * 60;
+    double incrementSec = 5;
 
     bool operator!=(const TimeSettings& other) const {
         return gm != other.gm ||
                rtum != other.rtum ||
-               tournamentTimeMin != other.tournamentTimeMin ||
+               tournamentTimeSec != other.tournamentTimeSec ||
                incrementSec != other.incrementSec;
     }
 
-    long long getTournementTimeMs() { return tournamentTimeMin * 60000LL; }
-    long long getIncrementMs() { return incrementSec * 1000LL; }
+    long long getTournementTimeMs() { return tournamentTimeSec * 1000LL; }
+    long long getIncrementMs() { return (long long)(incrementSec * 1000.0); }
 };
 
 struct AllSettings {

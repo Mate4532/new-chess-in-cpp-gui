@@ -73,6 +73,8 @@ public:
     void updateRobotTournementTime();
     void setGameMode(GameMode gm);
     void stopRobotCalculation();
+    std::vector<std::pair<int, int>> getLegalMovesForPiece(int file, int rank);
+    std::pair<int, int> getKingSquare(Color kingColor, int ply = -1);
 
     void updateClocks(long long elapsedMs);
 

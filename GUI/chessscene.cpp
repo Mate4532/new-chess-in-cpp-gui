@@ -210,10 +210,8 @@ void ChessScene::drawMovedPieceBackground() {
     MoveInfo lastMove = cvm->getMoveInfo();
     if (!lastMove.isValid()) return;
 
-    QColor highlightColor(246, 246, 105, 150);
-
-    highlightSquare(lastMove.fromFile, lastMove.fromRank, highlightColor);
-    highlightSquare(lastMove.toFile, lastMove.toRank, highlightColor);
+    highlightSquare(lastMove.fromFile, lastMove.fromRank, baseHighlightColor);
+    highlightSquare(lastMove.toFile, lastMove.toRank, baseHighlightColor);
 }
 
 void ChessScene::drawPieces() {
@@ -251,6 +249,87 @@ void ChessScene::drawPieces() {
     }
 }
 
+void ChessScene::highlightSelectedPiece() {
+    if (activeItem) {
+        int file = activeItem->data(FileKey).toInt();
+        int rank = activeItem->data(RankKey).toInt();
+
+        highlightSquare(file, rank, baseHighlightColor);
+    }
+}
+
+void ChessScene::drawLegalMoveDots() {
+    if (!cvm || currentLegalMoves.empty() || cvm->isUnderReview() || !cvm->showLegalMoves()) return;
+
+    auto boardMatrix = cvm->getBoardMatrix();
+
+    QColor dotColor(0, 0, 0, 50);
+    double normalRadius = TILE_SIZE * 0.15;
+    double captureRadius = TILE_SIZE * 0.42;
+
+    for (const auto& move : currentLegalMoves) {
+        int file = move.first;
+        int rank = move.second;
+
+        QRectF rect = getSquareRect(file, rank, true);
+        QPointF center = rect.center();
+
+        bool isOccupied = false;
+        if (file >= 0 && file < 8 && rank >= 0 && rank < 8) {
+            isOccupied = (boardMatrix[7 - rank][file].first != PieceType::PIECE_NONE);
+        }
+
+        if (isOccupied) {
+            QGraphicsEllipseItem* ring = new QGraphicsEllipseItem(
+                center.x() - captureRadius,
+                center.y() - captureRadius,
+                captureRadius * 2,
+                captureRadius * 2
+                );
+
+            QPen ringPen(dotColor);
+            ringPen.setWidth(TILE_SIZE * 0.08);
+            ring->setPen(ringPen);
+            ring->setBrush(Qt::NoBrush);
+            ring->setZValue(5);
+            addItem(ring);
+        }
+        else {
+            QGraphicsEllipseItem* dot = new QGraphicsEllipseItem(
+                center.x() - normalRadius,
+                center.y() - normalRadius,
+                normalRadius * 2,
+                normalRadius * 2
+                );
+
+            dot->setBrush(QBrush(dotColor));
+            dot->setPen(Qt::NoPen);
+            dot->setZValue(5);
+            addItem(dot);
+        }
+    }
+}
+
+void ChessScene::drawCheckHighlight() {
+    if (!cvm) return;
+
+    std::pair<int, int> kingPos = cvm->getKingInCheckCoords();
+
+    if (kingPos.first == -1 || kingPos.second == -1) return;
+
+    if (activeItem) {
+        int activeFile = activeItem->data(FileKey).toInt();
+        int activeRank = activeItem->data(RankKey).toInt();
+
+        if (activeFile == kingPos.first && activeRank == kingPos.second) {
+            return;
+        }
+    }
+
+    QColor checkRed(255, 0, 0, 180);
+    highlightSquare(kingPos.first, kingPos.second, checkRed);
+}
+
 void ChessScene::restoreDraggingState(const DraggingState& state)
 {
     QGraphicsPixmapItem* newActiveItem = findPieceAt(state.file, state.rank);
@@ -280,9 +359,9 @@ QGraphicsPixmapItem* ChessScene::findPieceAt(int file, int rank)
 ChessScene::DraggingState ChessScene::captureDraggingState()
 {
     DraggingState state;
-    state.wasDragging = (activeItem != nullptr);
+    state.wasItemActive = activeItem != nullptr;
 
-    if (state.wasDragging) {
+    if (state.wasItemActive) {
         state.file = activeItem->data(FileKey).toInt();
         state.rank = activeItem->data(RankKey).toInt();
         state.lastScenePos = activeItem->pos() + activeItem->boundingRect().center();
@@ -297,12 +376,16 @@ void ChessScene::renderBoard()
     hoverHighlightItem = nullptr;
 
     drawMovedPieceBackground();
+    drawCheckHighlight();
+    drawLegalMoveDots();
     drawPieces();
 
     if (cvm->isBoardUnderPromoption()) {
         highlightPromotionSquares();
         drawPromotionPieces();
     }
+
+    currentLegalMoves.clear();
 }
 
 void ChessScene::refreshHoverEffect()
@@ -322,10 +405,11 @@ void ChessScene::updateLayout()
 
     renderBoard();
 
-    if (state.wasDragging) {
+    if (state.wasItemActive) {
         restoreDraggingState(state);
     }
     refreshHoverEffect();
+    highlightSelectedPiece();
 }
 
 void ChessScene::onBoardChanged() {
@@ -382,124 +466,157 @@ void ChessScene::updateHoverHighlight(const QPointF& scenePos) {
 
 void ChessScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
 {
-    bool isPromotion = cvm->isBoardUnderPromoption();
-
     if (event->button() == Qt::RightButton) {
-        if (isPromotion) {
+        if (cvm->isBoardUnderPromoption()) {
             onPromotionEnded();
-            event->accept();
-            return;
-        }
-
-        if (activeItem) {
+        } else if (activeItem) {
             activeItem->setPos(activeItemOriginalPos);
             activeItem->setZValue(10);
-            activeItem->setCursor(Qt::OpenHandCursor);
             activeItem = nullptr;
+            currentLegalMoves.clear(); // Takarítás jobb klikknél is
+            updateLayout();
         }
         event->accept();
         return;
     }
 
     if (event->button() == Qt::LeftButton) {
-
         QGraphicsItem* itemUnderMouse = itemAt(event->scenePos(), QTransform());
-        if (itemUnderMouse) {
-            QVariant isPromoData = itemUnderMouse->data(IsPromotionKey);
-            if (isPromoData.isValid() && isPromoData.toBool()) {
-                PieceType chosenType = static_cast<PieceType>(itemUnderMouse->data(PieceTypeKey).toInt());
 
-                cvm->movePiece(promotionSquareFrom.first, promotionSquareFrom.second,
-                                  promotionSquareTo.first, promotionSquareTo.second,
-                                  chosenType);
-
-                onPromotionEnded();
-                event->accept();
-                return;
-            }
+        if (itemUnderMouse && itemUnderMouse->data(IsPromotionKey).toBool()) {
+            PieceType chosenType = static_cast<PieceType>(itemUnderMouse->data(PieceTypeKey).toInt());
+            cvm->movePiece(promotionSquareFrom.first, promotionSquareFrom.second,
+                           promotionSquareTo.first, promotionSquareTo.second, chosenType);
+            onPromotionEnded();
+            event->accept();
+            return;
         }
 
-        if (isPromotion) {
+        if (cvm->isBoardUnderPromoption()) {
             onPromotionEnded();
             return;
         }
 
         int clickedFile, clickedVisualRank;
-        if (!scenePosToSquare(event->scenePos(), clickedFile, clickedVisualRank)) {
-            QGraphicsScene::mousePressEvent(event);
-            return;
+        if (!scenePosToSquare(event->scenePos(), clickedFile, clickedVisualRank)) return;
+        int clickedLogicalRank = 7 - clickedVisualRank;
+
+        if (activeItem) {
+            int fromFile = activeItem->data(FileKey).toInt();
+            int fromRank = activeItem->data(RankKey).toInt();
+
+            if (fromFile == clickedFile && fromRank == clickedLogicalRank) {
+                isReclickingActiveItem = true;
+                wasPieceDragged = false;
+
+                activeItem->setPos(event->scenePos() - activeItem->boundingRect().center());
+                activeItem->setZValue(100);
+                event->accept();
+                return;
+            }
+
+            if (fromFile != clickedFile || fromRank != clickedLogicalRank) {
+                cvm->movePiece(fromFile, fromRank, clickedFile, clickedLogicalRank);
+                if (!activeItem) {
+                    currentLegalMoves.clear();
+                    return;
+                }
+            }
         }
 
-        int clickedLogicalRank = 7 - clickedVisualRank;
+        isReclickingActiveItem = false;
         QGraphicsPixmapItem* foundPiece = nullptr;
-
         for (QGraphicsItem* item : items()) {
             auto* castedItem = dynamic_cast<QGraphicsPixmapItem*>(item);
-            if (!castedItem || castedItem->zValue() < 5) continue;
+            if (!castedItem || castedItem->zValue() < 5 || castedItem->data(IsPromotionKey).toBool()) continue;
 
-            int itemFile = castedItem->data(FileKey).toInt();
-            int itemRank = castedItem->data(RankKey).toInt();
-
-            if (itemFile == clickedFile && itemRank == clickedLogicalRank) {
+            if (castedItem->data(FileKey).toInt() == clickedFile &&
+                castedItem->data(RankKey).toInt() == clickedLogicalRank) {
                 foundPiece = castedItem;
                 break;
             }
         }
 
-        activeItem = foundPiece;
-        if (activeItem) {
-            activeItemOriginalPos = activeItem->pos();
+        if (foundPiece) {
+            if (activeItem && activeItem != foundPiece) {
+                activeItem->setPos(activeItemOriginalPos);
+                activeItem->setZValue(10);
+            }
+
+            activeItem = foundPiece;
+            activeItemOriginalPos = getSquareRect(clickedFile, clickedLogicalRank, true).topLeft();
             activeItem->setZValue(100);
-            activeItem->setCursor(Qt::ClosedHandCursor);
             activeItem->setPos(event->scenePos() - activeItem->boundingRect().center());
 
-            updateHoverHighlight(event->scenePos());
+            currentLegalMoves = cvm->getLegalMovesForPiece(clickedFile, clickedLogicalRank);
+
+            updateLayout();
+        } else {
+            if (activeItem) {
+                activeItem->setPos(activeItemOriginalPos);
+                activeItem->setZValue(10);
+            }
+            activeItem = nullptr;
+            currentLegalMoves.clear();
+            updateLayout();
         }
+        event->accept();
     }
-    QGraphicsScene::mousePressEvent(event);
 }
 
 void ChessScene::mouseMoveEvent(QGraphicsSceneMouseEvent* event)
 {
     if (activeItem) {
-        activeItem->setPos(event->scenePos() - activeItem->boundingRect().center());
+        if (event->buttons() & Qt::LeftButton) {
+            activeItem->setPos(event->scenePos() - activeItem->boundingRect().center());
+            wasPieceDragged = true;
+        }
 
         updateHoverHighlight(event->scenePos());
-    } else {
-        if (hoverHighlightItem) hoverHighlightItem->setVisible(false);
+    }
+    else {
+        if (hoverHighlightItem) {
+            hoverHighlightItem->setVisible(false);
+        }
         QGraphicsScene::mouseMoveEvent(event);
     }
 }
 
 void ChessScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 {
-
-    if (hoverHighlightItem) {
-        hoverHighlightItem->setVisible(false);
-    }
-
     if (activeItem) {
-        activeItem->setCursor(Qt::OpenHandCursor);
-        activeItem->setZValue(10);
+        if (wasPieceDragged) {
+            int fromFile = activeItem->data(FileKey).toInt();
+            int fromRank = activeItem->data(RankKey).toInt();
 
-        int fromFile = activeItem->data(FileKey).toInt();
-        int fromRank = activeItem->data(RankKey).toInt();
+            int toFile, visualRank;
+            if (scenePosToSquare(event->scenePos(), toFile, visualRank)) {
+                int toLogicalRank = 7 - visualRank;
+                cvm->movePiece(fromFile, fromRank, toFile, toLogicalRank);
+            }
 
-        int toFile, visualRank;
-        bool insideBoard = scenePosToSquare(event->scenePos(), toFile, visualRank);
-
-        if (insideBoard && cvm) {
-            int toLogicalRank = 7 - visualRank;
-            bool isMovePromotion = cvm->isMovePromotion(fromFile, fromRank, toFile, toLogicalRank);
-            if (!isMovePromotion) cvm->movePiece(fromFile, fromRank, toFile, toLogicalRank);
-            else if (!cvm->isUnderReview()) handlePromotion(fromFile, fromRank, toFile, toLogicalRank);
+            if (activeItem) {
+                activeItem->setPos(activeItemOriginalPos);
+                activeItem->setZValue(10);
+                activeItem = nullptr;
+                currentLegalMoves.clear();
+                updateLayout();
+            }
         }
-
-        if (items().contains(activeItem)) {
+        else if (isReclickingActiveItem) {
+            activeItem->setPos(activeItemOriginalPos);
+            activeItem->setZValue(10);
+            activeItem = nullptr;
+            currentLegalMoves.clear();
+            updateLayout();
+        }
+        else {
             activeItem->setPos(activeItemOriginalPos);
         }
-        activeItem = nullptr;
     }
+
+    wasPieceDragged = false;
+    isReclickingActiveItem = false;
     QGraphicsScene::mouseReleaseEvent(event);
 }
 

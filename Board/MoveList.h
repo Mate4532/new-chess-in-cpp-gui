@@ -8,6 +8,10 @@ struct MoveList {
     Move moves[256];
     int count = 0;
 
+    void clear() {
+        count = 0;
+    }
+
     void push_back(const Move& move) {
         moves[count++] = move;
     }

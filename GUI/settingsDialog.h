@@ -11,6 +11,8 @@
 #include <QLineEdit>
 #include <QVBoxLayout>
 #include <QTextEdit>
+#include <QSpinBox>
+#include <QDoubleSpinBox>
 
 class SettingsDialog : public QDialog
 {
@@ -50,13 +52,16 @@ private:
     QTextEdit* beginnerPosFENTextEdit;
     QPushButton* setBeginnerFenBtn;
     QCheckBox* checkBoardFlipped;
+    QCheckBox* checkShowLegalMoves;
 
     QComboBox* comboTimeMode = nullptr;
     QWidget* widgetTournamentTime;
     QLabel* labelTourTime;
-    QLineEdit* lineTourTimeMin;
+    QSpinBox* spinTourTimeMin;
+    QSpinBox* spinTourTimeSec;
     QLabel* labelIncrement;
-    QLineEdit* lineIncrementSec;
+    QDoubleSpinBox* spinIncrementSec;
+
     void updateTimeUI();
 };
 

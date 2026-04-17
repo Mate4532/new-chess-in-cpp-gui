@@ -255,28 +255,40 @@ GameResult BoardManager::getGameResult(){
 }
 
 void BoardManager::writeGameResult() {
-    if (board.IsDraw()) {
+    GameResult result = getGameResult();
+
+    if (result == GameResult::GAME_DID_NOT_END) {
+        return;
+    }
+
+    if (result == GameResult::DRAW) {
         ResultManager::saveGameResult(ResultManager::DRAW);
         std::cout << "[ResultManager] Dontetlen." << std::endl;
         return;
     }
 
-    if (board.IsCheckMate()) {
-        Color winnerColor = (board.getSideToMove() == WHITE) ? BLACK : WHITE;
+    if (result == GameResult::WHITE_WON || result == GameResult::BLACK_WON) {
 
+        Color winnerColor = (result == GameResult::WHITE_WON) ? WHITE : BLACK;
         ISearcher* winnerBot = (winnerColor == WHITE) ? whiteRobot.get() : blackRobot.get();
 
+        if (winnerBot == nullptr) {
+            std::cout << "[ResultManager] " << (winnerColor == WHITE ? "Feher" : "Fekete") << " jatekos nyert." << std::endl;
+            return;
+        }
+
         SearcherType type = winnerBot->getType();
+
+
+        std::cout << "[ResultManager] " << winnerBot->getName() <<  " nyert." << std::endl;
 
         switch (type) {
         case SearcherType::OLD_SEARCHER:
             ResultManager::saveGameResult(ResultManager::OLD_WIN);
-            std::cout << "[ResultManager] Old Searcher nyert." << std::endl;
             break;
 
         case SearcherType::IMRPOVED_SEARCHER:
             ResultManager::saveGameResult(ResultManager::IMPROVED_WIN);
-            std::cout << "[ResultManager] Improved Searcher nyert." << std::endl;
             break;
 
         default:
@@ -513,6 +525,49 @@ void BoardManager::setGameMode(GameMode gm) {
 void BoardManager::stopRobotCalculation() {
     if (whiteRobot != nullptr && whiteRobot->isUnderSearch()) whiteRobot->stopSearch();
     if (blackRobot != nullptr && blackRobot->isUnderSearch()) blackRobot->stopSearch();
+}
+
+std::vector<std::pair<int, int>> BoardManager::getLegalMovesForPiece(int file, int rank) {
+    Square foundSquare = static_cast<Square>(rank * 8 + file);
+
+    MoveList moves = board.getCurrentLegalMoves();
+
+    std::vector<std::pair<int, int>> squares;
+
+    for (int i = 0; i < moves.size(); ++i) {
+        Move m = moves[i];
+
+        if (m.getFrom() == foundSquare) {
+            Square target = m.getTo();
+
+            int targetFile = target % 8;
+            int targetRank = target / 8;
+
+            squares.push_back({targetFile, targetRank});
+        }
+    }
+    squares.erase(std::unique(squares.begin(), squares.end()), squares.end());
+
+    return squares;
+}
+
+std::pair<int, int> BoardManager::getKingSquare(Color kingColor, int ply) {
+    auto boardMatrix = board.getBoardMatrix(ply);
+
+    for (int i = 0; i < 8; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            auto& square = boardMatrix[i][j];
+
+            if (square.first == PieceType::KING && square.second == kingColor) {
+                int file = j;
+                int logicalRank = 7 - i;
+
+                return {file, logicalRank};
+            }
+        }
+    }
+
+    return {-1, -1};
 }
 
 void BoardManager::updateClocks(long long elapsedMs) {

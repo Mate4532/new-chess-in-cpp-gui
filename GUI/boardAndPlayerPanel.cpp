@@ -145,9 +145,9 @@ void BoardAndPlayerPanel::onTimerChanged(Color playerColor, QString timerStr) {
     else blackPlayer->setTimerText(timerStr);
 }
 
-void BoardAndPlayerPanel::onSetTimerVisibility(Color playerColor, bool isVisible) {
-    if (playerColor == WHITE) whitePlayer->setTimerVisibility(isVisible);
-    else blackPlayer->setTimerVisibility(isVisible);
+void BoardAndPlayerPanel::onSetTimersVisible() {
+    whitePlayer->setTimerVisibility(true);
+    blackPlayer->setTimerVisibility(true);
 }
 
 void BoardAndPlayerPanel::onActivateTimerColorAndDisableOther(Color timerToActivate) {
