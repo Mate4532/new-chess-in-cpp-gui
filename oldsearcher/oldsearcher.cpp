@@ -614,6 +614,10 @@ std::string Searcher::getName() const {
     return "Régi robot";
 }
 
+std::string Searcher::getNameToSaveInFile() const {
+    return "Regi_robot";
+}
+
 Difficulty Searcher::getDifficulty() const {
     return currentDiff;
 }

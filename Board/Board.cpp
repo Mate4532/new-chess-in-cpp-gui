@@ -155,6 +155,7 @@ uint64_t Board::maskBishop(int sq) {
 void Board::LoadFEN(std::string fen) {
 
     ClearBoard();
+    beginnerFen = fen;
 
     if (fen.empty()) {
         fen = newPosFen;
@@ -935,7 +936,7 @@ void Board::currentPlayerGaveUp() {
         return;
 
     Color lastPlayerMoved = (Color)(m_side_to_move ^ 1);
-    gr = lastPlayerMoved == WHITE ? GameResult::WHITE_WON : GameResult::BLACK_WON;
+    gr = lastPlayerMoved == WHITE ? GameResult::BLACK_GAVE_UP : GameResult::WHITE_GAVE_UP;
 }
 
 GameResult Board::getGameResult() {
@@ -947,7 +948,7 @@ GameResult Board::getGameResult() {
 
     if (IsCheckMate()) {
         Color lastPlayerMoved = (Color)(m_side_to_move ^ 1);
-        return (lastPlayerMoved == WHITE ? GameResult::WHITE_WON : GameResult::BLACK_WON);
+        return (lastPlayerMoved == WHITE ? GameResult::WHITE_WON_WITH_CHECKMATE : GameResult::BLACK_WON_WITH_CHECKMATE);
     }
 
     return GameResult::GAME_DID_NOT_END;
@@ -959,6 +960,7 @@ void Board::ClearBoard() {
 
     gr = GameResult::GAME_DID_NOT_END;
 
+    beginnerFen = newPosFen;
     repetition_history.Clear();
     move_history.clear();
     pieceHistory.clear();

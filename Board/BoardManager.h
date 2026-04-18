@@ -6,18 +6,18 @@
 #include "memory"
 #include "Settings.h"
 #include "ISearcher.h"
+#include "ResultManager.h"
 
 class SettingsDialog;
 
 class BoardManager {
 private:
     Board board;
+    ResultManager resultManager;
     std::unique_ptr<ISearcher> whiteRobot;
     std::unique_ptr<ISearcher> blackRobot;
-    bool is_white_robot;
-	bool is_black_robot;
-	bool is_white_player;
-	bool is_black_player;
+    bool is_white_player = true;
+    bool is_black_player = true;
 
     long long whiteTimeLeftMs = 0;
     long long blackTimeLeftMs = 0;
@@ -54,6 +54,7 @@ public:
     void undoMove(int plyToUndo);
     bool didGameEnd();
     GameResult getGameResult();
+    std::string getGameResultString(Color winnerColor, bool isWinnerRobot, GameResult gameResult);
     void writeGameResult();
     void startGameLoop();
 
@@ -91,9 +92,9 @@ public:
     inline PieceType getCapturedPieceTypeAt(int ply) { return board.getCapturePieceType(ply); }
     inline PieceType getLastCapturedPieceType() { return board.getLastCapturePieceType(); }
     inline Move getMove(int ply = -1) { return board.getMove(ply); }
-    inline bool isRobot(Color c) const { return (c == WHITE && is_white_robot) || (c == BLACK && is_black_robot);}
+    inline bool isRobot(Color c) const { return (c == WHITE && !is_white_player) || (c == BLACK && !is_black_player);}
     inline bool isEnemyRobot() const { return (isRobot((Color)(board.getCommittedSideToMove() ^ 1)));}
-    inline bool isRobotToMove() const { return (is_white_robot && board.getCommittedSideToMove() == WHITE) || (is_black_robot && board.getSideToMove() == BLACK); }
+    inline bool isRobotToMove() const { return (isRobot(WHITE) && board.getCommittedSideToMove() == WHITE) || (isRobot(BLACK) && board.getSideToMove() == BLACK); }
     inline std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix(int ply = -1) const { return board.getBoardMatrix(ply); }
     inline void getPieceCounts(int piecesOut[2][6], int ply = -1) { board.getPieceCounts(piecesOut, ply); }
     inline MoveInfo getMoveInfo(int ply = -1) { return board.getMoveInfo(ply); }

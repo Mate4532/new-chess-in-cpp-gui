@@ -7,10 +7,18 @@
 const std::string newPosFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 enum GameResult : uint8_t {
-    WHITE_WON,
-    BLACK_WON,
-    DRAW,
-    GAME_DID_NOT_END
+    WHITE_WON_ON_TIME        = 0b00000001,
+    WHITE_WON_WITH_CHECKMATE = 0b00000010,
+    WHITE_GAVE_UP            = 0b00000100,
+    BLACK_WON_ON_TIME        = 0b00001000,
+    BLACK_WON_WITH_CHECKMATE = 0b00010000,
+    BLACK_GAVE_UP            = 0b00100000,
+    DRAW                     = 0b01000000,
+    GAME_DID_NOT_END         = 0b10000000,
+
+    WHITE_WON = WHITE_WON_ON_TIME | WHITE_WON_WITH_CHECKMATE | BLACK_GAVE_UP,
+
+    BLACK_WON = BLACK_WON_ON_TIME | BLACK_WON_WITH_CHECKMATE | WHITE_GAVE_UP
 };
 
 enum Color : uint8_t {

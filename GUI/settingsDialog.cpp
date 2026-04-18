@@ -382,7 +382,7 @@ QWidget* SettingsDialog::createTimeControlTab() {
     int currentMin = ts.tournamentTimeSec / 60;
     int currentSec = ts.tournamentTimeSec % 60;
 
-    QLabel* labelTourTimeTitle = new QLabel("Alapidő (perc - másodperc):");
+    QLabel* labelTourTimeTitle = new QLabel("Alapidő:");
 
     QFont bigFont;
     bigFont.setPointSize(12);

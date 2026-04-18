@@ -474,24 +474,29 @@ void InfoView::updateInfoPanel() {
     btnGiveUp->setFont(resizedMainButFont);
     btnNewGame->setFont(resizedMainButFont);
     btnUndo->setFont(resizedMainButFont);
-
-    if (gameRes != GameResult::GAME_DID_NOT_END) {
-        int iSize = qMax(24, panelCurrentWidth / 7);
-        QSize iconSize(iSize, iSize);
-        whiteKing->setPixmap(QIcon(":/resources/resources/white_king.png").pixmap(iconSize));
-        blackKing->setPixmap(QIcon(":/resources/resources/black_king.png").pixmap(iconSize));
-
-        QFont sf = statusLabel->font();
-        sf.setPixelSize(qMax(10, panelCurrentWidth / 22));
-        statusLabel->setFont(sf);
-    }
 }
 
 void InfoView::writeGameResultToDisplay(GameResult gr) {
+
     gameRes = gr;
-    if (gr == GameResult::WHITE_WON) { scoreLabel->setText("1 - 0"); statusLabel->setText("Világos nyert"); }
-    else if (gr == GameResult::BLACK_WON) { scoreLabel->setText("0 - 1"); statusLabel->setText("Fekete nyert"); }
-    else if (gr == GameResult::DRAW) { scoreLabel->setText("½ - ½"); statusLabel->setText("Döntetlen"); }
+
+    if (currentAllS.robotSettings.isBotVsBot) return;
+
+    bool whiteWon = (gr & GameResult::WHITE_WON) != 0;
+    bool blackWon = (gr & GameResult::BLACK_WON) != 0;
+    bool draw = gr == GameResult::DRAW;
+    if (whiteWon) { scoreLabel->setText("1 - 0"); statusLabel->setText("Világos nyert"); }
+    else if (blackWon) { scoreLabel->setText("0 - 1"); statusLabel->setText("Fekete nyert"); }
+    else if (draw) { scoreLabel->setText("½ - ½"); statusLabel->setText("Döntetlen"); }
+
+    int iSize = qMax(24, panelCurrentWidth / 7);
+    QSize iconSize(iSize, iSize);
+    whiteKing->setPixmap(QIcon(":/resources/resources/white_king.png").pixmap(iconSize));
+    blackKing->setPixmap(QIcon(":/resources/resources/black_king.png").pixmap(iconSize));
+
+    QFont sf = statusLabel->font();
+    sf.setPixelSize(qMax(10, panelCurrentWidth / 22));
+    statusLabel->setFont(sf);
 
     resultBox->setVisible(true);
     updateInfoPanel();

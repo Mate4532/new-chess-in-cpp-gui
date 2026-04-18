@@ -35,6 +35,7 @@ private:
 
     Color m_side_to_move = WHITE;
 
+    std::string beginnerFen = newPosFen;
 	RepetitionTable repetition_history;
     std::vector<Move> move_history;
     std::vector<MoveList> legalMovesHistory;
@@ -142,8 +143,14 @@ public:
     inline MoveList getCurrentLegalMoves() const {
         return legalMovesHistory[committedPly];
     }
-    inline const Move getLastMove() {
+    inline Move getLastMove() {
         return move_history.empty() ? Move() : move_history.back();
+    }
+    inline std::vector<Move> getMoveHistory() {
+        return move_history;
+    }
+    inline std::string getBeginnerFen() {
+        return beginnerFen;
     }
     inline const Move getMove(int ply = -1){
         if (move_history.empty()) {

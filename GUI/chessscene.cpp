@@ -259,7 +259,7 @@ void ChessScene::highlightSelectedPiece() {
 }
 
 void ChessScene::drawLegalMoveDots() {
-    if (!cvm || currentLegalMoves.empty() || cvm->isUnderReview() || !cvm->showLegalMoves()) return;
+    if (!cvm || currentLegalMoves.empty() || cvm->isUnderReview() || !cvm->showLegalMoves() || cvm->isBotVsBotMode()) return;
 
     auto boardMatrix = cvm->getBoardMatrix();
 
@@ -326,7 +326,7 @@ void ChessScene::drawCheckHighlight() {
         }
     }
 
-    QColor checkRed(255, 0, 0, 180);
+    QColor checkRed(230, 80, 80, 200);
     highlightSquare(kingPos.first, kingPos.second, checkRed);
 }
 
@@ -384,8 +384,6 @@ void ChessScene::renderBoard()
         highlightPromotionSquares();
         drawPromotionPieces();
     }
-
-    currentLegalMoves.clear();
 }
 
 void ChessScene::refreshHoverEffect()
@@ -403,11 +401,16 @@ void ChessScene::updateLayout()
 
     DraggingState state = captureDraggingState();
 
+    if (state.wasItemActive) {
+        currentLegalMoves = cvm->getLegalMovesForPiece(state.file, state.rank);
+    }
+
     renderBoard();
 
     if (state.wasItemActive) {
         restoreDraggingState(state);
     }
+
     refreshHoverEffect();
     highlightSelectedPiece();
 }

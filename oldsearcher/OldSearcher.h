@@ -85,6 +85,7 @@ public:
 
     SearcherType getType() const;
     std::string getName() const;
+    std::string getNameToSaveInFile() const;
     Difficulty getDifficulty() const;
     std::string getDifficultyString() const;
 };

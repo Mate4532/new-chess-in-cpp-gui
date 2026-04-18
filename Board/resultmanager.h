@@ -1,24 +1,26 @@
 #pragma once
 #include <string>
 #include <map>
-#include <vector>
+#include <filesystem>
+#include "ISearcher.h"
 
 class ResultManager {
 public:
-    enum GameOutcome {
-        OLD_WIN,
-        IMPROVED_WIN,
-        DRAW
-    };
+    ResultManager();
 
-    static void saveGameResult(GameOutcome outcome);
-    static void resetStats();
+    void saveGameResult(const GameResult& gameResult, const std::string& whiteName, const std::string& whiteSourcePath, const std::string& blackName, const std::string& blackSourcePath, const std::vector<Move>& moveList, const std::string& startingFen = "");
+    void resetStats(const std::string& whiteName, const std::string& blackName);
 
 private:
+    std::filesystem::path fullFilePath;
 
-    static constexpr std::string DIR_PATH = "botvsbotresults";
-    static constexpr std::string FILE_PATH = "botvsbot.txt";
+    void updatePath(const std::string& name1, const std::string& name2);
+    std::map<std::string, int> readCurrentStats(const std::string& whiteRobotName, const std::string& blackRobotName);
+    void writeStats(const std::map<std::string, int>& stats);
+    void ensureDirectoryExists();
+    void saveMatchMoves(const GameResult& gameResult, const std::string& whiteName, const std::string& blackName, const std::vector<Move>& moveList, const std::string& startingFen);
 
-    static std::map<std::string, int> readCurrentStats();
-    static void writeStats(const std::map<std::string, int>& stats);
+    static constexpr const char* DRAW_KEY = "Draws";
+    static constexpr const char* BASE_DIR = "botvsbotresults";
+    static constexpr const char* FILE_NAME = "results.txt";
 };

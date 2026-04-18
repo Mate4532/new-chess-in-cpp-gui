@@ -33,16 +33,16 @@ if(Qt6_FOUND)
     qt_add_executable(new-chess-in-cpp-gui
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        assets/openings.txt Board/Attacks.cpp Board/Attacks.h Board/Board.cpp Board/Board.h Board/BoardManager.cpp Board/BoardManager.h Board/BoardState.h Board/filemanager.cpp Board/filemanager.h Board/ISearcher.h Board/Move.h Board/MoveGenerator.cpp Board/MoveGenerator.h Board/MoveList.h Board/openingloader.cpp Board/openingloader.h Board/RepetitionTable.cpp Board/RepetitionTable.h Board/resultmanager.cpp Board/resultmanager.h Board/UCIParsing.cpp Board/UCIParsing.h Board/Utils.h Board/Zobrist.cpp Board/Zobrist.h botvsbotresults/botvsbot.txt GUI/chesspieceitem.cpp GUI/chesspieceitem.h GUI/chessscene.cpp GUI/chessscene.h GUI/chessview.cpp GUI/chessview.h GUI/chessviewmodel.cpp GUI/chessviewmodel.h GUI/infoview.cpp GUI/infoview.h GUI/mainwindow.cpp GUI/mainwindow.h GUI/Settings.h GUI/settingsDialog.cpp GUI/settingsDialog.h improvedSearcher/Evaluation.cpp  improvedSearcher/Evaluation.h improvedSearcher/LMR.cpp improvedSearcher/LMR.h improvedSearcher/MoveOrdering.cpp improvedSearcher/MoveOrdering.h improvedSearcher/PrecomputedEvaluationData.cpp improvedSearcher/PrecomputedEvaluationData.h improvedSearcher/Searcher.cpp improvedSearcher/Searcher.h improvedSearcher/TranspositionTable.cpp improvedSearcher/TranspositionTable.h nnue-probe-master/src/misc.cpp nnue-probe-master/src/misc.h nnue-probe-master/src/nnue.cpp nnue-probe-master/src/nnue.h nnue-probe-master/LICENSE nnue-probe-master/README.md oldsearcher/OldEvaluation.cpp oldsearcher/OldEvaluation.h oldsearcher/OldLMR.cpp oldsearcher/OldLMR.h oldsearcher/OldMoveOrdering.cpp oldsearcher/OldMoveOrdering.h oldsearcher/OldPrecomputedEvaluationData.cpp oldsearcher/OldPrecomputedEvaluationData.h oldsearcher/oldsearcher.cpp oldsearcher/OldSearcher.h oldsearcher/OldTranspositionTable.cpp oldsearcher/OldTranspositionTable.h resources/black_bishop.png resources/black_king.png resources/black_knight.png resources/black_pawn.png resources/black_queen.png resources/black_rook.png resources/chessboard.png resources/chessboard_flipped.png resources/white_bishop.png resources/white_king.png resources/white_knight.png resources/white_pawn.png resources/white_queen.png resources/white_rook.png main.cpp
+        assets/openings.txt Board/Attacks.cpp Board/Attacks.h Board/Board.cpp Board/Board.h Board/BoardManager.cpp Board/BoardManager.h Board/BoardState.h Board/filemanager.cpp Board/filemanager.h Board/ISearcher.h Board/Move.h Board/MoveGenerator.cpp Board/MoveGenerator.h Board/MoveList.h Board/openingloader.cpp Board/openingloader.h Board/RepetitionTable.cpp Board/RepetitionTable.h Board/resultmanager.cpp Board/resultmanager.h Board/UCIParsing.cpp Board/UCIParsing.h Board/Utils.h Board/Zobrist.cpp Board/Zobrist.h GUI/chesspieceitem.cpp GUI/chesspieceitem.h GUI/chessscene.cpp GUI/chessscene.h GUI/chessview.cpp GUI/chessview.h GUI/chessviewmodel.cpp GUI/chessviewmodel.h GUI/infoview.cpp GUI/infoview.h GUI/mainwindow.cpp GUI/mainwindow.h GUI/Settings.h GUI/settingsDialog.cpp GUI/settingsDialog.h nnue-probe-master/src/misc.cpp nnue-probe-master/src/misc.h nnue-probe-master/src/nnue.cpp nnue-probe-master/src/nnue.h nnue-probe-master/LICENSE nnue-probe-master/README.md resources/black_bishop.png resources/black_king.png resources/black_knight.png resources/black_pawn.png resources/black_queen.png resources/black_rook.png resources/chessboard.png resources/chessboard_flipped.png resources/white_bishop.png resources/white_king.png resources/white_knight.png resources/white_pawn.png resources/white_queen.png resources/white_rook.png main.cpp
         resources.qrc
         GUI/customQItemStyles/customButtonStyles.h
         GUI/boardAndPlayerPanel.h
         GUI/boardAndPlayerPanel.cpp
         GUI/playerpanel.h GUI/playerpanel.cpp
-        improvedSearcher/WorseEvaluation.cpp improvedSearcher/WorseEvaluation.h
-        improvedSearcher/SearcherSettings.h
         GUI/playerinfo.h GUI/playerinfo.cpp
-
+        bots/improvedSearcher/Evaluation.cpp bots/improvedSearcher/Evaluation.h bots/improvedSearcher/LMR.cpp bots/improvedSearcher/LMR.h bots/improvedSearcher/MoveOrdering.cpp bots/improvedSearcher/MoveOrdering.h bots/improvedSearcher/PrecomputedEvaluationData.cpp bots/improvedSearcher/PrecomputedEvaluationData.h bots/improvedSearcher/Searcher.cpp bots/improvedSearcher/Searcher.h bots/improvedSearcher/SearcherSettings.h bots/improvedSearcher/TranspositionTable.cpp bots/improvedSearcher/TranspositionTable.h bots/improvedSearcher/WorseEvaluation.cpp bots/improvedSearcher/WorseEvaluation.h bots/oldsearcher/OldEvaluation.cpp bots/oldsearcher/OldEvaluation.h bots/oldsearcher/OldLMR.cpp bots/oldsearcher/OldLMR.h bots/oldsearcher/OldMoveOrdering.cpp bots/oldsearcher/OldMoveOrdering.h bots/oldsearcher/OldPrecomputedEvaluationData.cpp bots/oldsearcher/OldPrecomputedEvaluationData.h bots/oldsearcher/oldsearcher.cpp bots/oldsearcher/oldsearcher.h bots/oldsearcher/OldTranspositionTable.cpp bots/oldsearcher/OldTranspositionTable.h
+        Utils/picosha2.h
+        Utils/versioncontrol.h Utils/versioncontrol.cpp
     )
 endif()
 
@@ -58,10 +58,11 @@ set_target_properties(new-chess-in-cpp-gui PROPERTIES
 
 target_include_directories(new-chess-in-cpp-gui PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/oldSearcher
-    ${CMAKE_CURRENT_SOURCE_DIR}/improvedSearcher
+    ${CMAKE_CURRENT_SOURCE_DIR}/bots/oldSearcher
+    ${CMAKE_CURRENT_SOURCE_DIR}/bots/improvedSearcher
     ${CMAKE_CURRENT_SOURCE_DIR}/GUI
     ${CMAKE_CURRENT_SOURCE_DIR}/Board
+    ${CMAKE_CURRENT_SOURCE_DIR}/Utils
 )
 
 include(GNUInstallDirs)

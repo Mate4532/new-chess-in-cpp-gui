@@ -21,8 +21,10 @@ public:
     virtual void stopSearch() = 0;
     virtual SearcherType getType() const = 0;
     virtual std::string getName() const = 0;
+    virtual std::string getNameToSaveInFile() const = 0;
     virtual Difficulty getDifficulty() const = 0;
     virtual std::string getDifficultyString() const = 0;
+    virtual std::string getBotDirectoryPath() const = 0;
     virtual ~ISearcher() = default;
 };
 

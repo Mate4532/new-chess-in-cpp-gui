@@ -604,7 +604,12 @@ Move Searcher::IterativeDeepening() {
 
     if (board.isDebugMode) {
         std::cout << "Bestmove: " << bestMove.toAlgebraic()
-        << " score cp " << (board.getSideToMove() == WHITE ? lastScore : -lastScore) << std::endl;
+                  << " score ";
+        if (abs(lastScore) > MATE_SCORE_BOUND)
+            std::cout << "mate " << ((lastScore > 0) ? (MATE_SCORE + 1 - lastScore) / 2 : -(MATE_SCORE + 1 + lastScore) / 2);
+        else
+            std::cout << "cp " << (board.getSideToMove() == WHITE ? lastScore : -lastScore);
+        std::cout << std::endl;
     }
 
     isSearching = false;
@@ -956,6 +961,10 @@ SearcherType Searcher::getType() const {
 
 std::string Searcher::getName() const {
     return "Új robot";
+}
+
+std::string Searcher::getNameToSaveInFile() const {
+    return "Uj_robot";
 }
 
 Difficulty Searcher::getDifficulty() const {

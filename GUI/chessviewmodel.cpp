@@ -182,15 +182,17 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
 
     bool botVsBotChanged = newRs.isBotVsBot != oldRs.isBotVsBot;
     bool botSearchTimeChanged = newRs.botSearchTimeMs != oldRs.botSearchTimeMs;
-    bool whiteRobotChanged = newRs.isWhiteRobot != oldRs.isWhiteRobot || newRs.whiteRobotDifficulty != oldRs.whiteRobotDifficulty;
-    bool blackRobotChanged = newRs.isBlackRobot != oldRs.isBlackRobot || newRs.blackRobotDifficulty != oldRs.blackRobotDifficulty;
+    bool whiteRobotChanged = newRs.isWhiteRobot != oldRs.isWhiteRobot;
+    bool blackRobotChanged = newRs.isBlackRobot != oldRs.isBlackRobot;
+    bool whiteRobotDiffChanged = newRs.whiteRobotDifficulty != oldRs.whiteRobotDifficulty;
+    bool blackRobotDiffChanged = newRs.blackRobotDifficulty != oldRs.blackRobotDifficulty;
 
     bool botVsBotGotTurnedOn = newRs.isBotVsBot && !oldRs.isBotVsBot;
     bool botVsBotGotTurnedOff = !newRs.isBotVsBot && oldRs.isBotVsBot;
 
     bool FENChanged = newBs.beginnerPosFEN != oldBs.beginnerPosFEN;
 
-    bool mustStartNewGame = botVsBotChanged || whiteRobotChanged || blackRobotChanged || FENChanged || timeConfigChanged;
+    bool mustStartNewGame = botVsBotChanged || whiteRobotChanged || blackRobotChanged || FENChanged || timeConfigChanged || whiteRobotDiffChanged || blackRobotDiffChanged;
 
     if (mustStartNewGame) {
         endGame();
@@ -206,21 +208,20 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
         bool isBlackRobot = newRs.isBlackRobot;
 
         if (botVsBotGotTurnedOn) {
-            bm.setRobot(WHITE); bm.setDifficulty(WHITE, Difficulty::IMPOSSIBLE);
-            bm.setRobot(BLACK); bm.setDifficulty(BLACK, Difficulty::IMPOSSIBLE);
-
             bm.prepareImprovedBotVsOldBot();
         }
 
         else if (whiteRobotChanged || blackRobotChanged || botVsBotGotTurnedOff) {
 
-            isWhiteRobot? bm.setRobot(WHITE) : bm.setPlayer(WHITE);
-            bm.setDifficulty(WHITE, newRs.whiteRobotDifficulty);
-
-            isBlackRobot ? bm.setRobot(BLACK) : bm.setPlayer(BLACK);
-            bm.setDifficulty(BLACK, newRs.blackRobotDifficulty);
+            if (!isWhiteRobot) bm.setPlayer(WHITE);
+            if (!isBlackRobot) bm.setPlayer(BLACK);
 
             bm.setupBotsForNormalGame(currentSettings.robotSettings);
+        }
+
+        else if (whiteRobotDiffChanged || blackRobotDiffChanged) {
+            if (whiteRobotDiffChanged) bm.setDifficulty(WHITE, newRs.whiteRobotDifficulty);
+            else bm.setDifficulty(BLACK, newRs.blackRobotDifficulty);
         }
 
         if (botSearchTimeChanged) {
@@ -242,7 +243,8 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
         bm.setGameMode(newTs.gm);
 
         bool isTimerVisible = newTs.gm == GameMode::TOURNAMENT_MODE;
-        setTimersVisible();
+        if (isTimerVisible) emit setTimersVisible();
+        else emit disableTimers();
 
         if (newTs.gm == GameMode::TOURNAMENT_MODE)
             currentMsBeforeRobotMove = minMsBeforeRobotMove;

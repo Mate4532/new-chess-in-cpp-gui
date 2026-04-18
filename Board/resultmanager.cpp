@@ -1,11 +1,11 @@
 #include "ResultManager.h"
 #include "filemanager.h"
-
+#include "versioncontrol.h"
 #include <iostream>
 #include <fstream>
-#include <filesystem>
-#include <sstream>
 #include <algorithm>
+#include <ctime>
+#include <iomanip>
 
 namespace fs = std::filesystem;
 
@@ -17,53 +17,127 @@ static std::string trim(const std::string& str) {
     return str.substr(strBegin, strEnd - strBegin + 1);
 }
 
+ResultManager::ResultManager() {}
 
-void ResultManager::saveGameResult(GameOutcome outcome) {
-
-    fs::path root = FileManager::getProjectRoot();
-    fs::path dirPath = root / DIR_PATH;
-    fs::path filePath = dirPath / FILE_PATH;
-
+void ResultManager::ensureDirectoryExists() {
+    fs::path dirPath = fullFilePath.parent_path();
     if (!fs::exists(dirPath)) {
         try {
             fs::create_directories(dirPath);
-            std::cout << "Mappa letrehozva: " << dirPath.string() << std::endl;
         } catch (const fs::filesystem_error& e) {
-            std::cerr << "HIBA: Nem sikerult letrehozni a konyvtarat: " << e.what() << std::endl;
-            return;
+            std::cerr << "ERROR: Failed to create directory: " << e.what() << std::endl;
         }
     }
+}
 
-    std::map<std::string, int> stats = readCurrentStats();
+void ResultManager::updatePath(const std::string& name1, const std::string& name2) {
+    std::string n1 = name1;
+    std::string n2 = name2;
+    if (n1 > n2) std::swap(n1, n2);
+    std::string folderName = n1 + "-" + n2;
+    fs::path root = FileManager::getProjectRoot();
+    fullFilePath = root / BASE_DIR / folderName / FILE_NAME;
+}
 
-    switch (outcome) {
-    case OLD_WIN:
-        stats["old_searcher_win"]++;
-        break;
-    case IMPROVED_WIN:
-        stats["improved_searcher_win"]++;
-        break;
-    case DRAW:
-        stats["draw"]++;
-        break;
+void ResultManager::saveGameResult(const GameResult& gameResult,
+                                   const std::string& whiteName, const std::string& whiteSourcePath,
+                                   const std::string& blackName, const std::string& blackSourcePath,
+                                   const std::vector<Move>& moveList, const std::string& startingFen) {
+
+    if (gameResult == GAME_DID_NOT_END) return;
+
+    updatePath(whiteName, blackName);
+    fs::path pairRoot = fullFilePath.parent_path();
+
+    fs::path fullWhiteSourcePath = FileManager::getProjectRoot() / fs::path(whiteSourcePath);
+    fs::path fullBlackSourcePath = FileManager::getProjectRoot() / fs::path(blackSourcePath);
+
+    VersionControl::manageBotVersion(whiteName, fullWhiteSourcePath.string());
+    VersionControl::manageBotVersion(blackName, fullBlackSourcePath.string());
+
+    std::string vNameWhite = VersionControl::getLatestVersionName(whiteName);
+    std::string vNameBlack = VersionControl::getLatestVersionName(blackName);
+
+    std::string v1 = vNameWhite;
+    std::string v2 = vNameBlack;
+    if (v1 > v2) std::swap(v1, v2);
+
+    std::string versionPairDirName = v1 + "-" + v2;
+    fs::path versionDir = pairRoot / versionPairDirName;
+
+    if (!fs::exists(versionDir)) {
+        fs::create_directories(versionDir);
+    }
+
+    fullFilePath = versionDir / FILE_NAME;
+
+    std::map<std::string, int> stats = readCurrentStats(whiteName, blackName);
+
+    if (gameResult == DRAW) {
+        stats[DRAW_KEY]++;
+    } else {
+        bool whiteWon = (gameResult & WHITE_WON) != 0;
+        std::string winnerName = whiteWon ? whiteName : blackName;
+        stats[winnerName + " win"]++;
     }
 
     writeStats(stats);
+    saveMatchMoves(gameResult, whiteName, blackName, moveList, startingFen);
 }
 
-std::map<std::string, int> ResultManager::readCurrentStats() {
-    std::map<std::string, int> stats;
-    stats["old_searcher_win"] = 0;
-    stats["improved_searcher_win"] = 0;
-    stats["draw"] = 0;
+void ResultManager::saveMatchMoves(const GameResult& gameResult, const std::string& whiteName, const std::string& blackName, const std::vector<Move>& moveList, const std::string& startingFen) {
+    fs::path matchesBaseDir = fullFilePath.parent_path() / "Matches";
 
-    fs::path root = FileManager::getProjectRoot();
-    fs::path filePath = root / DIR_PATH / FILE_PATH;
+    fs::create_directories(matchesBaseDir / "Draws");
+    fs::create_directories(matchesBaseDir / (whiteName + "_Wins"));
+    fs::create_directories(matchesBaseDir / (blackName + "_Wins"));
 
-    std::ifstream file(filePath);
-    if (!file.is_open()) {
-        return stats;
+    std::string subDir;
+    if (gameResult == DRAW) {
+        subDir = "Draws";
+    } else if ((gameResult & WHITE_WON) != 0) {
+        subDir = whiteName + "_Wins";
+    } else {
+        subDir = blackName + "_Wins";
     }
+
+    fs::path targetDir = matchesBaseDir / subDir;
+
+    auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%Y%m%d_%H%M%S") << ".txt";
+    fs::path matchFile = targetDir / oss.str();
+
+    std::ofstream file(matchFile.string());
+    if (!file.is_open()) return;
+
+    file << "White: " << whiteName << "\n";
+    file << "Black: " << blackName << "\n";
+    file << "Result: " << (gameResult == DRAW ? "Draw" : ((gameResult & WHITE_WON) ? "White won" : "Black won")) << "\n";
+
+    if (!startingFen.empty()) {
+        file << "Starting FEN: " << startingFen << "\n";
+    }
+
+    file << "\nMoves:\n";
+    for (size_t i = 0; i < moveList.size(); ++i) {
+        if (i % 2 == 0) file << (i / 2 + 1) << ". ";
+        file << moveList[i].toHumanReadable() << " ";
+        if (i % 2 == 1) file << "\n";
+    }
+
+    file.close();
+}
+
+std::map<std::string, int> ResultManager::readCurrentStats(const std::string& name1, const std::string& name2) {
+    std::map<std::string, int> stats;
+    stats[name1 + " win"] = 0;
+    stats[name2 + " win"] = 0;
+    stats[DRAW_KEY] = 0;
+
+    std::ifstream file(fullFilePath.string());
+    if (!file.is_open()) return stats;
 
     std::string line;
     while (std::getline(file, line)) {
@@ -80,27 +154,26 @@ std::map<std::string, int> ResultManager::readCurrentStats() {
 }
 
 void ResultManager::writeStats(const std::map<std::string, int>& stats) {
-    fs::path root = FileManager::getProjectRoot();
-    fs::path filePath = root / DIR_PATH / FILE_PATH;
-
-    std::ofstream file(filePath);
+    std::ofstream file(fullFilePath.string());
     if (!file.is_open()) {
-        std::cerr << "HIBA: Nem sikerult irni a fajlba: " << filePath.string() << std::endl;
+        std::cerr << "ERROR: Failed to write file: " << fullFilePath.string() << std::endl;
         return;
     }
 
-    file << "old_searcher_win: " << stats.at("old_searcher_win") << "\n";
-    file << "improved_searcher_win: " << stats.at("improved_searcher_win") << "\n";
-    file << "draw: " << stats.at("draw") << "\n";
+    for (const auto& [name, wins] : stats) {
+        file << name << ": " << wins << "\n";
+    }
+    file.close();
 }
 
-void ResultManager::resetStats() {
+void ResultManager::resetStats(const std::string& whiteName, const std::string& blackName) {
+    updatePath(whiteName, blackName);
+
     std::map<std::string, int> zeroStats;
-    zeroStats["old_searcher_win"] = 0;
-    zeroStats["improved_searcher_win"] = 0;
-    zeroStats["draw"] = 0;
+    zeroStats[whiteName + " win"] = 0;
+    zeroStats[blackName + " win"] = 0;
+    zeroStats[DRAW_KEY] = 0;
 
     writeStats(zeroStats);
-
-    std::cout << "Statisztikak sikeresen nullazva." << std::endl;
+    std::cout << "Statistics reset: " << whiteName << " vs " << blackName << std::endl;
 }

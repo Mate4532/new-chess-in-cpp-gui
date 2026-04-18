@@ -2,7 +2,6 @@
 #include "BoardManager.h"
 #include "UCIParsing.h"
 #include "openingloader.h"
-#include "ResultManager.h"
 
 #include <sstream>
 
@@ -20,10 +19,8 @@ std::vector<std::string> tokenize(const std::string& input) {
     return tokens;
 }
 
-BoardManager::BoardManager(): board() {
+BoardManager::BoardManager(): board(), resultManager() {
     Attacks::InitAll();
-    is_white_player = !is_white_robot;
-    is_black_player = !is_black_robot;
     OpeningLoader::loadOpenings(OPENING_PATH);
 }
 
@@ -194,7 +191,9 @@ void BoardManager::undoMove(int plyToUndo) {
         std::pair<long long, long long> timeRemainingAtPly = timeLeftAtPly[currentPly];
         whiteTimeLeftMs = timeRemainingAtPly.first;
         blackTimeLeftMs = timeRemainingAtPly.second;
-        timeLeftAtPly.pop_back();
+        if (!timeLeftAtPly.empty()) {
+            timeLeftAtPly.pop_back();
+        }
         startTurnClock();
     }
 }
@@ -249,53 +248,66 @@ bool BoardManager::didGameEnd() {
 }
 
 GameResult BoardManager::getGameResult(){
-    if (whiteTimeLeftMs <= 0) return GameResult::BLACK_WON;
-    if (blackTimeLeftMs <= 0) return GameResult::WHITE_WON;
+    if (whiteTimeLeftMs <= 0) return GameResult::BLACK_WON_ON_TIME;
+    if (blackTimeLeftMs <= 0) return GameResult::WHITE_WON_ON_TIME;
     return board.getGameResult();
 }
 
+std::string BoardManager::getGameResultString(Color winnerColor, bool isWinnerRobot, GameResult gameResult) {
+    if (gameResult == GAME_DID_NOT_END) {
+        return "A jatek meg folyamatban van.";
+    }
+
+    if (gameResult == DRAW) {
+        return "Dontetlen!";
+    }
+
+    std::string winnerName;
+    if (winnerColor == WHITE) {
+        winnerName = isWinnerRobot ? "Feher robot" : "Feher jatekos";
+    } else {
+        winnerName = isWinnerRobot ? "Fekete robot" : "Fekete jatekos";
+    }
+
+    std::string reason;
+    switch (gameResult) {
+    case WHITE_WON_WITH_CHECKMATE:
+    case BLACK_WON_WITH_CHECKMATE:
+        reason = "sakk-mattal gyozott.";
+        break;
+    case WHITE_WON_ON_TIME:
+    case BLACK_WON_ON_TIME:
+        reason = "idotullepessel gyozott.";
+        break;
+    case WHITE_GAVE_UP:
+    case BLACK_GAVE_UP:
+        return winnerName + " gyozott, mert az ellenfele feladta.";
+    default:
+        reason = "gyozott.";
+        break;
+    }
+
+    return winnerName + " " + reason;
+}
+
 void BoardManager::writeGameResult() {
+
+    if (!isRobot(WHITE) || !isRobot(BLACK)) return;
+
     GameResult result = getGameResult();
 
     if (result == GameResult::GAME_DID_NOT_END) {
         return;
     }
 
-    if (result == GameResult::DRAW) {
-        ResultManager::saveGameResult(ResultManager::DRAW);
-        std::cout << "[ResultManager] Dontetlen." << std::endl;
-        return;
-    }
+    bool whiteWon = (result & GameResult::WHITE_WON) != 0;
 
-    if (result == GameResult::WHITE_WON || result == GameResult::BLACK_WON) {
+    Color winnerColor = whiteWon ? WHITE : BLACK;
+    ISearcher* winnerBot = (winnerColor == WHITE) ? whiteRobot.get() : blackRobot.get();
 
-        Color winnerColor = (result == GameResult::WHITE_WON) ? WHITE : BLACK;
-        ISearcher* winnerBot = (winnerColor == WHITE) ? whiteRobot.get() : blackRobot.get();
+    std::cout << winnerBot->getName() << ", " << getGameResultString(winnerColor, true, result) << std::endl;
 
-        if (winnerBot == nullptr) {
-            std::cout << "[ResultManager] " << (winnerColor == WHITE ? "Feher" : "Fekete") << " jatekos nyert." << std::endl;
-            return;
-        }
-
-        SearcherType type = winnerBot->getType();
-
-
-        std::cout << "[ResultManager] " << winnerBot->getName() <<  " nyert." << std::endl;
-
-        switch (type) {
-        case SearcherType::OLD_SEARCHER:
-            ResultManager::saveGameResult(ResultManager::OLD_WIN);
-            break;
-
-        case SearcherType::IMRPOVED_SEARCHER:
-            ResultManager::saveGameResult(ResultManager::IMPROVED_WIN);
-            break;
-
-        default:
-            std::cout << "[ResultManager] Ismeretlen bot tipus!" << std::endl;
-            break;
-        }
-    }
+    resultManager.saveGameResult(result, whiteRobot->getNameToSaveInFile(), whiteRobot->getBotDirectoryPath(), blackRobot->getNameToSaveInFile(), blackRobot->getBotDirectoryPath(), board.getMoveHistory(), board.getBeginnerFen());
 }
 
 void BoardManager::startGameLoop() {
@@ -307,14 +319,14 @@ void BoardManager::startGameLoop() {
         if (didGameEnd())
             break;
 
-        if ((board.getSideToMove() == WHITE && is_white_robot) || (board.getSideToMove() == BLACK && is_black_robot)) {
+        if ((board.getSideToMove() == WHITE && isRobot(WHITE)) || (board.getSideToMove() == BLACK && isRobot(BLACK))) {
             MakeRobotMove();
         }
 
         if (didGameEnd())
             break;
 
-        if (is_white_robot && is_black_robot) {
+        if (isRobot(WHITE) && isRobot(BLACK)) {
             continue;
         }
 
@@ -404,12 +416,10 @@ long long BoardManager::getTimeRemaining(Color player) const {
 void BoardManager::setPlayer(Color c) {
     if (c == WHITE) {
         is_white_player = true;
-        is_white_robot = false;
     }
 
     else {
         is_black_player = true;
-        is_black_robot = false;
     }
 
 }
@@ -417,12 +427,10 @@ void BoardManager::setPlayer(Color c) {
 void BoardManager::setRobot(Color c){
     if (c == WHITE) {
         is_white_player = false;
-        is_white_robot = true;
     }
 
     else {
         is_black_player = false;
-        is_black_robot = true;
     }
 }
 
@@ -436,21 +444,27 @@ void BoardManager::setupBotsForNormalGame(const RobotSettings& rs) {
     if (rs.isWhiteRobot && (whiteRobot == nullptr || whiteRobot->getType() != IMRPOVED_SEARCHER)) {
         whiteRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
         whiteRobot->setDifficulty(rs.whiteRobotDifficulty);
+        setRobot(WHITE);
     }
 
     if (rs.isBlackRobot && (blackRobot == nullptr || blackRobot->getType() != IMRPOVED_SEARCHER)) {
         blackRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
         blackRobot->setDifficulty(rs.blackRobotDifficulty);
+        setRobot(BLACK);
     }
 }
 
 void BoardManager::prepareImprovedBotVsOldBot() {
     if (whiteRobot == nullptr || whiteRobot->getType() != IMRPOVED_SEARCHER) {
         whiteRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+        setDifficulty(WHITE, Difficulty::IMPOSSIBLE);
+        setRobot(WHITE);
     }
 
     if (blackRobot == nullptr || blackRobot->getType() != OLD_SEARCHER) {
         blackRobot = createBot(SearcherType::OLD_SEARCHER);
+        setDifficulty(BLACK, Difficulty::IMPOSSIBLE);
+        setRobot(BLACK);
     }
 }
 
@@ -546,6 +560,7 @@ std::vector<std::pair<int, int>> BoardManager::getLegalMovesForPiece(int file, i
             squares.push_back({targetFile, targetRank});
         }
     }
+    std::sort(squares.begin(), squares.end());
     squares.erase(std::unique(squares.begin(), squares.end()), squares.end());
 
     return squares;

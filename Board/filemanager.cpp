@@ -1,5 +1,7 @@
 #include "filemanager.h"
-#include <filesystem>
+#include "picosha2.h"
+#include <vector>
+#include <algorithm>
 
 namespace fs = std::filesystem;
 

@@ -48,6 +48,7 @@ public:
     inline void setIsBoardUnderPromotion(bool isUnderPromotion) { this->isUnderPromotion =  isUnderPromotion; }
     inline bool isBoardUnderPromoption() { return isUnderPromotion; }
     inline bool isUnderReview() const { return reviewingPly >= 0; }
+    inline bool isBotVsBotMode() const { return currentSettings.robotSettings.isBotVsBot; }
     inline bool showLegalMoves() const { return currentSettings.boardSettings.showLegalMoves; }
     std::vector<std::pair<int, int>> getLegalMovesForPiece(int file, int rank) { return bm.getLegalMovesForPiece(file, rank); }
 
