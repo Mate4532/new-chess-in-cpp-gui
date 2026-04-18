@@ -1,3 +1,0 @@
-Draws: 0
-Improved_searcher win: 1
-Old_searcher win: 0

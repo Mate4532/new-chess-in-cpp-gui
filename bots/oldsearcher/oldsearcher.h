@@ -83,7 +83,6 @@ public:
     void setDifficulty(const Difficulty& diff);
     inline bool isUnderSearch() { return isSearching; }
 
-    SearcherType getType() const;
     std::string getName() const;
     std::string getNameToSaveInFile() const;
     Difficulty getDifficulty() const;

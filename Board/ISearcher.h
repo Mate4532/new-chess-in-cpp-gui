@@ -19,7 +19,6 @@ public:
     virtual void updateTournementTime(long long timeLeftMs) = 0;
     virtual bool isUnderSearch() = 0;
     virtual void stopSearch() = 0;
-    virtual SearcherType getType() const = 0;
     virtual std::string getName() const = 0;
     virtual std::string getNameToSaveInFile() const = 0;
     virtual Difficulty getDifficulty() const = 0;

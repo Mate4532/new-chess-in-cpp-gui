@@ -959,10 +959,6 @@ void Searcher::setDifficulty(const Difficulty& diff) {
     }
 }
 
-SearcherType Searcher::getType() const {
-    return SearcherType::IMRPOVED_SEARCHER;
-}
-
 std::string Searcher::getName() const {
     return "Új robot";
 }

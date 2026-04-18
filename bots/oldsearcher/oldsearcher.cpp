@@ -610,10 +610,6 @@ void Searcher::setDifficulty(const Difficulty& diff) {
     }
 }
 
-SearcherType Searcher::getType() const {
-    return SearcherType::OLD_SEARCHER;
-}
-
 std::string Searcher::getName() const {
     return "Régi robot";
 }
