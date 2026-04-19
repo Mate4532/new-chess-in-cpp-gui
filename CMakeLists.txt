@@ -43,6 +43,7 @@ if(Qt6_FOUND)
         bots/improvedSearcher/Evaluation.cpp bots/improvedSearcher/Evaluation.h bots/improvedSearcher/LMR.cpp bots/improvedSearcher/LMR.h bots/improvedSearcher/MoveOrdering.cpp bots/improvedSearcher/MoveOrdering.h bots/improvedSearcher/PrecomputedEvaluationData.cpp bots/improvedSearcher/PrecomputedEvaluationData.h bots/improvedSearcher/Searcher.cpp bots/improvedSearcher/Searcher.h bots/improvedSearcher/SearcherSettings.h bots/improvedSearcher/TranspositionTable.cpp bots/improvedSearcher/TranspositionTable.h bots/improvedSearcher/WorseEvaluation.cpp bots/improvedSearcher/WorseEvaluation.h bots/oldsearcher/OldEvaluation.cpp bots/oldsearcher/OldEvaluation.h bots/oldsearcher/OldLMR.cpp bots/oldsearcher/OldLMR.h bots/oldsearcher/OldMoveOrdering.cpp bots/oldsearcher/OldMoveOrdering.h bots/oldsearcher/OldPrecomputedEvaluationData.cpp bots/oldsearcher/OldPrecomputedEvaluationData.h bots/oldsearcher/oldsearcher.cpp bots/oldsearcher/oldsearcher.h bots/oldsearcher/OldTranspositionTable.cpp bots/oldsearcher/OldTranspositionTable.h
         Utils/picosha2.h
         Utils/versioncontrol.h Utils/versioncontrol.cpp
+        Utils/PGNFormatter.h Utils/PGNFormatter.cpp
     )
 endif()
 

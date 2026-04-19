@@ -86,7 +86,7 @@ private:
     bool isBoardFlipped = false;
     bool isInBotSimulation = false;
 
-    void afterMoveBeenMade(Move m);
+    void afterMoveBeenMade();
     void swapRobots();
 
     QTimer* clockTimer;

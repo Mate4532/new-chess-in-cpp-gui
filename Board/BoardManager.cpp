@@ -2,6 +2,7 @@
 #include "BoardManager.h"
 #include "UCIParsing.h"
 #include "openingloader.h"
+#include "versioncontrol.h"
 
 #include <sstream>
 
@@ -31,7 +32,6 @@ std::unique_ptr<ISearcher> BoardManager::createBot(SearcherType st) {
     default: return std::make_unique<ImpSearcher>(board);
     }
 }
-
 
 void BoardManager::goPerft(int perftDepth) {
 
@@ -82,45 +82,14 @@ void BoardManager::printBestMove() {
     std::cout << "Best move: " + square_to_coordinates[best_move.getFrom()] + square_to_coordinates[best_move.getTo()] << std::endl;
 }
 
-MoveFlag BoardManager::getMoveFlagBasedOnPromotionPiece(PieceType promotionPiece) {
-
-    switch(promotionPiece){
-    case PieceType::KNIGHT:
-        return MoveFlag::PROMOTION_TYPE_KNIGHT;
-
-    case PieceType::BISHOP:
-        return MoveFlag::PROMOTION_TYPE_BISHOP;
-
-    case PieceType::ROOK:
-        return MoveFlag::PROMOTION_TYPE_ROOK;
-
-    case PieceType::QUEEN:
-        return MoveFlag::PROMOTION_TYPE_QUEEN;
-
-    default:
-        return MoveFlag::NORMAL_MOVE;
-    }
-}
-
 bool BoardManager::isMovePromotion(int fromX, int fromY, int toX, int toY) {
-    int fromSqIndex = fromY * 8 + fromX;
-    int toSqIndex = toY * 8 + toX;
+    Square fromSq = (Square)(fromY * 8 + fromX);
 
-    MoveList moves;
+    PieceType p = board.getPieceAt(fromSq, board.getSideToMove());
+    if (p != PAWN) return false;
 
-    MoveGenerator::GenerateMoves(board, moves);
-
-    for (int i = 0; i < moves.count; ++i) {
-        Move& m = moves[i];
-
-        if (m.getFrom() == fromSqIndex && m.getTo() == toSqIndex) {
-            if (m.getFlags() & MoveFlag::PROMOTION_FLAG) {
-                return true;
-            }
-        }
-    }
-
-    return false;
+    int targetRank = toY;
+    return (targetRank == 0 || targetRank == 7);
 }
 
 Move BoardManager::getMove(int fromX, int fromY, int toX, int toY, PieceType promotionPiece)
@@ -292,13 +261,11 @@ std::string BoardManager::getGameResultString(Color winnerColor, bool isWinnerRo
 
 void BoardManager::writeGameResult() {
 
-    if (!isRobot(WHITE) || !isRobot(BLACK)) return;
+    if (!whiteRobot || !blackRobot || !isRobot(WHITE) || !isRobot(BLACK)) return;
 
     GameResult result = getGameResult();
 
-    if (result == GameResult::GAME_DID_NOT_END) {
-        return;
-    }
+    if (result == GameResult::GAME_DID_NOT_END) return;
 
     bool whiteWon = (result & GameResult::WHITE_WON) != 0;
 
@@ -307,7 +274,16 @@ void BoardManager::writeGameResult() {
 
     std::cout << winnerBot->getName() << ", " << getGameResultString(winnerColor, true, result) << std::endl;
 
-    resultManager.saveGameResult(result, whiteRobot->getNameToSaveInFile(), whiteRobot->getBotDirectoryPath(), blackRobot->getNameToSaveInFile(), blackRobot->getBotDirectoryPath(), board.getMoveHistory(), board.getBeginnerFen());
+    std::string whiteNameToSaveInFile = whiteRobot->getNameToSaveInFile();
+    std::string blackNameToSaveInFile = blackRobot->getNameToSaveInFile();
+
+    std::string whiteSourcePath = whiteRobot->getBotDirectoryPath();
+    std::string blackSourcePath = blackRobot->getBotDirectoryPath();
+
+    VersionControl::manageBotVersion(whiteNameToSaveInFile, whiteSourcePath);
+    VersionControl::manageBotVersion(blackNameToSaveInFile, blackSourcePath);
+
+    resultManager.saveGameResult(result, whiteNameToSaveInFile, whiteSourcePath, blackNameToSaveInFile, blackSourcePath, board.getMoveHistroyInSAN(), board.getBeginnerFen());
 }
 
 void BoardManager::startGameLoop() {

@@ -35,62 +35,38 @@ std::string VersionControl::calculateFolderHash(const std::string& botPath) {
     return picosha2::hash256_hex_string(combinedHashes);
 }
 
-void VersionControl::manageBotVersion(const std::string& botName, const std::string& botSourcePath) {
+void VersionControl::manageBotVersion(const std::string& botNameToSaveInFile, const std::string& botSourcePath) {
     fs::path projectRoot = FileManager::getProjectRoot();
-    fs::path botBaseFolder = projectRoot / "generatedbotversions" / botName;
+    fs::path botBaseFolder = projectRoot / "generatedbotversions" / botNameToSaveInFile;
+    fs::path fullSourcePath = projectRoot / fs::path(botSourcePath);
 
     if (!fs::exists(botBaseFolder)) fs::create_directories(botBaseFolder);
 
-    std::string currentHash = calculateFolderHash(botSourcePath);
+    std::string currentHash = calculateFolderHash(fullSourcePath.string());
     if (currentHash.empty()) return;
 
-    int maxV = 0;
-    std::string lastHash = "";
+    int existingV = getCurrentVersion(botNameToSaveInFile, botSourcePath);
 
-    for (const auto& entry : fs::directory_iterator(botBaseFolder)) {
-        if (entry.is_directory()) {
-            std::string dirName = entry.path().filename().string();
-            std::string prefix = "v";
-            if (dirName.find(prefix) == 0) {
-                try {
-                    int v = std::stoi(dirName.substr(prefix.length()));
-                    if (v > maxV) {
-                        maxV = v;
-                        std::ifstream hFile(entry.path() / "hash.txt");
-                        std::getline(hFile, lastHash);
-                    }
-                } catch (...) {}
-            }
-        }
-    }
-
-    if (currentHash != lastHash) {
-        int nextV = maxV + 1;
+    if (existingV == 0) {
+        int nextV = getLatestVersion(botNameToSaveInFile) + 1;
         fs::path newVersionDir = botBaseFolder / ("v" + std::to_string(nextV));
 
         try {
             fs::create_directories(newVersionDir);
+
             std::ofstream hFile(newVersionDir / "hash.txt");
             hFile << currentHash;
             hFile.close();
 
             fs::path sourceDest = newVersionDir / "src";
-            if (fs::exists(sourceDest)) fs::remove_all(sourceDest);
-            fs::create_directories(sourceDest);
+            fs::copy(fullSourcePath, sourceDest, fs::copy_options::recursive);
 
-            for (const auto& entry : fs::directory_iterator(botSourcePath)) {
-                fs::path currentPath = entry.path();
-                fs::path destPath = sourceDest / currentPath.filename();
-                if (fs::is_directory(currentPath)) {
-                    fs::copy(currentPath, destPath, fs::copy_options::recursive);
-                } else {
-                    fs::copy_file(currentPath, destPath, fs::copy_options::overwrite_existing);
-                }
-            }
+            std::cout << "[VersionControl] Unique code state detected. Saved as v" << nextV << " for " << botNameToSaveInFile << std::endl;
         } catch (const fs::filesystem_error& e) {
-            std::cerr << "[VersionControl] Backup failed: " << e.what() << std::endl;
+            std::cerr << "[VersionControl] Error during version save: " << e.what() << std::endl;
         }
-        std::cout << "[VersionControl] New version for " << botName << " saved in: " << botBaseFolder.string() << "\\v" << nextV << std::endl;
+    } else {
+        std::cout << "[VersionControl] Bot " << botNameToSaveInFile << " matches existing version: v" << existingV << std::endl;
     }
 }
 
@@ -98,9 +74,9 @@ int VersionControl::getLatestVersion(const std::string& botName) {
     fs::path projectRoot = FileManager::getProjectRoot();
     fs::path botBaseFolder = projectRoot / "generatedbotversions" / botName;
 
-    if (!fs::exists(botBaseFolder)) return 1;
+    if (!fs::exists(botBaseFolder)) return 0;
 
-    int maxV = 1;
+    int maxV = 0;
     for (const auto& entry : fs::directory_iterator(botBaseFolder)) {
         if (entry.is_directory()) {
             std::string dirName = entry.path().filename().string();
@@ -119,3 +95,47 @@ std::string VersionControl::getLatestVersionName(const std::string& botName) {
     int v = getLatestVersion(botName);
     return botName + "_v" + std::to_string(v);
 }
+
+
+int VersionControl::getCurrentVersion(const std::string& botName, const std::string& botSourcePath) {
+    fs::path projectRoot = FileManager::getProjectRoot();
+    fs::path botBaseFolder = projectRoot / "generatedbotversions" / botName;
+
+    if (!fs::exists(botBaseFolder)) return 0;
+
+    fs::path fullSourcePath = projectRoot / fs::path(botSourcePath);
+    std::string currentSourceHash = calculateFolderHash(fullSourcePath.string());
+
+    if (currentSourceHash.empty()) return 0;
+
+    for (const auto& entry : fs::directory_iterator(botBaseFolder)) {
+        if (entry.is_directory()) {
+            fs::path hashFile = entry.path() / "hash.txt";
+            if (fs::exists(hashFile)) {
+                std::ifstream hFile(hashFile);
+                std::string savedHash;
+                std::getline(hFile, savedHash);
+
+                if (currentSourceHash == savedHash) {
+                    std::string dirName = entry.path().filename().string();
+                    try {
+                        return std::stoi(dirName.substr(1));
+                    } catch (...) {}
+                }
+            }
+        }
+    }
+
+    return 0;
+}
+
+std::string VersionControl::getCurrentVersionName(const std::string& botName, const std::string& botSourcePath) {
+    int v = getCurrentVersion(botName, botSourcePath);
+
+    if (v == 0) {
+        return botName + "_vUNKNOWN_MODIFIED";
+    }
+
+    return botName + "_v" + std::to_string(v);
+}
+

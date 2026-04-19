@@ -1,5 +1,6 @@
 #include "Board.h"
 #include "Zobrist.h"
+#include "PGNFormatter.h"
 
 uint64_t Board::pawn_attacks_table[2][64];
 uint64_t Board::knight_attacks_table[64];
@@ -914,6 +915,53 @@ void Board::getPieceCounts(int piecesOut[2][6], int ply) {
             piecesOut[static_cast<int>(piece.second)][static_cast<int>(piece.first)]++;
         }
     }
+}
+
+MoveFlag Board::getMoveFlagBasedOnPromotionPiece(PieceType promotionPiece) {
+
+    switch(promotionPiece){
+    case PieceType::KNIGHT:
+        return MoveFlag::PROMOTION_TYPE_KNIGHT;
+
+    case PieceType::BISHOP:
+        return MoveFlag::PROMOTION_TYPE_BISHOP;
+
+    case PieceType::ROOK:
+        return MoveFlag::PROMOTION_TYPE_ROOK;
+
+    case PieceType::QUEEN:
+        return MoveFlag::PROMOTION_TYPE_QUEEN;
+
+    default:
+        return MoveFlag::NORMAL_MOVE;
+    }
+}
+
+std::string Board::convertMoveToSAN(int ply, bool addPieceCharToString) {
+    int currentPly = (ply == -1) ? committedPly : ply;
+
+    if (currentPly <= 0 || currentPly >= move_history.size()) {
+        return "";
+    }
+
+    Move m = move_history[currentPly];
+
+    MoveList movesBefore = legalMovesHistory[currentPly - 1];
+
+    bool isCheck = wasMoveCheck(currentPly);
+
+    return PGNFormatter::convertMoveToSAN(m, movesBefore, isCheck, addPieceCharToString);
+}
+
+std::vector<std::string> Board::getMoveHistroyInSAN() {
+
+    std::vector<std::string> SANs;
+
+    for (int movePly = 1; movePly <= committedPly; ++movePly) {
+        SANs.push_back(convertMoveToSAN(movePly));
+    }
+
+    return SANs;
 }
 
 MoveList Board::generateCurrentLegalMoves() {

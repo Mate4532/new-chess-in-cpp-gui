@@ -128,13 +128,13 @@ bool ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType
 
         bool isMoveLegal = bm.MakeMove(m);
         if (isMoveLegal)
-            afterMoveBeenMade(m);
+            afterMoveBeenMade();
     }
 
     return isMoveValid;
 }
 
-void ChessViewModel::afterMoveBeenMade(Move m) {
+void ChessViewModel::afterMoveBeenMade() {
 
     if (!isInBotSimulation)
         reviewEnded();
@@ -147,12 +147,14 @@ void ChessViewModel::afterMoveBeenMade(Move m) {
         endGame();
 
     int ply = bm.getPly();
-    std::string checkString = bm.wasMoveCheck(ply) ? "+" : "";
 
     Color currentPlayer = bm.getSideToMove();
     Color lastMovedColor = (Color)(currentPlayer ^ 1);
 
-    emit moveMade(ply, QString::fromStdString(m.toHumanReadable(false) + checkString), lastMovedColor, m.getPieceType());
+    QString moveSAN = QString::fromStdString(bm.convertMoveToSAN(ply, false));
+    Move m = bm.getMove(ply);
+
+    emit moveMade(ply, moveSAN, lastMovedColor, m.getPieceType());
 
     if (isGameRunning && bm.isRobotToMove())
         makeRobotMove();
@@ -495,13 +497,13 @@ void ChessViewModel::onRobotMoveFinished(Move robotMove, int searchId) {
 
             isUnderSearch = false;
             if (robotMove.isValid()) {
-                afterMoveBeenMade(robotMove);
+                afterMoveBeenMade();
             }
         });
     } else {
         isUnderSearch = false;
         if (robotMove.isValid() && isGameRunning) {
-            afterMoveBeenMade(robotMove);
+            afterMoveBeenMade();
         }
     }
 }

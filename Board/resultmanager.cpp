@@ -1,6 +1,7 @@
 #include "ResultManager.h"
 #include "filemanager.h"
 #include "versioncontrol.h"
+#include "PGNFormatter.h"
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -39,24 +40,18 @@ void ResultManager::updatePath(const std::string& name1, const std::string& name
     fullFilePath = root / BASE_DIR / folderName / FILE_NAME;
 }
 
-void ResultManager::saveGameResult(const GameResult& gameResult,
-                                   const std::string& whiteName, const std::string& whiteSourcePath,
-                                   const std::string& blackName, const std::string& blackSourcePath,
-                                   const std::vector<Move>& moveList, const std::string& startingFen) {
+void ResultManager::saveGameResult(const GameResult& gameResult, const std::string& whiteName,
+                                   const std::string whiteSourcePath, const std::string& blackName,
+                                   const std::string& blackSourcePath, const std::vector<std::string>& moveList,
+                                   const std::string& startingFen) {
 
     if (gameResult == GAME_DID_NOT_END) return;
 
     updatePath(whiteName, blackName);
     fs::path pairRoot = fullFilePath.parent_path();
 
-    fs::path fullWhiteSourcePath = FileManager::getProjectRoot() / fs::path(whiteSourcePath);
-    fs::path fullBlackSourcePath = FileManager::getProjectRoot() / fs::path(blackSourcePath);
-
-    VersionControl::manageBotVersion(whiteName, fullWhiteSourcePath.string());
-    VersionControl::manageBotVersion(blackName, fullBlackSourcePath.string());
-
-    std::string vNameWhite = VersionControl::getLatestVersionName(whiteName);
-    std::string vNameBlack = VersionControl::getLatestVersionName(blackName);
+    std::string vNameWhite = VersionControl::getCurrentVersionName(whiteName, whiteSourcePath);
+    std::string vNameBlack = VersionControl::getCurrentVersionName(blackName, blackSourcePath);
 
     std::string v1 = vNameWhite;
     std::string v2 = vNameBlack;
@@ -82,52 +77,41 @@ void ResultManager::saveGameResult(const GameResult& gameResult,
     }
 
     writeStats(stats);
-    saveMatchMoves(gameResult, whiteName, blackName, moveList, startingFen);
+    saveMatch(gameResult, whiteName, blackName, moveList, startingFen);
 }
 
-void ResultManager::saveMatchMoves(const GameResult& gameResult, const std::string& whiteName, const std::string& blackName, const std::vector<Move>& moveList, const std::string& startingFen) {
-    fs::path matchesBaseDir = fullFilePath.parent_path() / "Matches";
+void ResultManager::saveMatch(const GameResult& gameResult, const std::string& whiteName, const std::string& blackName, const std::vector<std::string>& moveList, const std::string& startingFen) {
 
-    fs::create_directories(matchesBaseDir / "Draws");
-    fs::create_directories(matchesBaseDir / (whiteName + "_Wins"));
-    fs::create_directories(matchesBaseDir / (blackName + "_Wins"));
+    fs::path matchesBase = fullFilePath.parent_path() / "Matches";
 
-    std::string subDir;
-    if (gameResult == DRAW) {
-        subDir = "Draws";
-    } else if ((gameResult & WHITE_WON) != 0) {
-        subDir = whiteName + "_Wins";
-    } else {
-        subDir = blackName + "_Wins";
+    try {
+        fs::create_directories(matchesBase / "Draws");
+        fs::create_directories(matchesBase / (whiteName + "_Wins"));
+        fs::create_directories(matchesBase / (blackName + "_Wins"));
+    } catch (const fs::filesystem_error& e) {
+        std::cerr << "Mappa hiba: " << e.what() << std::endl;
     }
 
-    fs::path targetDir = matchesBaseDir / subDir;
+    std::string subDir = "Draws";
+    if ((gameResult & WHITE_WON) != 0) subDir = whiteName + "_Wins";
+    else if ((gameResult & BLACK_WON) != 0) subDir = blackName + "_Wins";
+
+    fs::path targetDir = fullFilePath.parent_path() / "Matches" / subDir;
+    fs::create_directories(targetDir);
 
     auto t = std::time(nullptr);
     auto tm = *std::localtime(&t);
     std::ostringstream oss;
-    oss << std::put_time(&tm, "%Y%m%d_%H%M%S") << ".txt";
+    oss << std::put_time(&tm, "%Y%m%d_%H%M%S") << ".pgn";
     fs::path matchFile = targetDir / oss.str();
 
+    std::string fullContent = PGNFormatter::createFullPGN(gameResult, whiteName, blackName, moveList, startingFen);
+
     std::ofstream file(matchFile.string());
-    if (!file.is_open()) return;
-
-    file << "White: " << whiteName << "\n";
-    file << "Black: " << blackName << "\n";
-    file << "Result: " << (gameResult == DRAW ? "Draw" : ((gameResult & WHITE_WON) ? "White won" : "Black won")) << "\n";
-
-    if (!startingFen.empty()) {
-        file << "Starting FEN: " << startingFen << "\n";
+    if (file.is_open()) {
+        file << fullContent;
+        file.close();
     }
-
-    file << "\nMoves:\n";
-    for (size_t i = 0; i < moveList.size(); ++i) {
-        if (i % 2 == 0) file << (i / 2 + 1) << ". ";
-        file << moveList[i].toHumanReadable() << " ";
-        if (i % 2 == 1) file << "\n";
-    }
-
-    file.close();
 }
 
 std::map<std::string, int> ResultManager::readCurrentStats(const std::string& name1, const std::string& name2) {

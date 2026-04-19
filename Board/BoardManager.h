@@ -47,7 +47,6 @@ public:
     Move getBestMoveOnBoard() { return board.getSideToMove() == WHITE ? whiteRobot->GetRobotMove() : blackRobot->GetRobotMove(); }
     Move MakeRobotMove();
     void printBestMove();
-    MoveFlag getMoveFlagBasedOnPromotionPiece(PieceType promotionPiece);
     bool isMovePromotion(int fromX, int fromY, int toX, int toY);
     Move getMove(int fromX, int fromY, int toX, int toY, PieceType promotionPiece);
     bool MakeMove(Move m);
@@ -86,6 +85,7 @@ public:
     inline int getPly() { return board.getPly(); }
     inline int getFullMoveNumber() { return board.getFullMoveNumber(); }
     inline Color getSideToMove(int ply = -1) { return board.getCommittedSideToMove(ply); }
+    inline MoveFlag getMoveFlagBasedOnPromotionPiece(PieceType promotionPiece) { return board.getMoveFlagBasedOnPromotionPiece(promotionPiece); }
     inline bool wasMoveCapture(Move m) { return m.getFlags() & MoveFlag::CAPTURE_FLAG; }
     inline bool wasMovePromotion(Move m) { return m.getFlags() & MoveFlag::PROMOTION_FLAG; }
     inline PieceType getPromotionPiece(Move m) { return Board::GetPromotionPiece(m); }
@@ -99,6 +99,7 @@ public:
     inline void getPieceCounts(int piecesOut[2][6], int ply = -1) { board.getPieceCounts(piecesOut, ply); }
     inline MoveInfo getMoveInfo(int ply = -1) { return board.getMoveInfo(ply); }
     inline bool wasMoveCheck(int ply = -1) { return board.wasMoveCheck(ply); }
+    inline std::string convertMoveToSAN(int ply = -1, bool addPieceCharToString = true) { return board.convertMoveToSAN(ply, addPieceCharToString); }
     inline long long getTimeLeft(Color player, int ply = -1) const {
         if (ply == -1)
             return player == WHITE ? whiteTimeLeftMs : blackTimeLeftMs;

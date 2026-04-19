@@ -153,7 +153,7 @@ public:
         return beginnerFen;
     }
     inline const Move getMove(int ply = -1){
-        if (move_history.empty()) {
+        if (move_history.size() <= 0) {
             return Move();
         }
         int index = (ply == -1) ? static_cast<int>(move_history.size()) - 1 : ply;
@@ -189,8 +189,10 @@ public:
     void PrintBoard(bool is_white_player = true, bool is_black_player = true) const;
     std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix(int ply = -1) const;
     void getPieceCounts(int piecesOut[2][6], int ply = -1);
+    MoveFlag getMoveFlagBasedOnPromotionPiece(PieceType promotionPiece);
+    std::string convertMoveToSAN(int ply = -1, bool addPieceCharToString = true);
+    std::vector<std::string>  getMoveHistroyInSAN();
     MoveList generateCurrentLegalMoves();
-
     void currentPlayerGaveUp();
     GameResult getGameResult();
 
