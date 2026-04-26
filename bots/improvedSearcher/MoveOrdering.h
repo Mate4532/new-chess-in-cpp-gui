@@ -4,13 +4,12 @@
 
 namespace ImprovedMoveOrdering {
 
-    #define MAX_KILLER_HISTORY 128
-    #define SQUARE_COUNT 64
+#define MAX_KILLER_HISTORY 128
 
     class MoveOrdering {
     public:
         static int See(const Board& board, Move m);
-        static int SortMoves(
+        static void SortMoves(
             const Board& board,
             MoveList& moves,
             Move ttMove,

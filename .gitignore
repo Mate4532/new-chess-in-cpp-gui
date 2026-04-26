@@ -1,2 +1,5 @@
 build/
+.qtcreator/
+botvsbotresults/
 CMakeLists.txt.user
+*.user

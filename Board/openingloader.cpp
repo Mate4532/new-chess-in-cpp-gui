@@ -6,8 +6,10 @@
 #include <unordered_set>
 #include <algorithm>
 #include <filesystem>
+#include <Utils.h>
 
 std::vector<std::string> OpeningLoader::openings;
+std::mutex OpeningLoader::openingMutex;
 
 static std::string trim(const std::string& str) {
     const std::string whitespace = " \t\n\r";
@@ -24,6 +26,7 @@ static std::string trim(const std::string& str) {
 
 void OpeningLoader::loadOpenings(const std::string& relativePath)
 {
+    std::lock_guard<std::mutex> lock(openingMutex);
     openings.clear();
     std::unordered_set<std::string> seen;
 
@@ -31,7 +34,7 @@ void OpeningLoader::loadOpenings(const std::string& relativePath)
     std::ifstream file(fullPath);
 
     if (!file.is_open()) {
-        std::cout << "HIBA: Nem sikerult megnyitni az opening fajlt: " << fullPath << std::endl;
+        LOG_DEBUG("Nem sikerult megnyitni az opening fajlt: " << fullPath);
         return;
     }
 
@@ -50,14 +53,14 @@ void OpeningLoader::loadOpenings(const std::string& relativePath)
     }
 
     file.close();
-
-    std::cout << "Sikeresen betoltve " << openings.size()
-              << " db opening FEN." << std::endl;
+    LOG_DEBUG("Sikeresen betoltve " << openings.size()
+        << " db opening FEN.");
 }
 
 std::string OpeningLoader::getRandomFen() {
+    std::lock_guard<std::mutex> lock(openingMutex);
     if (openings.empty()) {
-        return "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+        return newPosFen;
     }
 
     static std::mt19937 rng(std::random_device{}());
@@ -67,5 +70,26 @@ std::string OpeningLoader::getRandomFen() {
 }
 
 bool OpeningLoader::hasOpenings() {
+    std::lock_guard<std::mutex> lock(openingMutex);
     return !openings.empty();
+}
+
+std::string OpeningLoader::popRandomFen() {
+    std::lock_guard<std::mutex> lock(openingMutex);
+    if (openings.empty()) {
+        return newPosFen;
+    }
+
+    static std::mt19937 rng(std::random_device{}());
+    std::uniform_int_distribution<size_t> dist(0, openings.size() - 1);
+
+    size_t index = dist(rng);
+    std::string selectedFen = openings[index];
+
+    if (index != openings.size() - 1) {
+        openings[index] = std::move(openings.back());
+    }
+    openings.pop_back();
+
+    return selectedFen;
 }

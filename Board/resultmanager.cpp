@@ -100,7 +100,8 @@ void ResultManager::saveMatch(const GameResult& gameResult, const std::string& w
     fs::create_directories(targetDir);
 
     auto t = std::time(nullptr);
-    auto tm = *std::localtime(&t);
+    std::tm tm;
+    localtime_s(&tm, &t);
     std::ostringstream oss;
     oss << std::put_time(&tm, "%Y%m%d_%H%M%S") << ".pgn";
     fs::path matchFile = targetDir / oss.str();

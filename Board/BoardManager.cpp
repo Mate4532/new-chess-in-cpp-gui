@@ -5,6 +5,7 @@
 #include "versioncontrol.h"
 
 #include <sstream>
+#include <atomic>
 
 using ImpSearcher = ImprovedSearcher::Searcher;
 using OSearcher = OldSearcher::Searcher;
@@ -20,16 +21,19 @@ std::vector<std::string> tokenize(const std::string& input) {
     return tokens;
 }
 
-BoardManager::BoardManager(): board(), resultManager() {
-    Attacks::InitAll();
-    OpeningLoader::loadOpenings(OPENING_PATH);
+BoardManager::BoardManager() : board(), resultManager() {
+    static std::once_flag initFlag;
+    std::call_once(initFlag, [this]() {
+        Attacks::InitAll();
+        nnue_init("nn-62ef826d1a6d.nnue");
+    });
 }
 
 std::unique_ptr<ISearcher> BoardManager::createBot(SearcherType st) {
     switch (st) {
-    case SearcherType::OLD_SEARCHER: return std::make_unique<OSearcher>(board);
-    case SearcherType::IMRPOVED_SEARCHER: return std::make_unique<ImpSearcher>(board);
-    default: return std::make_unique<ImpSearcher>(board);
+    case SearcherType::OLD_SEARCHER: return std::make_unique<OSearcher>();
+    case SearcherType::IMRPOVED_SEARCHER: return std::make_unique<ImpSearcher>();
+    default: return std::make_unique<ImpSearcher>();
     }
 }
 
@@ -64,16 +68,26 @@ void BoardManager::resetForNewGame() {
     timeLeftAtPly.clear();
 }
 
+void BoardManager::loadOpenings() {
+    OpeningLoader::loadOpenings(OPENING_PATH);
+}
+
 void BoardManager::loadBeginnerFEN() {
     loadFEN(newPosFen);
 }
 
 void BoardManager::loadFEN(std::string FEN) {
+    resetForNewGame();
     board.LoadFEN(FEN);
+	updateRobotsState();
 }
 
 std::string BoardManager::getRandomOpening() {
     return OpeningLoader::getRandomFen();
+}
+
+std::string BoardManager::popRandomFen() {
+    return OpeningLoader::popRandomFen();
 }
 
 void BoardManager::printBestMove() {
@@ -132,15 +146,18 @@ Move BoardManager::getMove(int fromX, int fromY, int toX, int toY, PieceType pro
 bool BoardManager::MakeMove(Move m) {
     stopTurnClock();
 
+    Color movedColor = board.getSideToMove();
     bool success = board.MakeMove(m);
 
-    if (success && gameMode == GameMode::TOURNAMENT_MODE) {
-        if (board.getSideToMove() == BLACK) whiteTimeLeftMs += incrementMs;
+    if (success && currentSettings.timeSettings.gm == GameMode::TOURNAMENT_MODE) {
+        if (movedColor == WHITE) whiteTimeLeftMs += incrementMs;
         else blackTimeLeftMs += incrementMs;
 
         saveRemainingTime();
         startTurnClock();
     }
+
+    updateRobotsState();
 
     return success;
 }
@@ -155,124 +172,97 @@ void BoardManager::undoMove(int plyToUndo) {
         }
     }
 
-    if (gameMode == GameMode::TOURNAMENT_MODE) {
+    if (currentSettings.timeSettings.gm == GameMode::TOURNAMENT_MODE) {
         int currentPly = board.getPly();
         std::pair<long long, long long> timeRemainingAtPly = timeLeftAtPly[currentPly];
         whiteTimeLeftMs = timeRemainingAtPly.first;
         blackTimeLeftMs = timeRemainingAtPly.second;
         if (!timeLeftAtPly.empty()) {
-            timeLeftAtPly.pop_back();
+            timeLeftAtPly.resize(currentPly);
         }
         startTurnClock();
     }
+
+    updateRobotsState();
 }
 
 Move BoardManager::MakeRobotMove() {
 
-    if (gameMode == GameMode::TOURNAMENT_MODE)
+    if (currentSettings.timeSettings.gm == GameMode::TOURNAMENT_MODE)
         updateRobotTournementTime();
 
     Move robot_move;
-    std::cout << (board.getSideToMove() == WHITE ? (whiteRobot->getName() + " (feher) ") : (blackRobot->getName() + " (fekete) ")) <<"gondolkodik..." << std::endl;
-    if (board.isDebugMode) {
-        // uint64_t hash_before = board.getHash();
-        // std::cout << "Hash kereses elott: " << board.getHash() << std::endl;
-        robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetRobotMove() : blackRobot->GetRobotMove();
-
-        //uint64_t hash_after = board.getHash();
-        // std::cout << "Hash kereses utan: " << hash_after << std::endl;
-        // std::cout << "Repetition_history merete: " << board.getRepetitionHash().size() << std::endl;
-        // if (hash_before != hash_after) {
-        //    std::cout << "BAJ VAN\n\n\n\n\n" << std::endl;
-        // }
-    }
-    else {
-        robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetRobotMove() : blackRobot->GetRobotMove();
-    }
+    LOG_DEBUG(std::cout << (board.getSideToMove() == WHITE ? (whiteRobot->getName() + " (feher) ") : (blackRobot->getName() + " (fekete) ")) <<"gondolkodik..." << std::endl;)
+	robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetRobotMove() : blackRobot->GetRobotMove();
     if (!robot_move.isValid())
         return Move();
 
     MakeMove(robot_move);
-    std::cout << "Robot lepese: " + robot_move.toAlgebraic() << std::endl;
+    LOG_DEBUG(std::cout << "Robot lepese: " + robot_move.toAlgebraic() << std::endl;)
 
     return robot_move;
 }
 
-bool BoardManager::didGameEnd() {
-
-    if (board.IsDraw() || board.IsCheckMate())
-        board.PrintBoard(is_white_player, is_black_player);
-
-    if (board.IsDraw()) {
-        std::cout << "\nDontetlen!" << std::endl;
-        return true;
-    }
-
-    if (board.IsCheckMate()) {
-        std::cout << "\nSakkmat, " << (board.getSideToMove() == WHITE ? "Fekete" : "Feher") << " nyert!" << std::endl;
-        return true;
-    }
-
-    return false;
-}
-
 GameResult BoardManager::getGameResult(){
-    if (whiteTimeLeftMs <= 0) return GameResult::BLACK_WON_ON_TIME;
-    if (blackTimeLeftMs <= 0) return GameResult::WHITE_WON_ON_TIME;
+    if (getTimeRemaining(WHITE) <= 0 && currentSettings.timeSettings.gm == GameMode::TOURNAMENT_MODE) return GameResult::BLACK_WON_ON_TIME;
+    if (getTimeRemaining(BLACK) <= 0 && currentSettings.timeSettings.gm == GameMode::TOURNAMENT_MODE) return GameResult::WHITE_WON_ON_TIME;
     return board.getGameResult();
 }
 
-std::string BoardManager::getGameResultString(Color winnerColor, bool isWinnerRobot, GameResult gameResult) {
+bool BoardManager::didGameEnd() {
+    return getGameResult() != GameResult::GAME_DID_NOT_END;
+}
+
+std::string BoardManager::getGameResultString(GameResult gameResult) {
     if (gameResult == GAME_DID_NOT_END) {
-        return "A jatek meg folyamatban van.";
+        return "The game is still in progress.";
     }
 
     if (gameResult == DRAW) {
-        return "Dontetlen!";
+        return "Draw!";
     }
+
+	Color winnerColor = (gameResult & WHITE_WON) != 0 ? WHITE : BLACK;
+    bool isWinnerRobot = (winnerColor == WHITE && isRobot(WHITE)) || (winnerColor == BLACK && isRobot(BLACK));
 
     std::string winnerName;
     if (winnerColor == WHITE) {
-        winnerName = isWinnerRobot ? "Feher robot" : "Feher jatekos";
+        winnerName = isWinnerRobot ? whiteRobot->getName() + " (white)" : "White player";
     } else {
-        winnerName = isWinnerRobot ? "Fekete robot" : "Fekete jatekos";
+        winnerName = isWinnerRobot ? blackRobot->getName() + " (black)" : "Black player";
     }
 
     std::string reason;
     switch (gameResult) {
     case WHITE_WON_WITH_CHECKMATE:
     case BLACK_WON_WITH_CHECKMATE:
-        reason = "sakk-mattal gyozott.";
+        reason = "won with checkmate";
         break;
     case WHITE_WON_ON_TIME:
     case BLACK_WON_ON_TIME:
-        reason = "idotullepessel gyozott.";
+        reason = "won on time";
         break;
     case WHITE_GAVE_UP:
     case BLACK_GAVE_UP:
-        return winnerName + " gyozott, mert az ellenfele feladta.";
+        return winnerName + " won because the opponent gave up";
     default:
-        reason = "gyozott.";
+        reason = "won.";
         break;
     }
 
     return winnerName + " " + reason;
 }
 
-void BoardManager::writeGameResult() {
+void BoardManager::writeGameResult(GameResult gameResult, std::vector<std::string> moveList, std::string beginnerFen) {
 
     if (!whiteRobot || !blackRobot || !isRobot(WHITE) || !isRobot(BLACK)) return;
 
-    GameResult result = getGameResult();
+    if (gameResult == GameResult::GAME_DID_NOT_END) return;
 
-    if (result == GameResult::GAME_DID_NOT_END) return;
-
-    bool whiteWon = (result & GameResult::WHITE_WON) != 0;
+    bool whiteWon = (gameResult & GameResult::WHITE_WON) != 0;
 
     Color winnerColor = whiteWon ? WHITE : BLACK;
     ISearcher* winnerBot = (winnerColor == WHITE) ? whiteRobot.get() : blackRobot.get();
-
-    std::cout << winnerBot->getName() << ", " << getGameResultString(winnerColor, true, result) << std::endl;
 
     std::string whiteNameToSaveInFile = whiteRobot->getNameToSaveInFile();
     std::string blackNameToSaveInFile = blackRobot->getNameToSaveInFile();
@@ -280,10 +270,7 @@ void BoardManager::writeGameResult() {
     std::string whiteSourcePath = whiteRobot->getBotDirectoryPath();
     std::string blackSourcePath = blackRobot->getBotDirectoryPath();
 
-    VersionControl::manageBotVersion(whiteNameToSaveInFile, whiteSourcePath);
-    VersionControl::manageBotVersion(blackNameToSaveInFile, blackSourcePath);
-
-    resultManager.saveGameResult(result, whiteNameToSaveInFile, whiteSourcePath, blackNameToSaveInFile, blackSourcePath, board.getMoveHistroyInSAN(), board.getBeginnerFen());
+    resultManager.saveGameResult(gameResult, whiteNameToSaveInFile, whiteSourcePath, blackNameToSaveInFile, blackSourcePath, moveList, beginnerFen);
 }
 
 void BoardManager::startGameLoop() {
@@ -292,14 +279,14 @@ void BoardManager::startGameLoop() {
 
     while (true) {
 
-        if (didGameEnd())
+        if (getGameResult() != GameResult::GAME_DID_NOT_END)
             break;
 
         if ((board.getSideToMove() == WHITE && isRobot(WHITE)) || (board.getSideToMove() == BLACK && isRobot(BLACK))) {
             MakeRobotMove();
         }
 
-        if (didGameEnd())
+        if (getGameResult() != GameResult::GAME_DID_NOT_END)
             break;
 
         if (isRobot(WHITE) && isRobot(BLACK)) {
@@ -350,7 +337,7 @@ void BoardManager::startGameLoop() {
         }
 
         if (move.getPieceType() != PIECE_NONE) {
-            if (board.MakeMove(move)) {
+            if (MakeMove(move)) {
                 std::cout << "Sikeres lepes!" << std::endl;
             }
             else {
@@ -359,6 +346,91 @@ void BoardManager::startGameLoop() {
         }
         else {
             std::cout << "Ervenytelen koordinatak vagy ures mezo!" << std::endl;
+        }
+    }
+}
+
+void BoardManager::runUCIService() {
+    std::string line;
+    std::string token;
+
+    while (std::getline(std::cin, line)) {
+        if (line.empty()) continue;
+
+        std::istringstream iss(line);
+        iss >> token;
+
+        if (token == "uci") {
+            std::cout << "id name " << "Proudly bad bot" << std::endl;
+            std::cout << "id author " << "Mate Szekely" << std::endl;
+            std::cout << "uciok" << std::endl;
+        }
+        else if (token == "isready") {
+            std::cout << "readyok" << std::endl;
+        }
+        else if (token == "ucinewgame") {
+            resetForNewGame();
+        }
+        else if (token == "position") {
+            std::string type;
+            iss >> type;
+            if (type == "startpos") {
+                loadBeginnerFEN();
+            }
+            else if (type == "fen") {
+                std::string fen;
+                std::string part;
+                for (int i = 0; i < 6 && (iss >> part); ++i) {
+                    fen += part + (i < 5 ? " " : "");
+                }
+                loadFEN(fen);
+            }
+
+            std::string nextToken;
+            while (iss >> nextToken) {
+                if (nextToken == "moves") continue;
+                Move m = UCIParsing::Parse(nextToken, board);
+                if (m.isValid()) {
+                    board.MakeMove(m);
+                }
+            }
+        }
+        else if (token == "go") {
+            std::string subToken;
+            long long wtime = -1, btime = -1, winc = 0, binc = 0, movetime = -1;
+
+            while (iss >> subToken) {
+                if (subToken == "wtime") iss >> wtime;
+                else if (subToken == "btime") iss >> btime;
+                else if (subToken == "winc") iss >> winc;
+                else if (subToken == "binc") iss >> binc;
+                else if (subToken == "movetime") iss >> movetime;
+            }
+
+            if (movetime != -1) {
+                setFixedTimePerMove(movetime);
+                setRobotTimeUsageMode(RobotTimeUsageMode::FIXED_TIME);
+            }
+            else if (wtime != -1 || btime != -1) {
+                this->whiteTimeLeftMs = (wtime != -1) ? wtime : 0;
+                this->blackTimeLeftMs = (btime != -1) ? btime : 0;
+                this->incrementMs = (board.getSideToMove() == WHITE) ? winc : binc;
+
+                setRobotTimeUsageMode(RobotTimeUsageMode::TOURNEMENT_TIME);
+                updateRobotTournementTime();
+            }
+
+            Move best = (board.getSideToMove() == WHITE)
+                ? whiteRobot->GetRobotMove()
+                : blackRobot->GetRobotMove();
+
+            std::cout << "bestmove " << UCIParsing::MoveToUCI(best) << std::endl;
+        }
+        else if (token == "stop") {
+            stopRobotCalculation();
+        }
+        else if (token == "quit") {
+            break;
         }
     }
 }
@@ -374,14 +446,17 @@ void BoardManager::stopTurnClock() {
     auto now = std::chrono::steady_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - turnStartTime).count();
 
-    if (board.getCommittedSideToMove() == WHITE) whiteTimeLeftMs -= elapsed;
-    else blackTimeLeftMs -= elapsed;
+    updateClocks(elapsed);
 
     isClockRunning = false;
 }
 
+void BoardManager::restartClock() {
+	setTournementTime(currentSettings.timeSettings.getTournementTimeMs(), currentSettings.timeSettings.getIncrementMs());
+}
+
 long long BoardManager::getTimeRemaining(Color player) const {
-    if (isClockRunning && board.getCommittedSideToMove() == player && gameMode == GameMode::TOURNAMENT_MODE) {
+    if (isClockRunning && board.getCommittedSideToMove() == player && currentSettings.timeSettings.gm == GameMode::TOURNAMENT_MODE) {
         auto now = std::chrono::steady_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - turnStartTime).count();
         return std::max(0LL, (player == WHITE ? whiteTimeLeftMs : blackTimeLeftMs) - elapsed);
@@ -428,6 +503,8 @@ void BoardManager::setupBotsForNormalGame(const RobotSettings& rs) {
         blackRobot->setDifficulty(rs.blackRobotDifficulty);
         setRobot(BLACK);
     }
+
+    setRobotTimeUsageMode(currentSettings.timeSettings.rtum);
 }
 
 void BoardManager::prepareImprovedBotVsOldBot() {
@@ -442,6 +519,11 @@ void BoardManager::prepareImprovedBotVsOldBot() {
         setDifficulty(BLACK, Difficulty::IMPOSSIBLE);
         setRobot(BLACK);
     }
+
+    setRobotTimeUsageMode(currentSettings.timeSettings.rtum);
+
+    VersionControl::manageBotVersion(whiteRobot->getNameToSaveInFile(), whiteRobot->getBotDirectoryPath());
+    VersionControl::manageBotVersion(blackRobot->getNameToSaveInFile(), blackRobot->getBotDirectoryPath());
 }
 
 void BoardManager::SwapRobots() {
@@ -467,6 +549,7 @@ void BoardManager::setDifficulty(Color c, Difficulty d) {
 }
 
 void BoardManager::setRobotTimeUsageMode(RobotTimeUsageMode rtum) {
+
     if (whiteRobot != nullptr) whiteRobot->setTimeUsageMode(rtum);
     if (blackRobot != nullptr) blackRobot->setTimeUsageMode(rtum);
 }
@@ -481,21 +564,12 @@ void BoardManager::updateRobotTournementTime() {
     if (blackRobot != nullptr) blackRobot->updateTournementTime(getTimeRemaining(BLACK));
 }
 
-void BoardManager::setTournementTime(long long tournementTimeMs, long long incrementMs) {
-    this->whiteTimeLeftMs = tournementTimeMs;
-    this->blackTimeLeftMs = tournementTimeMs;
-    this->incrementMs = incrementMs;
+void BoardManager::setSettings(const AllSettings& settings) {
 
-    if (whiteRobot != nullptr) whiteRobot->setTournamentTime(tournementTimeMs, incrementMs);
-    if (blackRobot != nullptr) blackRobot->setTournamentTime(tournementTimeMs, incrementMs);
+    RobotTimeUsageMode rtum;
+    currentSettings = settings;
 
-    saveRemainingTime();
-}
-
-void BoardManager::setGameMode(GameMode gm) {
-    this->gameMode = gm;
-
-    switch(gm) {
+    switch (settings.timeSettings.gm) {
     case GameMode::UNLIMITED_THINKING_TIME:
         rtum = RobotTimeUsageMode::FIXED_TIME;
         break;
@@ -509,7 +583,18 @@ void BoardManager::setGameMode(GameMode gm) {
         break;
     }
 
-    setRobotTimeUsageMode(rtum);
+	setRobotTimeUsageMode(rtum);
+}
+
+void BoardManager::setTournementTime(long long tournementTimeMs, long long incrementMs) {
+    this->whiteTimeLeftMs = tournementTimeMs;
+    this->blackTimeLeftMs = tournementTimeMs;
+    this->incrementMs = incrementMs;
+
+    if (whiteRobot != nullptr) whiteRobot->setTournamentTime(tournementTimeMs, incrementMs);
+    if (blackRobot != nullptr) blackRobot->setTournamentTime(tournementTimeMs, incrementMs);
+
+    saveRemainingTime();
 }
 
 void BoardManager::stopRobotCalculation() {
@@ -562,7 +647,7 @@ std::pair<int, int> BoardManager::getKingSquare(Color kingColor, int ply) {
 }
 
 void BoardManager::updateClocks(long long elapsedMs) {
-    if (gameMode != GameMode::TOURNAMENT_MODE) return;
+    if (currentSettings.timeSettings.gm != GameMode::TOURNAMENT_MODE) return;
 
     if (board.getSideToMove() == WHITE) {
         whiteTimeLeftMs -= elapsedMs;
@@ -578,3 +663,119 @@ void BoardManager::saveRemainingTime() {
     timeLeftAtPly.push_back(timeRemains);
 }
 
+void BoardManager::updateRobotsState() {
+    if (whiteRobot != nullptr) whiteRobot->setState(board);
+    if (blackRobot != nullptr) blackRobot->setState(board);
+};
+
+void BoardManager::startBotSimulation(int totalRounds, int threadId) {
+    const int gamesPerRound = 2;
+    isInBotSimulation = true;
+
+    if (whiteRobot == nullptr || blackRobot == nullptr) {
+        std::lock_guard<std::mutex> lock(consoleMutex);
+        prepareImprovedBotVsOldBot();
+    }
+
+    int roundsFinished = 0;
+
+    while (isInBotSimulation && roundsFinished < totalRounds) {
+        std::string openingFen = popRandomFen();
+        std::string roundSummary[2];
+		GameResult roundResults[2];
+
+        for (int gameInRound = 0; gameInRound < gamesPerRound; ++gameInRound) {
+            loadFEN(openingFen);
+            restartClock();
+
+            if (currentSettings.timeSettings.gm == GameMode::TOURNAMENT_MODE) {
+                startTurnClock();
+            }
+
+            while (!didGameEnd() && isInBotSimulation) {
+                MakeRobotMove();
+            }
+
+            stopTurnClock();
+
+            GameResult result = getGameResult();
+
+            roundSummary[gameInRound] = getGameResultString(result);
+            roundSummary[gameInRound] += ", " + std::to_string(board.getMoveHistory().size()) + " moves been made";
+			roundResults[gameInRound] = result;
+
+            {
+                std::lock_guard<std::mutex> lock(consoleMutex);
+				if (gameInRound == 0) {
+                    std::cout << std::endl;
+					if (threadId != -1) {
+                        std::cout << "[BoardManager] - [Thread " << threadId << "] ";
+                    }
+                    std::cout << "Game 1 result: ";
+                    std::cout << "Fen: " << openingFen << std::endl;
+                    std::cout << roundSummary[gameInRound] << std::endl;
+                    writeGameResult(result, board.getMoveHistroyInSAN(), board.getBeginnerFen());
+                    SwapRobots();
+                }
+            }
+        }
+
+        roundsFinished++;
+
+        if (threadId != -1) {
+            std::lock_guard<std::mutex> lock(consoleMutex);
+            std::cout << std::endl;
+            std::cout << "[BoardManager] - [Thread " << threadId << "] ROUND ";
+            if (totalRounds != 1) std::cout << roundsFinished << "/" << totalRounds << " ";
+            std::cout << "SUMMARY:" << std::endl;
+            std::cout << "  FEN: " << openingFen << std::endl;
+            std::cout << "  Game 1: " << roundSummary[0] << std::endl;
+            std::cout << "  Game 2: " << roundSummary[1] << std::endl;
+        }
+        writeGameResult(roundResults[1], board.getMoveHistroyInSAN(), board.getBeginnerFen());
+        SwapRobots();
+    }
+    isInBotSimulation = false;
+}
+
+void BoardManager::startMultiThreadedSimulation(int totalGames, int numThreads) {
+
+	int totalRounds = totalGames / 2;
+
+    std::atomic<int> roundsRemaining(totalRounds);
+    std::vector<std::thread> threads;
+
+    loadOpenings();
+
+    std::cout << "[BoardManager] Simulation started on " << numThreads << " threads." << std::endl;
+
+    auto startTime = std::chrono::steady_clock::now();
+
+    for (int i = 0; i < numThreads; ++i) {
+        threads.emplace_back([&roundsRemaining, i, this]() {
+
+            BoardManager localManager;
+
+			localManager.setSettings(this->currentSettings);
+
+            while (roundsRemaining.fetch_sub(1) > 0) {
+                localManager.startBotSimulation(1, i);
+            }
+            });
+    }
+
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    auto endTime = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+
+    std::cout << "\n[BoardManager] Simulation done: " << totalGames << " games." << std::endl;
+    std::cout << "Simulation period of time: " << duration << " second." << std::endl;
+}
+
+void BoardManager::stopBotSimulation() {
+    isInBotSimulation = false;
+    stopRobotCalculation();
+}

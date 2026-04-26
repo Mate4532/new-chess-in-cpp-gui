@@ -106,6 +106,11 @@ void ChessViewModel::currentPlayerGaveUp() {
 
 bool ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType promotionPiece) {
 
+    Move m = bm.getMove(fromX, fromY, toX, toY, promotionPiece);
+    bool isMoveValid = m.isValid();
+
+    if (!isMoveValid) return false;
+
     if (isUnderReview()) {
         reviewEnded();
         emit boardChanged();
@@ -118,18 +123,9 @@ bool ChessViewModel::movePiece(int fromX, int fromY, int toX, int toY, PieceType
     if (isRobotUnderSearch() || !isGameRunning)
         return false;
 
-    if (isBeginnerPos)
-        isBeginnerPos = false;
-
-    Move m = bm.getMove(fromX, fromY, toX, toY, promotionPiece);
-    bool isMoveValid = m.isValid();
-
-    if (isMoveValid) {
-
-        bool isMoveLegal = bm.MakeMove(m);
-        if (isMoveLegal)
-            afterMoveBeenMade();
-    }
+    bool isMoveLegal = bm.MakeMove(m);
+    if (isMoveLegal)
+        afterMoveBeenMade();
 
     return isMoveValid;
 }
@@ -142,6 +138,9 @@ void ChessViewModel::afterMoveBeenMade() {
     emit boardChanged();
 
     updatePlayerPanelAtNewPos();
+
+    if (isBeginnerPos)
+        isBeginnerPos = false;
 
     if (bm.didGameEnd())
         endGame();
@@ -170,6 +169,7 @@ void ChessViewModel::loadSettings(AllSettings& allS) {
 void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
 
     currentSettings = newS;
+    bm.setSettings(newS);
 
     RobotSettings& oldRs = oldS.robotSettings;
     RobotSettings& newRs = newS.robotSettings;
@@ -230,7 +230,6 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
             bm.setFixedTimePerMove(newRs.botSearchTimeMs);
         }
 
-        bm.setGameMode(newTs.gm);
         updatePlayerPanelsIconAndLabel();
     }
 
@@ -242,7 +241,6 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
     }
 
     if (timeConfigChanged) {
-        bm.setGameMode(newTs.gm);
 
         bool isTimerVisible = newTs.gm == GameMode::TOURNAMENT_MODE;
         if (isTimerVisible) emit setTimersVisible();
@@ -338,7 +336,6 @@ void ChessViewModel::runNextSimGame() {
         currentSimFen = QString::fromStdString(bm.getRandomOpening());
     }
 
-    loadNewGame();
     loadFEN(currentSimFen.toStdString());
     isGameRunning = true;
 
@@ -356,7 +353,10 @@ void ChessViewModel::runNextSimGame() {
 void ChessViewModel::advanceSimulation() {
     if (!isInBotSimulation || !currentSettings.robotSettings.isBotVsBot) return;
 
-    bm.writeGameResult();
+    if (currentSettings.timeSettings.gm == GameMode::TOURNAMENT_MODE) {
+        stopClock();
+    }
+
     swapRobots();
 
     simJ++;
@@ -404,9 +404,9 @@ void ChessViewModel::resetClock() {
 
     bm.setTournementTime(ts.getTournementTimeMs(), ts.getIncrementMs());
     QString timerString = formatTime(ts.getTournementTimeMs());
-    tournementModeStarted();
-    timerChanged(WHITE, timerString);
-    timerChanged(BLACK, timerString);
+    emit tournementModeStarted();
+    emit timerChanged(WHITE, timerString);
+    emit timerChanged(BLACK, timerString);
     emit disableTimers();
 }
 

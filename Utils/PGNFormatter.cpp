@@ -97,7 +97,8 @@ std::string PGNFormatter::createFullPGN(
     pgn << "[Site \"Local Simulation\"]\n";
 
     auto t = std::time(nullptr);
-    auto tm = *std::localtime(&t);
+    std::tm tm;
+    localtime_s(&tm, &t);
     pgn << "[Date \"" << std::put_time(&tm, "%Y.%m.%d") << "\"]\n";
 
     pgn << "[White \"" << VersionControl::getLatestVersionName(whiteName) << "\"]\n";

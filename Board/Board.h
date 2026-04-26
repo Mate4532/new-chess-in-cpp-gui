@@ -169,8 +169,18 @@ public:
         if (ply < 0) return false;
         return checkHistory[ply];
     }
+    inline uint64_t getBishopsQueens() const {
+        return m_bitboards[WHITE][BISHOP] | m_bitboards[BLACK][BISHOP] |
+            m_bitboards[WHITE][QUEEN] | m_bitboards[BLACK][QUEEN];
+    }
+
+    inline uint64_t getRooksQueens() const {
+        return m_bitboards[WHITE][ROOK] | m_bitboards[BLACK][ROOK] |
+            m_bitboards[WHITE][QUEEN] | m_bitboards[BLACK][QUEEN];
+    }
 
     bool HasNonPawnMaterial(Color color) const;
+    bool hasPromotingPawn() const;
     uint64_t getAttacksTo(Square sq, uint64_t occupied) const;
     Square getSmallestAttacker(uint64_t attackers, Color side, PieceType& attackerType) const;
     uint64_t getNewXRayAttacks(Square to, uint64_t occupied) const;

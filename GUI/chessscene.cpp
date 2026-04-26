@@ -476,7 +476,7 @@ void ChessScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
             activeItem->setPos(activeItemOriginalPos);
             activeItem->setZValue(10);
             activeItem = nullptr;
-            currentLegalMoves.clear(); // Takarítás jobb klikknél is
+            currentLegalMoves.clear();
             updateLayout();
         }
         event->accept();

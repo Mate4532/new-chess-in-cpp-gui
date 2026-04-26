@@ -2,6 +2,14 @@
 #include <cstdint>
 #include <string>
 
+//#define DEBUG_MODE
+
+#ifdef DEBUG_MODE
+    #define LOG_DEBUG(x) std::cout << "DEBUG: " << x << std::endl
+#else
+    #define LOG_DEBUG(x)
+#endif
+
 #define MAX_PLY 2048
 
 const std::string newPosFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";

@@ -58,3 +58,24 @@ Move UCIParsing::Parse(const std::string& uci, const Board& board) {
 
     return Move(from_sq, to_sq, moving_piece, flag);
 }
+
+std::string UCIParsing::MoveToUCI(const Move& m) {
+    std::string uci = "";
+
+    uci += square_to_coordinates[m.getFrom()];
+    uci += square_to_coordinates[m.getTo()];
+
+    // Előléptetés kezelése
+    if (m.getFlags() & PROMOTION_FLAG) {
+        uint8_t promoType = m.getFlags() & 0b0011;
+
+        switch (promoType) {
+        case 0b0000: uci += 'n'; break;
+        case 0b0001: uci += 'b'; break;
+        case 0b0010: uci += 'r'; break;
+        case 0b0011: uci += 'q'; break;
+        }
+    }
+
+    return uci;
+}

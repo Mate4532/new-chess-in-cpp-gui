@@ -392,6 +392,15 @@ if (getPieceBitboard(color, KNIGHT)) return true;
     return false;
 }
 
+bool Board::hasPromotingPawn() const {
+    if (m_side_to_move == WHITE) {
+        return (m_bitboards[WHITE][PAWN] & RANK_7) != 0;
+    }
+    else {
+        return (m_bitboards[BLACK][PAWN] & RANK_2) != 0;
+    }
+}
+
 uint64_t Board::getAttacksTo(Square sq, uint64_t occupied) const {
     return (getPawnAttacks(sq, BLACK) & getPieceBitboard(WHITE, PAWN)) |
         (getPawnAttacks(sq, WHITE) & getPieceBitboard(BLACK, PAWN)) |
@@ -836,19 +845,19 @@ void Board::PrintBoard(bool is_white_player, bool is_black_player) const {
 
     if (isDebugMode) {
 
-        std::cout << "Jatekban levo szin: " << ((m_side_to_move == WHITE) ? "Feher" : "Fekete") << std::endl;
-        std::cout << "Feher parasztok szama: " << (int)piece_count[WHITE][PAWN] << std::endl;
-        std::cout << "Feher batyak szama: " << (int)piece_count[WHITE][ROOK] << std::endl;
-        std::cout << "Feher lovak szama: " << (int)piece_count[WHITE][KNIGHT] << std::endl;
-        std::cout << "Feher futok szama: " << (int)piece_count[WHITE][BISHOP] << std::endl;
-        std::cout << "Feher kiralynok szama: " << (int)piece_count[WHITE][QUEEN] << std::endl;
-        std::cout << "Feher kiraly szama: " << (int)piece_count[WHITE][KING] << std::endl;
-        std::cout << "Fekete parasztok szama: " << (int)piece_count[BLACK][PAWN] << std::endl;
-        std::cout << "Fekete batyak szama: " << (int)piece_count[BLACK][ROOK] << std::endl;
-        std::cout << "Fekete lovak szama: " << (int)piece_count[BLACK][KNIGHT] << std::endl;
-        std::cout << "Fekete futok szama: " << (int)piece_count[BLACK][BISHOP] << std::endl;
-        std::cout << "Fekete kiralynok szama: " << (int)piece_count[BLACK][QUEEN] << std::endl;
-        std::cout << "Fekete kiraly szama: " << (int)piece_count[BLACK][KING] << std::endl << std::endl;
+        std::cout << "Side to move: " << ((m_side_to_move == WHITE) ? "White" : "Black") << std::endl;
+        std::cout << "White pawns count: " << (int)piece_count[WHITE][PAWN] << std::endl;
+        std::cout << "White rooks count: " << (int)piece_count[WHITE][ROOK] << std::endl;
+        std::cout << "White knights count: " << (int)piece_count[WHITE][KNIGHT] << std::endl;
+        std::cout << "White bishops count: " << (int)piece_count[WHITE][BISHOP] << std::endl;
+        std::cout << "White queens count: " << (int)piece_count[WHITE][QUEEN] << std::endl;
+        std::cout << "White king count: " << (int)piece_count[WHITE][KING] << std::endl;
+        std::cout << "Black pawns count: " << (int)piece_count[BLACK][PAWN] << std::endl;
+        std::cout << "Black rooks count: " << (int)piece_count[BLACK][ROOK] << std::endl;
+        std::cout << "Black knights count: " << (int)piece_count[BLACK][KNIGHT] << std::endl;
+        std::cout << "Black bishops count: " << (int)piece_count[BLACK][BISHOP] << std::endl;
+        std::cout << "Black queens count: " << (int)piece_count[BLACK][QUEEN] << std::endl;
+        std::cout << "Black king count: " << (int)piece_count[BLACK][KING] << std::endl << std::endl;
 
     }
 }

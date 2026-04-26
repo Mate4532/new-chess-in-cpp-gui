@@ -25,8 +25,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Widgets Concurrent)
 
 set(PROJECT_SOURCES
-        main.cpp
-	mainwindow.ui
+    main.cpp
+    mainwindow.ui
+    resources/app_resources.rc
 )
 
 if(Qt6_FOUND)
@@ -40,10 +41,11 @@ if(Qt6_FOUND)
         GUI/boardAndPlayerPanel.cpp
         GUI/playerpanel.h GUI/playerpanel.cpp
         GUI/playerinfo.h GUI/playerinfo.cpp
-        bots/improvedSearcher/Evaluation.cpp bots/improvedSearcher/Evaluation.h bots/improvedSearcher/LMR.cpp bots/improvedSearcher/LMR.h bots/improvedSearcher/MoveOrdering.cpp bots/improvedSearcher/MoveOrdering.h bots/improvedSearcher/PrecomputedEvaluationData.cpp bots/improvedSearcher/PrecomputedEvaluationData.h bots/improvedSearcher/Searcher.cpp bots/improvedSearcher/Searcher.h bots/improvedSearcher/SearcherSettings.h bots/improvedSearcher/TranspositionTable.cpp bots/improvedSearcher/TranspositionTable.h bots/improvedSearcher/WorseEvaluation.cpp bots/improvedSearcher/WorseEvaluation.h bots/oldsearcher/OldEvaluation.cpp bots/oldsearcher/OldEvaluation.h bots/oldsearcher/OldLMR.cpp bots/oldsearcher/OldLMR.h bots/oldsearcher/OldMoveOrdering.cpp bots/oldsearcher/OldMoveOrdering.h bots/oldsearcher/OldPrecomputedEvaluationData.cpp bots/oldsearcher/OldPrecomputedEvaluationData.h bots/oldsearcher/oldsearcher.cpp bots/oldsearcher/oldsearcher.h bots/oldsearcher/OldTranspositionTable.cpp bots/oldsearcher/OldTranspositionTable.h
+        bots/improvedSearcher/Evaluation.cpp bots/improvedSearcher/Evaluation.h bots/improvedSearcher/LMR.cpp bots/improvedSearcher/LMR.h bots/improvedSearcher/MoveOrdering.cpp bots/improvedSearcher/MoveOrdering.h bots/improvedSearcher/Searcher.cpp bots/improvedSearcher/Searcher.h bots/improvedSearcher/SearcherSettings.h bots/improvedSearcher/TranspositionTable.cpp bots/improvedSearcher/TranspositionTable.h bots/improvedSearcher/WorseEvaluation.cpp bots/improvedSearcher/WorseEvaluation.h bots/oldsearcher/OldEvaluation.cpp bots/oldsearcher/OldEvaluation.h bots/oldsearcher/OldLMR.cpp bots/oldsearcher/OldLMR.h bots/oldsearcher/OldMoveOrdering.cpp bots/oldsearcher/OldMoveOrdering.h bots/oldsearcher/oldsearcher.cpp bots/oldsearcher/oldsearcher.h bots/oldsearcher/OldTranspositionTable.cpp bots/oldsearcher/OldTranspositionTable.h
         Utils/picosha2.h
         Utils/versioncontrol.h Utils/versioncontrol.cpp
         Utils/PGNFormatter.h Utils/PGNFormatter.cpp
+        bots/oldSearcher/OldWorseEvaluation.h bots/oldSearcher/OldWorseEvaluation.cpp
     )
 endif()
 
@@ -64,6 +66,7 @@ target_include_directories(new-chess-in-cpp-gui PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/GUI
     ${CMAKE_CURRENT_SOURCE_DIR}/Board
     ${CMAKE_CURRENT_SOURCE_DIR}/Utils
+    ${CMAKE_CURRENT_SOURCE_DIR}/nnue-probe-master/src
 )
 
 include(GNUInstallDirs)

@@ -7,6 +7,7 @@
 #include "Settings.h"
 #include "ISearcher.h"
 #include "ResultManager.h"
+#include <mutex>
 
 class SettingsDialog;
 
@@ -23,14 +24,20 @@ private:
     long long blackTimeLeftMs = 0;
     long long incrementMs = 0;
     std::vector<std::pair<long long, long long>> timeLeftAtPly;
-    GameMode gameMode = GameMode::UNLIMITED_THINKING_TIME;
-    RobotTimeUsageMode rtum = RobotTimeUsageMode::FIXED_TIME;
 
     std::chrono::steady_clock::time_point turnStartTime;
     bool isClockRunning = false;
 
     void setRobotTimeUsageMode(RobotTimeUsageMode rtum);
     void saveRemainingTime();
+    void updateRobotsState();
+
+    bool isInBotSimulation = false;
+    std::string currentSimFen;
+
+    AllSettings currentSettings;
+
+    static inline std::mutex consoleMutex;
 
 public:
     const std::string OPENING_PATH = "assets/openings.txt";
@@ -41,9 +48,11 @@ public:
 
 	void goPerft(int perftDepth);
     void resetForNewGame();
+    void loadOpenings();
     void loadBeginnerFEN();
     void loadFEN(std::string FEN);
     std::string getRandomOpening();
+    std::string popRandomFen();
     Move getBestMoveOnBoard() { return board.getSideToMove() == WHITE ? whiteRobot->GetRobotMove() : blackRobot->GetRobotMove(); }
     Move MakeRobotMove();
     void printBestMove();
@@ -51,14 +60,16 @@ public:
     Move getMove(int fromX, int fromY, int toX, int toY, PieceType promotionPiece);
     bool MakeMove(Move m);
     void undoMove(int plyToUndo);
-    bool didGameEnd();
     GameResult getGameResult();
-    std::string getGameResultString(Color winnerColor, bool isWinnerRobot, GameResult gameResult);
-    void writeGameResult();
+    bool didGameEnd();
+    std::string getGameResultString(GameResult gameResult);
+    void writeGameResult(GameResult gameResult, std::vector<std::string> moveList, std::string beginnerFen);
     void startGameLoop();
+    void runUCIService();
 
     void startTurnClock();
     void stopTurnClock();
+    void restartClock();
     long long getTimeRemaining(Color player) const;
 
     void setPlayer(Color c);
@@ -71,7 +82,7 @@ public:
     void setFixedTimePerMove(long long timePerMoveMs);
     void setTournementTime(long long tournementTimeMs, long long incrementMs = 0);
     void updateRobotTournementTime();
-    void setGameMode(GameMode gm);
+    void setSettings(const AllSettings& settings);
     void stopRobotCalculation();
     std::vector<std::pair<int, int>> getLegalMovesForPiece(int file, int rank);
     std::pair<int, int> getKingSquare(Color kingColor, int ply = -1);
@@ -105,5 +116,9 @@ public:
             return player == WHITE ? whiteTimeLeftMs : blackTimeLeftMs;
         return player == WHITE ? timeLeftAtPly[ply].first : timeLeftAtPly[ply].second;
     }
+
+    void startBotSimulation(int numGames, int threadId = -1);
+    void startMultiThreadedSimulation(int totalGames, int numThreads);
+    void stopBotSimulation();
 
 };

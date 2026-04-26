@@ -10,6 +10,7 @@ enum SearcherType {
 
 class ISearcher {
 public:
+	virtual void setState(const Board& board) = 0;
     virtual void ClearSearcher() = 0;
     virtual Move GetRobotMove() = 0;
     virtual void setDifficulty(const Difficulty& d) = 0;
