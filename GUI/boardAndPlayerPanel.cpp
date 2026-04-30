@@ -23,7 +23,7 @@ BoardAndPlayerPanel::BoardAndPlayerPanel(PlayerPanel* whitePlayer, PlayerPanel* 
     this->setStyleSheet(R"(
         QWidget#BoardPanel {
             background-color: rgb(49, 46, 43);
-            border-radius: 8px;
+            border-radius: 10px;
         }
     )");
 
