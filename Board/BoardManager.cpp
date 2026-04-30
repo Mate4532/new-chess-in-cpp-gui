@@ -91,6 +91,9 @@ void BoardManager::printBestMove() {
 bool BoardManager::isMovePromotion(int fromX, int fromY, int toX, int toY) {
     Square fromSq = (Square)(fromY * 8 + fromX);
 
+    PieceType p = board.getPieceAt(fromSq, board.getSideToMove());
+    if (p != PAWN) return false;
+
     Move m = getMove(fromX, fromY, toX, toY, QUEEN);
     if (isRobotToMove() || !m.isValid()) return false;
 
