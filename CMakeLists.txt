@@ -46,6 +46,7 @@ if(Qt6_FOUND)
         Utils/versioncontrol.h Utils/versioncontrol.cpp
         Utils/PGNFormatter.h Utils/PGNFormatter.cpp
         bots/oldSearcher/OldWorseEvaluation.h bots/oldSearcher/OldWorseEvaluation.cpp
+        Board/BotFactory.cpp Board/BotFactory.h
     )
 endif()
 

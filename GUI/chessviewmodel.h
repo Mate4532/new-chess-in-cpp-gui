@@ -74,8 +74,8 @@ signals:
     void reviewEndedRequest(int currentPly);
     void tournementModeStarted();
     void timerChanged(Color playerColor, QString timerStr);
-    void activateTimerColorAndDisableOther(Color timerColor);
-    void setTimersVisible();
+    void activateTimers(bool isWhiteTimerActive, bool isBlackTimerActive);
+    void setTimersVisibility(bool visibility);
     void disableTimers();
 
 private:
@@ -104,6 +104,7 @@ private:
     void updatePlayerPanelsIconAndLabel();
     void updatePlayerPanelAtNewPos();
     void updatePlayerPanelAtReview();
+    void updatePlayerTimers();
     QString formatTime(qint64 remainingMs) const;
 
     QThread* robotThread = nullptr;

@@ -20,8 +20,8 @@ public slots:
     void playerPanelChanged(QString playerName, QString playerIconPath, Color playerColor);
     void syncPiecesWithPanels(int pieces[2][6]);
     void onTimerChanged(Color c, QString timerStr);
-    void onActivateTimerColorAndDisableOther(Color timerToActivate);
-    void onSetTimersVisible();
+    void onActivateTimers(bool isWhiteTimerActive, bool isBlackTimerActive);
+    void onSetTimersVisibility(bool visibility);
     void onDisableTimers();
     void clearPanels();
 

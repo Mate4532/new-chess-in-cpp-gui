@@ -29,14 +29,6 @@ BoardManager::BoardManager() : board(), resultManager() {
     });
 }
 
-std::unique_ptr<ISearcher> BoardManager::createBot(SearcherType st) {
-    switch (st) {
-    case SearcherType::OLD_SEARCHER: return std::make_unique<OSearcher>();
-    case SearcherType::IMRPOVED_SEARCHER: return std::make_unique<ImpSearcher>();
-    default: return std::make_unique<ImpSearcher>();
-    }
-}
-
 void BoardManager::goPerft(int perftDepth) {
 
     std::cout << "Perft(" << perftDepth << ") inditasa..." << std::endl;
@@ -99,8 +91,8 @@ void BoardManager::printBestMove() {
 bool BoardManager::isMovePromotion(int fromX, int fromY, int toX, int toY) {
     Square fromSq = (Square)(fromY * 8 + fromX);
 
-    PieceType p = board.getPieceAt(fromSq, board.getSideToMove());
-    if (p != PAWN) return false;
+    Move m = getMove(fromX, fromY, toX, toY, QUEEN);
+    if (isRobotToMove() || !m.isValid()) return false;
 
     int targetRank = toY;
     return (targetRank == 0 || targetRank == 7);
@@ -493,13 +485,13 @@ void BoardManager::ClearSearchers() {
 void BoardManager::setupBotsForNormalGame(const RobotSettings& rs) {
 
     if (rs.isWhiteRobot && (whiteRobot == nullptr || dynamic_cast<ImpSearcher*>(whiteRobot.get()) == nullptr)) {
-        whiteRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+        whiteRobot = BotFactory::createBot(SearcherType::IMPROVED_SEARCHER, currentSettings.robotSettings);
         whiteRobot->setDifficulty(rs.whiteRobotDifficulty);
         setRobot(WHITE);
     }
 
     if (rs.isBlackRobot && (blackRobot == nullptr || dynamic_cast<ImpSearcher*>(blackRobot.get()) == nullptr)) {
-        blackRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+        blackRobot = BotFactory::createBot(SearcherType::IMPROVED_SEARCHER, currentSettings.robotSettings);
         blackRobot->setDifficulty(rs.blackRobotDifficulty);
         setRobot(BLACK);
     }
@@ -509,13 +501,13 @@ void BoardManager::setupBotsForNormalGame(const RobotSettings& rs) {
 
 void BoardManager::prepareImprovedBotVsOldBot() {
     if (whiteRobot == nullptr || dynamic_cast<ImpSearcher*>(whiteRobot.get()) == nullptr) {
-        whiteRobot = createBot(SearcherType::IMRPOVED_SEARCHER);
+        whiteRobot = BotFactory::createBot(SearcherType::IMPROVED_SEARCHER, currentSettings.robotSettings);
         setDifficulty(WHITE, Difficulty::IMPOSSIBLE);
         setRobot(WHITE);
     }
 
     if (blackRobot == nullptr || dynamic_cast<OSearcher*>(blackRobot.get()) == nullptr) {
-        blackRobot = createBot(SearcherType::OLD_SEARCHER);
+        blackRobot = BotFactory::createBot(SearcherType::OLD_SEARCHER, currentSettings.robotSettings);
         setDifficulty(BLACK, Difficulty::IMPOSSIBLE);
         setRobot(BLACK);
     }

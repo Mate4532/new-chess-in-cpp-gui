@@ -137,6 +137,9 @@ public:
     inline std::vector<uint64_t> getRepetitionHash() const {
         return repetition_history.getHashes();
 	}
+    inline const RepetitionTable& getRepetitionTable() const {
+        return repetition_history;
+    }
     inline uint16_t getPly() const {
         return committedPly;
     }

@@ -4,10 +4,10 @@
 
 namespace OldEvaluation {
 
-class Evaluation {
-public:
-    static int GetPieceValue(PieceType p);
-    static int GetNnuePieceNum(PieceType p, Color c);
-    static int EvaluatePos(const Board& board, int ply, NNUEdata* nnue_state);
-};
+    class Evaluation {
+    public:
+        static int GetPieceValue(PieceType p);
+        static int GetNnuePieceNum(PieceType p, Color c);
+        static int EvaluatePos(const Board& board, int ply, NNUEdata* nnue_state);
+    };
 }

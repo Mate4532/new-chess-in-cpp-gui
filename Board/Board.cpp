@@ -1,6 +1,9 @@
 #include "Board.h"
 #include "Zobrist.h"
 #include "PGNFormatter.h"
+#include <mutex>
+
+static std::once_flag init_flag;
 
 uint64_t Board::pawn_attacks_table[2][64];
 uint64_t Board::knight_attacks_table[64];
@@ -24,9 +27,11 @@ Board::Board() {
 }
 
 void Board::InitializeBoard() {
-    Zobrist::Init();
-    InitializeAttackTables();
-    InitializeMagicTables();
+    std::call_once(init_flag, [this]() {
+        Zobrist::Init();
+        InitializeAttackTables();
+        InitializeMagicTables();
+        });
 
     LoadFEN(newPosFen);
 }
@@ -648,13 +653,13 @@ bool Board::MakeMove(Move move, bool in_search) {
     m_side_to_move = enemy;
 
     bool reset = (piece == PAWN) || (flags & CAPTURE_FLAG);
+    repetition_history.Push(newHash, reset);
 
     if (!in_search) {
         Square enemyKingSq = getKingSquare(enemy);
         bool gaveCheck = isSquareAttacked(enemyKingSq, player);
 
         committedPly++;
-        repetition_history.Push(newHash, reset);
         move_history.push_back(move);
         pieceHistory.push_back(getBoardMatrix());
         checkHistory.push_back(gaveCheck);
@@ -732,9 +737,10 @@ void Board::UndoMove(Move move, bool in_search) {
         }
     }
 
+    repetition_history.TryPop();
+
     if (!in_search) {
         committedPly--;
-        repetition_history.TryPop();
         move_history.pop_back();
         pieceHistory.pop_back();
         checkHistory.pop_back();

@@ -377,13 +377,17 @@ void ChessScene::renderBoard()
 
     drawMovedPieceBackground();
     drawCheckHighlight();
-    drawLegalMoveDots();
-    drawPieces();
 
     if (cvm->isBoardUnderPromoption()) {
+        highlightSquare(promotionSquareFrom.first, promotionSquareFrom.second, baseHighlightColor);
         highlightPromotionSquares();
         drawPromotionPieces();
+    } else {
+        drawLegalMoveDots();
     }
+
+    drawPieces();
+    highlightSelectedPiece();
 }
 
 void ChessScene::refreshHoverEffect()
@@ -421,14 +425,24 @@ void ChessScene::onBoardChanged() {
 
 void ChessScene::onPromotionEnded() {
     cvm->setIsBoardUnderPromotion(false);
+    currentLegalMoves.clear();
+    activeItem = nullptr;
     updateLayout();
 }
 
 void ChessScene::handlePromotion(int fromX, int fromY, int toX, int toY) {
-
     cvm->setIsBoardUnderPromotion(true);
     promotionSquareFrom = std::pair<int, int>(fromX, fromY);
     promotionSquareTo = std::pair<int, int>(toX, toY);
+
+    currentLegalMoves.clear();
+
+    if (activeItem) {
+        activeItem->setPos(activeItemOriginalPos);
+        activeItem->setZValue(10);
+        activeItem = nullptr;
+    }
+
     updateLayout();
 }
 
@@ -511,17 +525,21 @@ void ChessScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
             if (fromFile == clickedFile && fromRank == clickedLogicalRank) {
                 isReclickingActiveItem = true;
                 wasPieceDragged = false;
-
                 activeItem->setPos(event->scenePos() - activeItem->boundingRect().center());
                 activeItem->setZValue(100);
                 event->accept();
                 return;
             }
 
-            if (fromFile != clickedFile || fromRank != clickedLogicalRank) {
-                cvm->movePiece(fromFile, fromRank, clickedFile, clickedLogicalRank);
-                if (!activeItem) {
+            if (cvm->isMovePromotion(fromFile, fromRank, clickedFile, clickedLogicalRank)) {
+                handlePromotion(fromFile, fromRank, clickedFile, clickedLogicalRank);
+                event->accept();
+                return;
+            } else {
+                bool moveExecuted = cvm->movePiece(fromFile, fromRank, clickedFile, clickedLogicalRank);
+                if (moveExecuted || activeItem == nullptr) {
                     currentLegalMoves.clear();
+                    event->accept();
                     return;
                 }
             }
@@ -550,9 +568,7 @@ void ChessScene::mousePressEvent(QGraphicsSceneMouseEvent* event)
             activeItemOriginalPos = getSquareRect(clickedFile, clickedLogicalRank, true).topLeft();
             activeItem->setZValue(100);
             activeItem->setPos(event->scenePos() - activeItem->boundingRect().center());
-
             currentLegalMoves = cvm->getLegalMovesForPiece(clickedFile, clickedLogicalRank);
-
             updateLayout();
         } else {
             if (activeItem) {
@@ -595,7 +611,11 @@ void ChessScene::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
             int toFile, visualRank;
             if (scenePosToSquare(event->scenePos(), toFile, visualRank)) {
                 int toLogicalRank = 7 - visualRank;
-                cvm->movePiece(fromFile, fromRank, toFile, toLogicalRank);
+                if (cvm->isMovePromotion(fromFile, fromRank, toFile, toLogicalRank)) {
+                    handlePromotion(fromFile, fromRank, toFile, toLogicalRank);
+                } else {
+                    cvm->movePiece(fromFile, fromRank, toFile, toLogicalRank);
+                }
             }
 
             if (activeItem) {

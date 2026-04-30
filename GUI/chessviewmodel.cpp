@@ -184,17 +184,15 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
 
     bool botVsBotChanged = newRs.isBotVsBot != oldRs.isBotVsBot;
     bool botSearchTimeChanged = newRs.botSearchTimeMs != oldRs.botSearchTimeMs;
-    bool whiteRobotChanged = newRs.isWhiteRobot != oldRs.isWhiteRobot;
-    bool blackRobotChanged = newRs.isBlackRobot != oldRs.isBlackRobot;
-    bool whiteRobotDiffChanged = newRs.whiteRobotDifficulty != oldRs.whiteRobotDifficulty;
-    bool blackRobotDiffChanged = newRs.blackRobotDifficulty != oldRs.blackRobotDifficulty;
+    bool whiteRobotChanged = newRs.isWhiteRobot != oldRs.isWhiteRobot || newRs.whiteRobotDifficulty != oldRs.whiteRobotDifficulty;
+    bool blackRobotChanged = newRs.isBlackRobot != oldRs.isBlackRobot || newRs.blackRobotDifficulty != oldRs.blackRobotDifficulty;
 
     bool botVsBotGotTurnedOn = newRs.isBotVsBot && !oldRs.isBotVsBot;
     bool botVsBotGotTurnedOff = !newRs.isBotVsBot && oldRs.isBotVsBot;
 
     bool FENChanged = newBs.beginnerPosFEN != oldBs.beginnerPosFEN;
 
-    bool mustStartNewGame = botVsBotChanged || whiteRobotChanged || blackRobotChanged || FENChanged || timeConfigChanged || whiteRobotDiffChanged || blackRobotDiffChanged;
+    bool mustStartNewGame = botVsBotChanged || whiteRobotChanged || blackRobotChanged || FENChanged || timeConfigChanged;
 
     if (mustStartNewGame) {
         endGame();
@@ -213,17 +211,14 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
             bm.prepareImprovedBotVsOldBot();
         }
 
-        else if (whiteRobotChanged || blackRobotChanged || botVsBotGotTurnedOff) {
+        if (whiteRobotChanged || blackRobotChanged || botVsBotGotTurnedOff) {
 
             if (!isWhiteRobot) bm.setPlayer(WHITE);
+            else bm.setRobot(WHITE);
             if (!isBlackRobot) bm.setPlayer(BLACK);
+            else bm.setRobot(BLACK);
 
             bm.setupBotsForNormalGame(currentSettings.robotSettings);
-        }
-
-        else if (whiteRobotDiffChanged || blackRobotDiffChanged) {
-            if (whiteRobotDiffChanged) bm.setDifficulty(WHITE, newRs.whiteRobotDifficulty);
-            else bm.setDifficulty(BLACK, newRs.blackRobotDifficulty);
         }
 
         if (botSearchTimeChanged) {
@@ -243,8 +238,7 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
     if (timeConfigChanged) {
 
         bool isTimerVisible = newTs.gm == GameMode::TOURNAMENT_MODE;
-        if (isTimerVisible) emit setTimersVisible();
-        else emit disableTimers();
+        emit setTimersVisibility(isTimerVisible);
 
         if (newTs.gm == GameMode::TOURNAMENT_MODE)
             currentMsBeforeRobotMove = minMsBeforeRobotMove;
@@ -391,7 +385,7 @@ void ChessViewModel::handleClockTick() {
 void ChessViewModel::startClock() {
     clockTimer->start(clockPullTimeMs);
     bm.startTurnClock();
-    emit activateTimerColorAndDisableOther(bm.getSideToMove());
+    updatePlayerTimers();
 }
 
 void ChessViewModel::stopClock() {
@@ -431,16 +425,21 @@ void ChessViewModel::updatePlayerPanelAtNewPos() {
     int allPieces[2][6];
     bm.getPieceCounts(allPieces);
     emit syncPiecesWithPanelsRequest(allPieces);
-    emit activateTimerColorAndDisableOther(bm.getSideToMove());
+    updatePlayerTimers();
 }
 
 void ChessViewModel::updatePlayerPanelAtReview() {
     int allPieces[2][6];
     bm.getPieceCounts(allPieces, reviewingPly);
+    updatePlayerTimers();
     emit syncPiecesWithPanelsRequest(allPieces);
-    emit activateTimerColorAndDisableOther(bm.getSideToMove(reviewingPly));
     emit timerChanged(WHITE, formatTime(bm.getTimeLeft(WHITE, reviewingPly)));
     emit timerChanged(BLACK, formatTime(bm.getTimeLeft(BLACK, reviewingPly)));
+}
+
+void ChessViewModel::updatePlayerTimers() {
+    bool isWhiteToMove = bm.getSideToMove() == WHITE;
+    emit activateTimers(isWhiteToMove, !isWhiteToMove);
 }
 
 QString ChessViewModel::formatTime(qint64 remainingMs) const {

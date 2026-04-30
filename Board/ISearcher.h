@@ -3,11 +3,6 @@
 
 #include "Board.h"
 
-enum SearcherType {
-    OLD_SEARCHER, IMRPOVED_SEARCHER
-};
-
-
 class ISearcher {
 public:
 	virtual void setState(const Board& board) = 0;

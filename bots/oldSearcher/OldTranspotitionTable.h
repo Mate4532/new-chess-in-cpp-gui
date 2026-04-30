@@ -1,27 +1,11 @@
 #pragma once
-
 #include <vector>
 #include <cstdint>
+#include <cmath>
 #include <xmmintrin.h>
 #include "Move.h"
-#include <mutex>
-#include <atomic>
 
-namespace ImprovedTT {
-
-    class SpinLock {
-        std::atomic_flag locked = ATOMIC_FLAG_INIT;
-    public:
-        void lock() {
-            while (locked.test_and_set(std::memory_order_acquire)) {
-                _mm_pause();
-            }
-        }
-
-        void unlock() {
-            locked.clear(std::memory_order_release);
-        }
-    };
+namespace OldTT {
 
     enum TTFlag : uint8_t { TT_NONE, TT_EXACT, TT_ALPHA, TT_BETA };
 
@@ -62,9 +46,6 @@ namespace ImprovedTT {
 
         int ScoreToTT(int score, int ply);
         int ScoreFromTT(int score, int ply);
-
-        static constexpr size_t NUM_LOCKS = 4096;
-        SpinLock ttLocks[NUM_LOCKS];
     };
 
 }

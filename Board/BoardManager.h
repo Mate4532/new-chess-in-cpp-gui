@@ -5,7 +5,7 @@
 #include "oldsearcher.h"
 #include "memory"
 #include "Settings.h"
-#include "ISearcher.h"
+#include "BotFactory.h"
 #include "ResultManager.h"
 #include <mutex>
 
@@ -44,8 +44,6 @@ public:
 
     BoardManager();
 
-    std::unique_ptr<ISearcher> createBot(SearcherType st);
-
 	void goPerft(int perftDepth);
     void resetForNewGame();
     void loadOpenings();
@@ -57,7 +55,7 @@ public:
     Move MakeRobotMove();
     void printBestMove();
     bool isMovePromotion(int fromX, int fromY, int toX, int toY);
-    Move getMove(int fromX, int fromY, int toX, int toY, PieceType promotionPiece);
+    Move getMove(int fromX, int fromY, int toX, int toY, PieceType promotionPiece = PIECE_NONE);
     bool MakeMove(Move m);
     void undoMove(int plyToUndo);
     GameResult getGameResult();

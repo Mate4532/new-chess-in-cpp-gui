@@ -1,5 +1,4 @@
 #include "OldEvaluation.h"
-#include "nnue.h"
 
 using namespace OldEvaluation;
 
@@ -17,7 +16,7 @@ int Evaluation::GetPieceValue(PieceType p) {
 
 int Evaluation::GetNnuePieceNum(PieceType p, Color c) {
 
-    switch(p){
+    switch (p) {
 
     case KING:
         return (c == WHITE ? 1 : 7);
