@@ -114,7 +114,9 @@ static inline int ScoreMove(
 
         int mvv_lva = v * 16 - a;
 
-        return 5'000'000 + mvv_lva;
+        if (v >= a) return 5'000'000 + mvv_lva;
+        else if (MoveOrdering::See(board, m) >= 0) return 5'000'000 + mvv_lva;
+        else return -1'000'000;
     }
 
     if (moveFlag & PROMOTION_FLAG) {

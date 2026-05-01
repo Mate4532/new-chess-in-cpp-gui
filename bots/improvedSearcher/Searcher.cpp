@@ -45,7 +45,6 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
     if (shouldStop()) stop = true;
     if (isStopped()) return alpha;
 
-    int originalAlpha = alpha;
     uint64_t hash = board.getHash();
     if (ply > 0) {
         if (board.getHalfMoveClock() >= 100 || board.getRepetitionTable().Contains(hash) || board.IsInsufficientMaterial()) {
@@ -56,9 +55,25 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         if (alpha >= beta) return alpha;
     }
 
+    int originalAlpha = alpha;
     if (ply >= MAXIMUM_DEPTH - 1) return Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
 
     bool inCheck = board.isSquareAttacked(board.getKingSquare(board.getSideToMove()), (Color)(board.getSideToMove() ^ 1));
+
+    if (inCheck && ply >= 30) {
+        return currentSettings.worseEvaluationEnabled
+                   ? WorseEvaluation::Evaluation::EvaluatePos(board)
+                   : Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
+    }
+
+    int ttScore;
+    Move ttMove;
+
+    bool foundInTT = tt->Probe(hash, ply, 0, alpha, beta, ttScore, ttMove);
+
+    if (foundInTT && ply > 0) {
+        return ttScore;
+    }
 
     if (!inCheck) {
         int standPat = currentSettings.worseEvaluationEnabled
@@ -81,7 +96,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
 
     Move dummyKillers[2] = { Move(), Move() };
     int scores[MoveOrdering::SCORE_SIZE];
-    MoveOrdering::ScoreMoves(board, moves, Move(), historyMoves, dummyKillers, scores);
+    MoveOrdering::ScoreMoves(board, moves, ttMove, historyMoves, dummyKillers, scores);
 
     int n = moves.count;
     int movesSearched = 0;
@@ -240,9 +255,6 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
     if (isStopped()) return alpha;
 
     if (ply >= MAXIMUM_DEPTH - 1) return Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
-
-    bool isPvNode = (beta - alpha > 1);
-    int originalAlpha = alpha;
     uint64_t hash = board.getHash();
     if (ply > 0) {
         if (board.getHalfMoveClock() >= 100 || board.getRepetitionTable().Contains(hash) || board.IsInsufficientMaterial()) {
@@ -252,6 +264,9 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
         beta = std::min(beta, MATE_SCORE - ply);
         if (alpha >= beta) return alpha;
     }
+
+    bool isPvNode = (beta - alpha > 1);
+    int originalAlpha = alpha;
 
     int ttScore;
     Move ttMove;
@@ -272,11 +287,17 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
     }
 
     MoveList moves;
-    MoveGenerator::GenerateMoves(board, moves);
+    if (ply == 0) {
+        for (const RootMove& rm : rootMoves) {
+            moves.push_back(rm.m);
+        }
+    } else {
+        MoveGenerator::GenerateMoves(board, moves);
+    }
 
     bool inCheck = board.isSquareAttacked(board.getKingSquare(board.getSideToMove()), (Color)(board.getSideToMove() ^ 1));
 
-    if (inCheck) {
+    if (inCheck && ply < depth + 4) {
         depth++;
     }
 
@@ -344,7 +365,13 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
     }
 
     int scores[MoveOrdering::SCORE_SIZE];
-    MoveOrdering::ScoreMoves(board, moves, ttMove, historyMoves, currentKillers, scores);
+    if (ply == 0) {
+        for (int i = 0; i < moves.count; i++) {
+            scores[i] = 1000000 - i;
+        }
+    } else {
+        MoveOrdering::ScoreMoves(board, moves, ttMove, historyMoves, currentKillers, scores);
+    }
 
     Move bestMoveThisNode;
     int n = moves.count;
@@ -501,7 +528,6 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
                 if (!givesCheck && !isKiller) {
                     reduction = LMR::LMR::GetReduction(depth, movesSearched);
-                    reduction = std::clamp(reduction, 0, depth - 2);
 
                     if (!improving) {
                         reduction += 1;
@@ -519,6 +545,8 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
                     else if (histScore < 100) {
                         reduction += 1;
                     }
+
+                    reduction = std::clamp(reduction, 0, depth - 2);
                 }
             }
 
@@ -538,6 +566,15 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
         board.UndoMove(m, true);
         if (isStopped()) return alpha;
+
+        if (ply == 0) {
+            for (RootMove& rm : rootMoves) {
+                if (rm.m == m) {
+                    rm.score = score;
+                    break;
+                }
+            }
+        }
 
         if (score >= beta) {
             if (quiet) {
@@ -629,42 +666,43 @@ void Searcher::ClearHistory() {
 Move Searcher::IterativeDeepening(bool silent) {
     PrepareSearcher();
 
-    MoveList rootMoves;
-    MoveGenerator::GenerateMoves(board, rootMoves);
+    MoveList rawRootMoves;
+    MoveGenerator::GenerateMoves(board, rawRootMoves);
 
-    MoveList legalRootMoves;
-    for (const Move& m : rootMoves) {
+    rootMoves.clear();
+    for (const Move& m : rawRootMoves) {
         if (board.MakeMove(m, true)) {
-            legalRootMoves.push_back(m);
+            rootMoves.push_back({m, -MATE_SCORE});
             board.UndoMove(m, true);
         }
     }
 
-    if (legalRootMoves.count == 0) {
+    if (rootMoves.empty()) {
         isSearching = false;
         return Move();
     }
 
-    if (legalRootMoves.count == 1) {
+    if (rootMoves.size() == 1) {
         isSearching = false;
-        return legalRootMoves[0];
+        return rootMoves[0].m;
     }
 
-    Move bestMoveToPlay = legalRootMoves[0];
+    Move bestMoveToPlay = rootMoves[0].m;
     int lastScore = 0;
     int stableBestMoveCount = 0;
 
-    int window = 50;
+    int scoreHistory[MAXIMUM_DEPTH + 1] = {0};
 
     for (int depth = 1; depth <= currentSettings.maxDepth; depth++) {
 
         int alpha = -MATE_SCORE;
         int beta = MATE_SCORE;
-        int delta = 50; // Ez felel meg a window-nak
+        int delta = 60;
 
         if (depth >= 4) {
-            alpha = std::max(-MATE_SCORE, lastScore - delta);
-            beta = std::min(MATE_SCORE, lastScore + delta);
+            int expectedScore = scoreHistory[depth - 2];
+            alpha = std::max(-MATE_SCORE, expectedScore - delta);
+            beta = std::min(MATE_SCORE, expectedScore + delta);
         }
 
         int score;
@@ -687,24 +725,24 @@ Move Searcher::IterativeDeepening(bool silent) {
 
         if (isStopped()) break;
 
+        std::stable_sort(rootMoves.begin(), rootMoves.end(), [](const RootMove& a, const RootMove& b) {
+            return a.score > b.score;
+        });
+
         int prevScore = lastScore;
-
         lastScore = score;
-        window = 50;
 
-        int ttScore = 0;
-        Move ttMove;
-        tt->Probe(board.getHash(), 0, depth, alpha, beta, ttScore, ttMove);
+        scoreHistory[depth] = score;
 
-        if (ttMove.isValid()) {
-            if (ttMove == bestMoveToPlay) {
-                stableBestMoveCount++;
-            }
-            else {
-                stableBestMoveCount = 0;
-            }
-            bestMoveToPlay = ttMove;
+        Move currentBest = rootMoves[0].m;
+
+        if (currentBest == bestMoveToPlay) {
+            stableBestMoveCount++;
+        } else {
+            stableBestMoveCount = 0;
         }
+
+        bestMoveToPlay = currentBest;
 
         bool inCrisis = (depth > 3 && score < prevScore - 50);
         long long timeSpent = now_ms() - startTime;
@@ -756,8 +794,14 @@ Move Searcher::GetRobotMove() {
     this->stop = false;
     Board board_snapshot = this->board;
 
+    struct HistorySnapshot {
+        int moves[2][SQUARE_COUNT][SQUARE_COUNT];
+    };
+    HistorySnapshot histCopy;
+    std::memcpy(histCopy.moves, this->historyMoves, sizeof(this->historyMoves));
+
     for (int i = 0; i < numThreads - 1; ++i) {
-        helpers.emplace_back([this, board_snapshot]() mutable {
+        helpers.emplace_back([this, board_snapshot, histCopy]() mutable {
             auto helper = std::make_unique<Searcher>(this->tt);
             helper->isHelper = true;
             helper->abortPtr = &this->stop;
@@ -768,7 +812,9 @@ Move Searcher::GetRobotMove() {
             helper->fixedTimePerMoveMs.store(this->fixedTimePerMoveMs.load());
             helper->timeLeftMs.store(this->timeLeftMs.load());
             helper->incrementMs.store(this->incrementMs.load());
-            std::memcpy(helper->historyMoves, this->historyMoves, sizeof(this->historyMoves));
+
+            std::memcpy(helper->historyMoves, histCopy.moves, sizeof(histCopy.moves));
+
             helper->IterativeDeepening(true);
         });
     }

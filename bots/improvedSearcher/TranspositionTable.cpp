@@ -37,7 +37,7 @@ int TranspositionTable::ScoreFromTT(int score, int ply) {
 }
 
 void TranspositionTable::Store(uint64_t hash, int score, int ply, int depth, TTFlag flag, Move bestMove) {
-    if (depth <= 0) return;
+    depth = std::max(depth, 0);
 
     size_t index = hash & (size - 1);
     std::lock_guard<SpinLock> lock(ttLocks[index % NUM_LOCKS]);

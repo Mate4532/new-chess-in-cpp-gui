@@ -50,6 +50,12 @@ private:
 
     alignas(64) NNUEdata nnue_state[MAX_PLY];
 
+    struct RootMove {
+        Move m;
+        int score;
+    };
+    std::vector<RootMove> rootMoves;
+
     void PrepareSearcher();
 
     void ClearKillers();
