@@ -76,6 +76,7 @@ public:
     uint64_t maskRook(int sq);
     uint64_t maskBishop(int sq);
     void LoadFEN(std::string fen);
+    std::string GetFEN() const;
     void loadNewGame();
     PieceType getPieceAt(Square sq, Color color) const;
     uint64_t getBishopAttacksSlow(Square sq, uint64_t occupied) const;

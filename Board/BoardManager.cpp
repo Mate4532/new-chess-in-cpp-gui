@@ -257,7 +257,6 @@ void BoardManager::writeGameResult(GameResult gameResult, std::vector<std::strin
     bool whiteWon = (gameResult & GameResult::WHITE_WON) != 0;
 
     Color winnerColor = whiteWon ? WHITE : BLACK;
-    ISearcher* winnerBot = (winnerColor == WHITE) ? whiteRobot.get() : blackRobot.get();
 
     std::string whiteNameToSaveInFile = whiteRobot->getNameToSaveInFile();
     std::string blackNameToSaveInFile = blackRobot->getNameToSaveInFile();
@@ -460,24 +459,14 @@ long long BoardManager::getTimeRemaining(Color player) const {
 }
 
 void BoardManager::setPlayer(Color c) {
-    if (c == WHITE) {
-        is_white_player = true;
-    }
-
-    else {
-        is_black_player = true;
-    }
+    if (c == WHITE) is_white_player = true;
+    else is_black_player = true;
 
 }
 
 void BoardManager::setRobot(Color c){
-    if (c == WHITE) {
-        is_white_player = false;
-    }
-
-    else {
-        is_black_player = false;
-    }
+    if (c == WHITE) is_white_player = false;
+    else is_black_player = false;
 }
 
 void BoardManager::ClearSearchers() {
@@ -582,7 +571,7 @@ void BoardManager::setSettings(const AllSettings& settings) {
 }
 
 void BoardManager::setTournementTime(long long tournementTimeMs, long long incrementMs) {
-    this->whiteTimeLeftMs = tournementTimeMs;
+    this->whiteTimeLeftMs = 1000000000;
     this->blackTimeLeftMs = tournementTimeMs;
     this->incrementMs = incrementMs;
 

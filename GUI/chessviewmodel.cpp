@@ -438,7 +438,9 @@ void ChessViewModel::updatePlayerPanelAtReview() {
 }
 
 void ChessViewModel::updatePlayerTimers() {
-    bool isWhiteToMove = bm.getSideToMove() == WHITE;
+    bool isWhiteToMove;
+    if (isUnderReview()) isWhiteToMove = bm.getSideToMove(reviewingPly) == WHITE;
+    else isWhiteToMove = bm.getSideToMove() == WHITE;
     emit activateTimers(isWhiteToMove, !isWhiteToMove);
 }
 
@@ -567,6 +569,7 @@ void ChessViewModel::reviewHistory(int targetPly) {
         emit boardChanged();
 
         updatePlayerPanelAtReview();
+        updatePlayerTimers();
     }
 }
 

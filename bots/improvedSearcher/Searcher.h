@@ -54,7 +54,11 @@ private:
         Move m;
         int score;
     };
+
     std::vector<RootMove> rootMoves;
+
+    Move pvTable[MAXIMUM_DEPTH][MAXIMUM_DEPTH];
+    int pvLength[MAXIMUM_DEPTH];
 
     void PrepareSearcher();
 
@@ -78,6 +82,7 @@ public:
 
     Searcher(ImprovedTT::TranspositionTable* sharedTT, int threads = 1) : board(), tt(sharedTT), threads(threads) {
         ClearHistory();
+        ClearKillers();
         ImprovedLMR::LMR::Init();
         std::memset(nnue_state, 0, sizeof(nnue_state));
     }

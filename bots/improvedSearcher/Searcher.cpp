@@ -41,6 +41,7 @@ void Searcher::stopSearch() {
 }
 
 int Searcher::quiescence(int alpha, int beta, int ply) {
+    pvLength[ply] = 0;
 
     if (shouldStop()) stop = true;
     if (isStopped()) return alpha;
@@ -66,15 +67,6 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
                    : Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
     }
 
-    int ttScore;
-    Move ttMove;
-
-    bool foundInTT = tt->Probe(hash, ply, 0, alpha, beta, ttScore, ttMove);
-
-    if (foundInTT && ply > 0) {
-        return ttScore;
-    }
-
     if (!inCheck) {
         int standPat = currentSettings.worseEvaluationEnabled
                            ? WorseEvaluation::Evaluation::EvaluatePos(board)
@@ -96,7 +88,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
 
     Move dummyKillers[2] = { Move(), Move() };
     int scores[MoveOrdering::SCORE_SIZE];
-    MoveOrdering::ScoreMoves(board, moves, ttMove, historyMoves, dummyKillers, scores);
+    MoveOrdering::ScoreMoves(board, moves, Move(), historyMoves, dummyKillers, scores);
 
     int n = moves.count;
     int movesSearched = 0;
@@ -250,6 +242,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
 }
 
 int Searcher::negamax(int depth, int alpha, int beta, int ply) {
+    pvLength[ply] = 0;
 
     if (shouldStop()) stop = true;
     if (isStopped()) return alpha;
@@ -273,7 +266,11 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
     bool foundInTT = tt->Probe(hash, ply, depth, alpha, beta, ttScore, ttMove);
 
-    if (foundInTT && ply > 0) {
+    if (foundInTT && ply > 0 && !isPvNode) {
+        if (ttMove.isValid()) {
+            pvTable[ply][0] = ttMove;
+            pvLength[ply] = 1;
+        }
         return ttScore;
     }
 
@@ -297,9 +294,9 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
     bool inCheck = board.isSquareAttacked(board.getKingSquare(board.getSideToMove()), (Color)(board.getSideToMove() ^ 1));
 
-    if (inCheck && ply < depth + 4) {
-        depth++;
-    }
+    // if (inCheck && ply < depth + 4) {
+    //     depth++;
+    // }
 
     int staticEval = SCORE_NONE;
     evalHistory[ply] = SCORE_NONE;
@@ -591,6 +588,13 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
         if (score > alpha) {
             alpha = score;
             bestMoveThisNode = m;
+
+            pvTable[ply][0] = m;
+            for (int j = 0; j < pvLength[ply + 1]; j++) {
+                pvTable[ply][j + 1] = pvTable[ply + 1][j];
+            }
+            pvLength[ply] = pvLength[ply + 1] + 1;
+
         }
     }
 
@@ -664,7 +668,22 @@ void Searcher::ClearHistory() {
 }
 
 Move Searcher::IterativeDeepening(bool silent) {
+
     PrepareSearcher();
+
+    if (!silent) {
+        std::vector<Move> moves = board.getMoveHistory();
+        std::string movesString = "";
+        for (Move m : moves){
+            if (!m.isValid()) continue;
+            movesString += m.toAlgebraic();
+            movesString += " ";
+        }
+        std::cout << std::endl;
+        std::cout << "Beginner FEN: " << board.getBeginnerFen() << std::endl;
+        std::cout << "Current pos fen: " << board.GetFEN() << std::endl;
+        std::cout << "All moves: " << movesString << std::endl;
+    }
 
     MoveList rawRootMoves;
     MoveGenerator::GenerateMoves(board, rawRootMoves);
@@ -690,8 +709,9 @@ Move Searcher::IterativeDeepening(bool silent) {
     Move bestMoveToPlay = rootMoves[0].m;
     int lastScore = 0;
     int stableBestMoveCount = 0;
-
     int scoreHistory[MAXIMUM_DEPTH + 1] = {0};
+
+    std::string bestPvStringSoFar = "";
 
     for (int depth = 1; depth <= currentSettings.maxDepth; depth++) {
 
@@ -735,6 +755,7 @@ Move Searcher::IterativeDeepening(bool silent) {
         scoreHistory[depth] = score;
 
         Move currentBest = rootMoves[0].m;
+        Move previousBestMove = bestMoveToPlay;
 
         if (currentBest == bestMoveToPlay) {
             stableBestMoveCount++;
@@ -747,13 +768,25 @@ Move Searcher::IterativeDeepening(bool silent) {
         bool inCrisis = (depth > 3 && score < prevScore - 50);
         long long timeSpent = now_ms() - startTime;
 
+        std::string currentPvString = "";
+        for (int i = 0; i < pvLength[0]; i++) {
+            currentPvString += pvTable[0][i].toAlgebraic() + " ";
+        }
+
+        if (pvLength[0] >= 2) {
+            bestPvStringSoFar = currentPvString;
+        }
+        else if (pvLength[0] < 2 && currentBest == previousBestMove && bestPvStringSoFar != "") {
+            currentPvString = bestPvStringSoFar;
+        }
+
         if (!silent) std::cout << "info depth " << depth << " score "
-                                << ((abs(score) > MATE_SCORE_BOUND)
-                                        ? "mate " + std::to_string((score > 0) ? (MATE_SCORE + 1 - score) / 2 : -(MATE_SCORE + 1 + score) / 2)
-                                        : "cp " + std::to_string(board.getSideToMove() == WHITE ? score : -score))
-                                << " time " << timeSpent
-                                << " nodes " << (nodes + localNodes)
-                                << " pv " << bestMoveToPlay.toAlgebraic() << std::endl;
+                      << ((abs(score) > MATE_SCORE_BOUND)
+                              ? "mate " + std::to_string((score > 0) ? (MATE_SCORE + 1 - score) / 2 : -(MATE_SCORE + 1 + score) / 2)
+                              : "cp " + std::to_string(board.getSideToMove() == WHITE ? score : -score))
+                      << " time " << timeSpent
+                      << " nodes " << (nodes + localNodes)
+                      << " pv " << currentPvString << std::endl;
 
         if (IsMateScore(score) && score > 0) break;
 
@@ -769,10 +802,18 @@ Move Searcher::IterativeDeepening(bool silent) {
         }
     }
 
-    if (!silent) std::cout << "Final Score: "
-                      << ((abs(lastScore) > MATE_SCORE_BOUND)
-                              ? "mate " + std::to_string((lastScore > 0) ? (MATE_SCORE + 1 - lastScore) / 2 : -(MATE_SCORE + 1 + lastScore) / 2) + " " : ""
-                                "cp " + std::to_string(board.getSideToMove() == WHITE ? lastScore : -lastScore) + " pv " + bestMoveToPlay.toAlgebraic()) << std::endl;
+    if (!silent) {
+
+        std::string currentPvString = "";
+        for (int i = 0; i < pvLength[0]; i++) {
+            currentPvString += pvTable[0][i].toAlgebraic() + " ";
+        }
+
+        std::cout << "Final Score: "
+                  << ((abs(lastScore) > MATE_SCORE_BOUND)
+                          ? "mate " + std::to_string((lastScore > 0) ? (MATE_SCORE + 1 - lastScore) / 2 : -(MATE_SCORE + 1 + lastScore) / 2) + " " : ""
+                            "cp " + std::to_string(board.getSideToMove() == WHITE ? lastScore : -lastScore) + " | pv " + currentPvString) << std::endl;
+    }
 
     isSearching = false;
 

@@ -253,6 +253,82 @@ void Board::LoadFEN(std::string fen) {
     legalMovesHistory.push_back(generateCurrentLegalMoves());
 }
 
+std::string Board::GetFEN() const {
+    std::stringstream ss;
+
+    for (int rank = 7; rank >= 0; rank--) {
+        int empty_squares = 0;
+
+        for (int file = 0; file < 8; file++) {
+            Square sq = (Square)GetSquare(rank, file);
+            char piece_char = '?';
+
+            PieceType pt_white = getPieceAt(sq, WHITE);
+            if (pt_white != PIECE_NONE) {
+                if (pt_white == PAWN) piece_char = 'P';
+                else if (pt_white == KNIGHT) piece_char = 'N';
+                else if (pt_white == BISHOP) piece_char = 'B';
+                else if (pt_white == ROOK) piece_char = 'R';
+                else if (pt_white == QUEEN) piece_char = 'Q';
+                else if (pt_white == KING) piece_char = 'K';
+            }
+            else {
+                // Ha nincs világos, megnézzük a sötétet
+                PieceType pt_black = getPieceAt(sq, BLACK);
+                if (pt_black != PIECE_NONE) {
+                    if (pt_black == PAWN) piece_char = 'p';
+                    else if (pt_black == KNIGHT) piece_char = 'n';
+                    else if (pt_black == BISHOP) piece_char = 'b';
+                    else if (pt_black == ROOK) piece_char = 'r';
+                    else if (pt_black == QUEEN) piece_char = 'q';
+                    else if (pt_black == KING) piece_char = 'k';
+                }
+            }
+
+            if (piece_char != '?') {
+                if (empty_squares > 0) {
+                    ss << empty_squares;
+                    empty_squares = 0;
+                }
+                ss << piece_char;
+            } else {
+                empty_squares++;
+            }
+        }
+
+        if (empty_squares > 0) {
+            ss << empty_squares;
+        }
+        if (rank > 0) {
+            ss << '/';
+        }
+    }
+
+    ss << (m_side_to_move == WHITE ? " w " : " b ");
+
+    uint8_t castling = boardStateHistory[m_ply].castling_rights;
+    bool has_castling = false;
+    if (castling & WHITE_KINGSIDE_CASTLE)  { ss << "K"; has_castling = true; }
+    if (castling & WHITE_QUEENSIDE_CASTLE) { ss << "Q"; has_castling = true; }
+    if (castling & BLACK_KINGSIDE_CASTLE)  { ss << "k"; has_castling = true; }
+    if (castling & BLACK_QUEENSIDE_CASTLE) { ss << "q"; has_castling = true; }
+    if (!has_castling) ss << "-";
+
+    Square ep_sq = (Square)boardStateHistory[m_ply].en_passant_sq;
+    if (ep_sq == SQUARE_NONE) {
+        ss << " - ";
+    } else {
+        char file_char = 'a' + (ep_sq % 8);
+        char rank_char = '1' + (ep_sq / 8);
+        ss << " " << file_char << rank_char << " ";
+    }
+
+    ss << (int)boardStateHistory[m_ply].half_move_clock << " "
+       << (int)boardStateHistory[m_ply].full_move_number;
+
+    return ss.str();
+}
+
 void Board::loadNewGame() {
     LoadFEN(newPosFen);
 }
