@@ -26,7 +26,12 @@ int MoveOrdering::See(const Board& board, Move m) {
     uint64_t occupied = board.getAllOccupancy();
     uint64_t attackers = board.getAttacksTo(to, occupied);
 
-    gain[d] = Evaluation::GetPieceValue(victim);
+    gain[0] = Evaluation::GetPieceValue(victim);
+
+    if (flags & PROMOTION_FLAG) {
+        PieceType promoPiece = Board::GetPromotionPiece(flags);
+        gain[0] += Evaluation::GetPieceValue(promoPiece) - Evaluation::GetPieceValue(PAWN);
+    }
     Color side = us;
 
     if (flags == EN_PASSANT) {

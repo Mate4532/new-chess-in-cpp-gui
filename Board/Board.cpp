@@ -20,6 +20,8 @@ uint64_t Board::bishop_table[64][512];
 Magic Board::rook_magics[64];
 Magic Board::bishop_magics[64];
 
+uint64_t Board::passed_pawn_mask[2][64];
+
 std::atomic<uint64_t> global_node_count(0);
 
 Board::Board() {
@@ -31,7 +33,8 @@ void Board::InitializeBoard() {
         Zobrist::Init();
         InitializeAttackTables();
         InitializeMagicTables();
-        });
+        InizializePassedPawnTable();
+    });
 
     LoadFEN(newPosFen);
 }
@@ -105,6 +108,26 @@ void Board::InitializeMagicTables() {
             uint32_t index = (uint32_t)((occ * bishop_magics[sq].magic) >> bishop_magics[sq].shift);
             bishop_table[sq][index] = getBishopAttacksSlow((Square)sq, occ);
         }
+    }
+}
+
+void Board::InizializePassedPawnTable() {
+    for (int sq = 0; sq < 64; sq++) {
+        int file = sq % 8;
+        int rank = sq / 8;
+
+        uint64_t white_mask = 0ULL;
+        uint64_t black_mask = 0ULL;
+
+        for (int r = 0; r < 8; r++) {
+            for (int f = std::max(0, file - 1); f <= std::min(7, file + 1); f++) {
+                int current_sq = r * 8 + f;
+                if (r > rank) white_mask |= (1ULL << current_sq);
+                if (r < rank) black_mask |= (1ULL << current_sq);
+            }
+        }
+        passed_pawn_mask[WHITE][sq] = white_mask;
+        passed_pawn_mask[BLACK][sq] = black_mask;
     }
 }
 
@@ -482,6 +505,38 @@ bool Board::hasPromotingPawn() const {
     }
 }
 
+bool Board::hasAdvancedPawn() const {
+    if (m_side_to_move == WHITE) {
+        return (m_bitboards[WHITE][PAWN] & (RANK_7 | RANK_6)) != 0;
+    }
+    else {
+        return (m_bitboards[BLACK][PAWN] & (RANK_2 | RANK_3)) != 0;
+    }
+}
+
+bool Board::hasAdvancedPassedPawn(Color color) const {
+    uint64_t advancedPawns;
+
+    if (color == WHITE) {
+        advancedPawns = m_bitboards[WHITE][PAWN] & (RANK_6 | RANK_7);
+    } else {
+        advancedPawns = m_bitboards[BLACK][PAWN] & (RANK_3 | RANK_2);
+    }
+
+    if (!advancedPawns) return false;
+
+    uint64_t tempPawns = advancedPawns;
+    while (tempPawns) {
+        Square sq = PopBit(tempPawns);
+
+        if (isPassedPawn(color, sq)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 uint64_t Board::getAttacksTo(Square sq, uint64_t occupied) const {
     return (getPawnAttacks(sq, BLACK) & getPieceBitboard(WHITE, PAWN)) |
         (getPawnAttacks(sq, WHITE) & getPieceBitboard(BLACK, PAWN)) |
@@ -607,6 +662,27 @@ bool Board::isSquareAttacked(Square sq, Color attackerColor) const {
     if (getRookAttacks(sq, occ) & (m_bitboards[attackerColor][ROOK] | m_bitboards[attackerColor][QUEEN])) return true;
 
     return false;
+}
+
+bool Board::isPassedPawn(Color color, Square sq) const {
+    Color enemy = (Color)(color ^ 1);
+    return !(passed_pawn_mask[color][sq] & m_bitboards[enemy][PAWN]);
+}
+
+bool Board::isAdvancedPassedPawnPush(Move move) const {
+    if (move.getPieceType() != PAWN) return false;
+
+    Square to_sq = move.getTo();
+    Color player = m_side_to_move;
+
+    if (!isPassedPawn(player, to_sq)) return false;
+
+    int rank = to_sq / 8;
+    if (player == WHITE) {
+        return rank >= 5;
+    } else {
+        return rank <= 2;
+    }
 }
 
 bool Board::MakeMove(Move move, bool in_search) {
@@ -1082,7 +1158,7 @@ GameResult Board::getGameResult() {
     if (gr != GameResult::GAME_DID_NOT_END)
         return gr;
 
-    if (IsDraw())
+    if (IsDraw() || IsInsufficientMaterial())
         return GameResult::DRAW;
 
     if (IsCheckMate()) {

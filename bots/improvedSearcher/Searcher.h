@@ -40,7 +40,7 @@ private:
     std::atomic<uint64_t> nodes;
     uint64_t localNodes;
 
-    ImprovedTT::TranspositionTable* tt;
+    std::shared_ptr<ImprovedTT::TranspositionTable> tt;
 
     const int SCORE_NONE = 32000;
     int evalHistory[MAX_PLY];
@@ -80,7 +80,15 @@ public:
     static constexpr int MATE_SCORE = 30000;
     static constexpr int MATE_SCORE_BOUND = 20000;
 
-    Searcher(ImprovedTT::TranspositionTable* sharedTT, int threads = 1) : board(), tt(sharedTT), threads(threads) {
+    Searcher(int threads = 1) : board(), threads(threads) {
+        tt = std::make_shared<ImprovedTT::TranspositionTable>(TT_SIZE_MB);
+        ClearHistory();
+        ClearKillers();
+        ImprovedLMR::LMR::Init();
+        std::memset(nnue_state, 0, sizeof(nnue_state));
+    }
+
+    Searcher(std::shared_ptr<ImprovedTT::TranspositionTable> sharedTT) : board(), tt(sharedTT), threads(1) {
         ClearHistory();
         ClearKillers();
         ImprovedLMR::LMR::Init();

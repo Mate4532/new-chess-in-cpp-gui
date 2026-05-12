@@ -67,6 +67,8 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
                    : Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
     }
 
+    Color player = board.getSideToMove();
+
     if (!inCheck) {
         int standPat = currentSettings.worseEvaluationEnabled
                            ? WorseEvaluation::Evaluation::EvaluatePos(board)
@@ -77,7 +79,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         }
 
         int BIG_DELTA = 975;
-        if (board.hasPromotingPawn()) BIG_DELTA += 775;
+        if (board.hasAdvancedPassedPawn(player)) BIG_DELTA += 775;
         if (standPat < alpha - BIG_DELTA) return alpha;
 
         if (alpha < standPat) alpha = standPat;
@@ -117,12 +119,18 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         bool isPromo = flags & PROMOTION_FLAG;
         bool isCastle = (flags == KINGSIDE_CASTLE || flags == QUEENSIDE_CASTLE) && mPieceType == KING;
 
-        Color player = board.getSideToMove();
         Color enemy = (Color)(player ^ 1);
         Square mFrom = m.getFrom();
         Square mTo = m.getTo();
 
-        if (!inCheck && isCapture && !isPromo) {
+        if (isPromo) {
+            PieceType promoPiece = Board::GetPromotionPiece(flags);
+            if (promoPiece != QUEEN) {
+                continue;
+            }
+        }
+
+        if (!inCheck && isCapture) {
             if (currentScore < 0) {
                 continue;
             }
@@ -261,10 +269,12 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
     bool isPvNode = (beta - alpha > 1);
     int originalAlpha = alpha;
 
-    int ttScore;
-    Move ttMove;
+    int ttScore = 0;
+    Move ttMove = Move();
+    int ttDepth = 0;
+    TTFlag ttFlag;
 
-    bool foundInTT = tt->Probe(hash, ply, depth, alpha, beta, ttScore, ttMove);
+    bool foundInTT = tt->Probe(hash, ply, depth, alpha, beta, ttScore, ttMove, ttDepth, ttFlag);
 
     if (foundInTT && ply > 0 && !isPvNode) {
         if (ttMove.isValid()) {
@@ -280,7 +290,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
         negamax(iidDepth, alpha, beta, ply);
 
-        tt->Probe(hash, ply, iidDepth, alpha, beta, ttScore, ttMove);
+        tt->Probe(hash, ply, iidDepth, alpha, beta, ttScore, ttMove, ttDepth, ttFlag);
     }
 
     MoveList moves;
@@ -294,9 +304,22 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
     bool inCheck = board.isSquareAttacked(board.getKingSquare(board.getSideToMove()), (Color)(board.getSideToMove() ^ 1));
 
-    // if (inCheck && ply < depth + 4) {
-    //     depth++;
-    // }
+    bool isSingleReply = false;
+
+    if (inCheck) {
+        int legalEvasions = 0;
+        for (int i = 0; i < moves.count; i++) {
+            if (board.MakeMove(moves[i], true)) {
+                legalEvasions++;
+                board.UndoMove(moves[i], true);
+
+                if (legalEvasions > 1) {
+                    break;
+                }
+            }
+        }
+        isSingleReply = (legalEvasions == 1);
+    }
 
     int staticEval = SCORE_NONE;
     evalHistory[ply] = SCORE_NONE;
@@ -341,14 +364,21 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
     if (!inCheck && !isPvNode && depth >= 3 && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
         if (staticEval >= beta && board.HasNonPawnMaterial(board.getSideToMove())) {
-            int R = 3 + (depth / 6);
-            nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
-            nnue_state[ply + 1].accumulator.computedAccumulation = 0;
-            board.MakeNullMove();
-            int score = -negamax(depth - 1 - R, -beta, -beta + 1, ply + 1);
-            board.UndoNullMove();
-            if (isStopped()) return alpha;
-            if (score >= beta) return beta;
+            if (!board.hasAdvancedPassedPawn(board.getSideToMove())) {
+
+                int R = 3 + (depth / 6);
+                if (staticEval - beta < 100) R--;
+
+                nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
+                nnue_state[ply + 1].accumulator.computedAccumulation = 0;
+
+                board.MakeNullMove();
+                int score = -negamax(depth - 1 - R, -beta, -beta + 1, ply + 1);
+                board.UndoNullMove();
+
+                if (isStopped()) return alpha;
+                if (score >= beta) return beta;
+            }
         }
     }
 
@@ -390,6 +420,12 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
         nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
         nnue_state[ply + 1].accumulator.computedAccumulation = 0;
 
+        Color player = board.getSideToMove();
+        Color enemy = (Color)(player ^ 1);
+        Square mFrom = m.getFrom();
+        Square mTo = m.getTo();
+
+
         MoveFlag flags = m.getFlags();
         PieceType mPieceType = m.getPieceType();
         bool isCapture = flags & CAPTURE_FLAG;
@@ -397,11 +433,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
         bool quiet = !isCapture && !isPromo;
         bool isCastle = (flags == KINGSIDE_CASTLE || flags == QUEENSIDE_CASTLE) && mPieceType == KING;
         bool isEp = flags == EN_PASSANT;
-
-        Color player = board.getSideToMove();
-        Color enemy = (Color)(player ^ 1);
-        Square mFrom = m.getFrom();
-        Square mTo = m.getTo();
+        bool isAdvancedPassedPawnPush = (mPieceType == PAWN) && board.isAdvancedPassedPawnPush(m);
 
         if (isCapture) {
 
@@ -515,33 +547,48 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
         int score = 0;
 
+        int extension = 0;
+
+        if (inCheck && isSingleReply) {
+            extension = 1;
+        }
+        else if (isPvNode && givesCheck && movesSearched == 1) {
+            extension = 1;
+        }
+
         if (movesSearched == 1) {
-            score = -negamax(depth - 1, -beta, -alpha, ply + 1);
+            score = -negamax(depth + extension - 1, -beta, -alpha, ply + 1);
         }
         else {
             int reduction = 0;
+            int seeScore = MoveOrdering::See(board, m);
+            bool badQuiet = quiet && (seeScore < 0);
 
-            if (depth >= 3 && movesSearched > 3 && quiet && !inCheck) {
-
-                if (!givesCheck && !isKiller) {
-                    reduction = LMR::LMR::GetReduction(depth, movesSearched);
+            if (depth >= 3 && movesSearched > 1 && !inCheck) {
+                if (quiet) {
+                    reduction = LMR::LMR::GetReduction(depth, movesSearched, isPvNode);
 
                     if (!improving) {
                         reduction += 1;
                     }
 
-                    if (isPvNode) {
-                        reduction -= 1;
-                    }
-
-                    int histScore = historyMoves[player][mFrom][mTo];
-
-                    if (histScore > 4000) {
-                        reduction -= 1;
-                    }
-                    else if (histScore < 100) {
+                    if (badQuiet) {
                         reduction += 1;
                     }
+
+                    if (isKiller){
+                        reduction -= 1;
+                    }
+
+                    if (isAdvancedPassedPawnPush) {
+                        reduction -= 1;
+                    }
+
+                    if (givesCheck) {
+                        reduction -= 1;
+                    }
+
+                    reduction -= (historyMoves[player][mFrom][mTo] / 4000);
 
                     reduction = std::clamp(reduction, 0, depth - 2);
                 }
@@ -786,7 +833,7 @@ Move Searcher::IterativeDeepening(bool silent) {
                               : "cp " + std::to_string(board.getSideToMove() == WHITE ? score : -score))
                       << " time " << timeSpent
                       << " nodes " << (nodes + localNodes)
-                      << " pv " << currentPvString << std::endl;
+                      << " | pv " << currentPvString << std::endl;
 
         if (IsMateScore(score) && score > 0) break;
 
@@ -809,10 +856,23 @@ Move Searcher::IterativeDeepening(bool silent) {
             currentPvString += pvTable[0][i].toAlgebraic() + " ";
         }
 
-        std::cout << "Final Score: "
-                  << ((abs(lastScore) > MATE_SCORE_BOUND)
-                          ? "mate " + std::to_string((lastScore > 0) ? (MATE_SCORE + 1 - lastScore) / 2 : -(MATE_SCORE + 1 + lastScore) / 2) + " " : ""
-                            "cp " + std::to_string(board.getSideToMove() == WHITE ? lastScore : -lastScore) + " | pv " + currentPvString) << std::endl;
+        if (pvLength[0] == 0 || currentPvString.empty()) {
+            currentPvString = bestPvStringSoFar;
+        }
+
+        bool isMate = std::abs(lastScore) > MATE_SCORE_BOUND;
+
+        std::cout << "Final Score: ";
+
+        if (isMate) {
+            int mateIn = (lastScore > 0) ? (MATE_SCORE + 1 - lastScore) / 2 : -(MATE_SCORE + 1 + lastScore) / 2;
+            std::cout << "mate " << mateIn << " ";
+        } else {
+            int cpScore = (board.getSideToMove() == WHITE ? lastScore : -lastScore);
+            std::cout << "cp " << cpScore << " ";
+        }
+
+        std::cout << "| pv " << currentPvString << std::endl;
     }
 
     isSearching = false;

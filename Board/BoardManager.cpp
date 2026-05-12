@@ -256,8 +256,6 @@ void BoardManager::writeGameResult(GameResult gameResult, std::vector<std::strin
 
     bool whiteWon = (gameResult & GameResult::WHITE_WON) != 0;
 
-    Color winnerColor = whiteWon ? WHITE : BLACK;
-
     std::string whiteNameToSaveInFile = whiteRobot->getNameToSaveInFile();
     std::string blackNameToSaveInFile = blackRobot->getNameToSaveInFile();
 
@@ -571,7 +569,7 @@ void BoardManager::setSettings(const AllSettings& settings) {
 }
 
 void BoardManager::setTournementTime(long long tournementTimeMs, long long incrementMs) {
-    this->whiteTimeLeftMs = tournementTimeMs;
+    this->whiteTimeLeftMs = 1000000000;
     this->blackTimeLeftMs = tournementTimeMs;
     this->incrementMs = incrementMs;
 

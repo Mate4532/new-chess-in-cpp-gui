@@ -8,7 +8,7 @@ struct RobotSettings {
     bool isBlackRobot = false;
     bool isBotVsBot = false;
     int botSearchTimeMs = 1000;
-    int numThreads = 10;
+    int numThreads = 7;
     Difficulty whiteRobotDifficulty = Difficulty::EASY;
     Difficulty blackRobotDifficulty = Difficulty::EASY;
 

@@ -30,7 +30,7 @@ namespace ImprovedTT {
         int16_t  score;
         uint16_t moveData;
         uint8_t  movePieceType;
-        uint8_t   depth;
+        uint8_t  depth;
         uint8_t  type;
         uint8_t  gen;
     };
@@ -50,7 +50,7 @@ namespace ImprovedTT {
         void Prefetch(uint64_t hash);
 
         void Store(uint64_t hash, int score, int ply, int depth, TTFlag flag, Move bestMove);
-        bool Probe(uint64_t hash, int ply, int depth, int alpha, int beta, int& score, Move& bestMove);
+        bool Probe(uint64_t hash, int ply, int depth, int alpha, int beta, int& score, Move& bestMove, int& ttDepth, TTFlag& ttFlag);
 
         Move getPvMove(uint64_t hash);
 
