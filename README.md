@@ -34,5 +34,3 @@ The framework implements a robust settings management system (`RobotSettings`, `
 1. Clone the repository and build the project using **Qt Creator** or **CMake**.
 2. **Important:** For the evaluation to function correctly, the **NNUE evaluation file** must be placed in the same directory as the compiled executable (`.exe`).
 3. Ensure the engine implementation is correctly linked or satisfies the required C++ interface.
-
-> **Note:** While the essential GUI functions are fully operational, several advanced features—such as pondering display and complex engine option menus—are currently not supported.
