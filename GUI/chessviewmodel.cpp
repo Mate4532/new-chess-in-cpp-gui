@@ -211,7 +211,7 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
             bm.prepareImprovedBotVsOldBot();
         }
 
-        if (whiteRobotChanged || blackRobotChanged || botVsBotGotTurnedOff) {
+        else if (whiteRobotChanged || blackRobotChanged || botVsBotGotTurnedOff) {
 
             if (!isWhiteRobot) bm.setPlayer(WHITE);
             else bm.setRobot(WHITE);

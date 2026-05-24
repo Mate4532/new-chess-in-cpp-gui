@@ -490,6 +490,9 @@ void BoardManager::setupBotsForNormalGame(const RobotSettings& rs) {
 }
 
 void BoardManager::prepareImprovedBotVsOldBot() {
+
+    loadOpenings();
+
     if (whiteRobot == nullptr || dynamic_cast<ImpSearcher*>(whiteRobot.get()) == nullptr) {
         whiteRobot = BotFactory::createBot(SearcherType::IMPROVED_SEARCHER, currentSettings.robotSettings);
         setDifficulty(WHITE, Difficulty::IMPOSSIBLE);
@@ -726,8 +729,6 @@ void BoardManager::startMultiThreadedSimulation(int totalGames, int numThreads) 
 
     std::atomic<int> roundsRemaining(totalRounds);
     std::vector<std::thread> threads;
-
-    loadOpenings();
 
     std::cout << "[BoardManager] Simulation started on " << numThreads << " threads." << std::endl;
 
