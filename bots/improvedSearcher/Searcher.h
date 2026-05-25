@@ -26,6 +26,7 @@ private:
 
     int negamax(int depth, int alpha, int beta, int ply);
     int quiescence(int alpha, int beta, int ply);
+    Move GetBestAmongTopMoves(const SearcherSettings& settings);
 
     std::atomic<long long> fixedTimePerMoveMs{1000};
     std::atomic<long long> timeLeftMs{300000};
@@ -97,6 +98,8 @@ public:
 
     Move IterativeDeepening(bool silent = true);
     inline bool IsMateScore(int score) { return std::abs(score) >= MATE_SCORE_BOUND;}
+
+    Move GetMultiThreadedBestMove();
 
     void setState(const Board& board) override { this->board = board; };
     void ClearSearcher() override;
