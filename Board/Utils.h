@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <string>
 
-//#define DEBUG_MODE
+#define DEBUG_MODE
 
 #ifdef DEBUG_MODE
     #define LOG_DEBUG(x) std::cout << "DEBUG: " << x << std::endl

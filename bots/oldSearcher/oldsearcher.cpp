@@ -645,7 +645,7 @@ Move Searcher::IterativeDeepening() {
                 : "cp " + std::to_string(board.getSideToMove() == WHITE ? score : -score))
             << " time " << timeSpent
             << " nodes " << nodes
-            << " pv " << bestMoveToPlay.toAlgebraic();)
+            << " pv " << bestMoveToPlay.toAlgebraic());
 
             if (IsMateScore(score) && score > 0) break;
 
@@ -664,7 +664,7 @@ Move Searcher::IterativeDeepening() {
     LOG_DEBUG("Final Score: "
         << ((abs(lastScore) > MATE_SCORE_BOUND)
             ? "mate " + std::to_string((lastScore > 0) ? (MATE_SCORE + 1 - lastScore) / 2 : -(MATE_SCORE + 1 + lastScore) / 2)
-            : "cp " + std::to_string(board.getSideToMove() == WHITE ? lastScore : -lastScore) + " pv " + bestMoveToPlay.toAlgebraic());)
+                      : "cp " + std::to_string(board.getSideToMove() == WHITE ? lastScore : -lastScore) + " pv " + bestMoveToPlay.toAlgebraic()));
 
         isSearching = false;
 

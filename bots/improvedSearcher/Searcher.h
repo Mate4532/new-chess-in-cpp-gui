@@ -65,7 +65,7 @@ private:
 
     void ClearKillers();
     void ClearHistory();
-    void AgeHistory();
+    // void AgeHistory();
 
     SearcherSettings currentSettings = SearcherSettings::getSettings(Difficulty::IMPOSSIBLE);
     int movesWithoutBlunderOnPropuse = 0;

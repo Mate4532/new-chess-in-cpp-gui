@@ -32,6 +32,7 @@ int MoveOrdering::See(const Board& board, Move m) {
         PieceType promoPiece = Board::GetPromotionPiece(flags);
         gain[0] += Evaluation::GetPieceValue(promoPiece) - Evaluation::GetPieceValue(PAWN);
     }
+
     Color side = us;
 
     if (flags == EN_PASSANT) {

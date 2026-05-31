@@ -187,13 +187,13 @@ Move BoardManager::MakeRobotMove() {
         updateRobotTournementTime();
 
     Move robot_move;
-    LOG_DEBUG(std::cout << (board.getSideToMove() == WHITE ? (whiteRobot->getName() + " (feher) ") : (blackRobot->getName() + " (fekete) ")) <<"gondolkodik..." << std::endl;)
+    LOG_DEBUG((board.getSideToMove() == WHITE ? (whiteRobot->getName() + " (feher) ") : (blackRobot->getName() + " (fekete) ")) <<"gondolkodik...");
 	robot_move = board.getSideToMove() == WHITE ? whiteRobot->GetRobotMove() : blackRobot->GetRobotMove();
     if (!robot_move.isValid())
         return Move();
 
     MakeMove(robot_move);
-    LOG_DEBUG(std::cout << "Robot lepese: " + robot_move.toAlgebraic() << std::endl;)
+    LOG_DEBUG("Robot lepese: " + robot_move.toAlgebraic());
 
     return robot_move;
 }
