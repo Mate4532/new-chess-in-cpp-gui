@@ -80,7 +80,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         }
 
         int BIG_DELTA = 975;
-        if (board.hasPromotingPawn()) BIG_DELTA += 775; // if (board.hasAdvancedPassedPawn(player)) BIG_DELTA += 775;
+        if (board.hasAdvancedPassedPawn(player)) BIG_DELTA += 775;
         if (standPat < alpha - BIG_DELTA) return alpha;
 
         if (alpha < standPat) alpha = standPat;
@@ -124,12 +124,12 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         Square mFrom = m.getFrom();
         Square mTo = m.getTo();
 
-        /*if (isPromo) {
+        if (isPromo) {
             PieceType promoPiece = Board::GetPromotionPiece(flags);
             if (promoPiece != QUEEN) {
                 continue;
             }
-        }*/
+        }
 
         if (!inCheck && isCapture && !isPromo) {
             if (currentScore < 0) {
@@ -272,8 +272,10 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
     int ttScore = 0;
     Move ttMove = Move();
+    int ttDepth = 0;
+    TTFlag ttFlag = TT_ALPHA;
 
-    bool foundInTT = tt->Probe(hash, ply, depth, alpha, beta, ttScore, ttMove);
+    bool foundInTT = tt->Probe(hash, ply, depth, alpha, beta, ttScore, ttMove, ttDepth, ttFlag);
 
     if (foundInTT && ply > 0 && !isPvNode) {
         if (ttMove.isValid()) {
@@ -289,7 +291,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
         negamax(iidDepth, alpha, beta, ply);
 
-        tt->Probe(hash, ply, iidDepth, alpha, beta, ttScore, ttMove);
+        tt->Probe(hash, ply, iidDepth, alpha, beta, ttScore, ttMove, ttDepth, ttFlag);
     }
 
     MoveList moves;
@@ -303,7 +305,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
     bool inCheck = board.isSquareAttacked(board.getKingSquare(board.getSideToMove()), (Color)(board.getSideToMove() ^ 1));
 
-    /*bool isSingleReply = false;
+    bool isSingleReply = false;
 
     if (inCheck) {
         int legalEvasions = 0;
@@ -318,7 +320,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
             }
         }
         isSingleReply = (legalEvasions == 1);
-    }*/
+    }
 
     int staticEval = SCORE_NONE;
     evalHistory[ply] = SCORE_NONE;
@@ -363,7 +365,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
     if (!inCheck && !isPvNode && depth >= 3 && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
         if (staticEval >= beta && board.HasNonPawnMaterial(board.getSideToMove())) {
-            // if (!board.hasAdvancedPassedPawn(board.getSideToMove())) {
+            if (!board.hasAdvancedPassedPawn(board.getSideToMove())) {
 
                 int R = 3 + (depth / 6);
 
@@ -376,7 +378,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
                 if (isStopped()) return alpha;
                 if (score >= beta) return beta;
-            // }
+            }
         }
     }
 
@@ -545,60 +547,60 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
         int score = 0;
 
-        /*int extension = 0;
+        int extension = 0;
 
         if (isSingleReply) {
             extension = 1;
         }
         else if (isPvNode && givesCheck && movesSearched == 1) {
             extension = 1;
-        }*/
+        }
 
         if (movesSearched == 1) {
-            score = -negamax(depth - 1, -beta, -alpha, ply + 1); // depth + extension - 1
+            score = -negamax(depth + extension - 1, -beta, -alpha, ply + 1);
         }
         else {
             int reduction = 0;
-            /*int seeScore = MoveOrdering::See(board, m);
-            bool badQuiet = quiet && (seeScore < 0);*/
+            int seeScore = MoveOrdering::See(board, m);
+            bool badQuiet = quiet && (seeScore < 0);
 
-            if (depth >= 3 && movesSearched > 3 && quiet && !inCheck) { // movesSearched > 1 + quiet is not here
-                if (!givesCheck && !isKiller) { // quiet
-                    reduction = LMR::LMR::GetReduction(depth, movesSearched); // PVNode
+            if (depth >= 3 && movesSearched > 1 && !inCheck) { // movesSearched > 1 + quiet is not here
+                if (quiet) { // quiet
+                    reduction = LMR::LMR::GetReduction(depth, movesSearched, isPvNode); // PVNode
 
                     if (!improving) {
                         reduction += 1;
                     }
 
-                    /*if (badQuiet) {
+                    if (badQuiet) {
                          reduction += 1;
-                    }*/
+                    }
 
-                    /*if (isKiller){
+                    if (isKiller){
                         reduction -= 1;
-                    }*/
+                    }
 
                     if (isPvNode) {
                         reduction -= 1;
                     }
 
-                    /*if (isAdvancedPassedPawnPush) {
+                    if (isAdvancedPassedPawnPush) {
                         reduction -= 1;
-                    }*/
+                    }
 
-                    /*if (givesCheck) {
+                    if (givesCheck) {
                         reduction -= 1;
-                    }*/
+                    }
 
                     int histScore = historyMoves[player][mFrom][mTo];
 
                     int historyModifier = -(histScore / 2048);
 
-                    historyModifier = std::clamp(historyModifier, -2, 2);
+                    historyModifier = std::clamp(historyModifier, -1, 2);
 
                     reduction += historyModifier;
 
-                    reduction = std::clamp(reduction, 0, depth - 2);
+                    reduction = std::clamp(reduction, 0, depth);
                 }
             }
 

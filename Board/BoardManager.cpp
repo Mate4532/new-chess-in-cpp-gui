@@ -474,13 +474,13 @@ void BoardManager::ClearSearchers() {
 
 void BoardManager::setupBotsForNormalGame(const RobotSettings& rs) {
 
-    if (rs.isWhiteRobot && (whiteRobot == nullptr || dynamic_cast<ImpSearcher*>(whiteRobot.get()) == nullptr)) {
+    if (rs.isWhiteRobot) {
         whiteRobot = BotFactory::createBot(SearcherType::IMPROVED_SEARCHER, currentSettings.robotSettings);
         whiteRobot->setDifficulty(rs.whiteRobotDifficulty);
         setRobot(WHITE);
     }
 
-    if (rs.isBlackRobot && (blackRobot == nullptr || dynamic_cast<ImpSearcher*>(blackRobot.get()) == nullptr)) {
+    if (rs.isBlackRobot) {
         blackRobot = BotFactory::createBot(SearcherType::IMPROVED_SEARCHER, currentSettings.robotSettings);
         blackRobot->setDifficulty(rs.blackRobotDifficulty);
         setRobot(BLACK);
@@ -572,7 +572,7 @@ void BoardManager::setSettings(const AllSettings& settings) {
 }
 
 void BoardManager::setTournementTime(long long tournementTimeMs, long long incrementMs) {
-    this->whiteTimeLeftMs = tournementTimeMs;
+    this->whiteTimeLeftMs = 1000000000;
     this->blackTimeLeftMs = tournementTimeMs;
     this->incrementMs = incrementMs;
 

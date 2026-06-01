@@ -186,8 +186,6 @@ void Board::LoadFEN(std::string fen) {
     ClearBoard();
     beginnerFen = fen;
 
-    std::cout << fen;
-
     if (fen.empty()) {
         fen = newPosFen;
     }
