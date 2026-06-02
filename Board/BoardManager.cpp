@@ -572,7 +572,7 @@ void BoardManager::setSettings(const AllSettings& settings) {
 }
 
 void BoardManager::setTournementTime(long long tournementTimeMs, long long incrementMs) {
-    this->whiteTimeLeftMs = 1000000000;
+    this->whiteTimeLeftMs = tournementTimeMs;
     this->blackTimeLeftMs = tournementTimeMs;
     this->incrementMs = incrementMs;
 
