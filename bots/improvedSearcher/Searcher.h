@@ -18,15 +18,19 @@ private:
     static constexpr int MAXIMUM_DEPTH = 128;
     static constexpr int TT_SIZE_MB = 128;
 
+    static_assert(MAX_PLY >= MAXIMUM_DEPTH,
+                  "MAX_PLY must be at least MAXIMUM_DEPTH: the search ply guards use MAXIMUM_DEPTH");
+
     Difficulty currentDiff = Difficulty::IMPOSSIBLE;
     RobotTimeUsageMode rtum = RobotTimeUsageMode::FIXED_TIME;
 
     Board board;
-    bool isSearching = false;
+    std::atomic<bool> isSearching{false};
 
-    int negamax(int depth, int alpha, int beta, int ply);
+    int negamax(int depth, int alpha, int beta, int ply, Move excludedMove = Move(), Move prevMove = Move());
     int quiescence(int alpha, int beta, int ply);
     Move GetBestAmongTopMoves(const SearcherSettings& settings);
+    void SetupNnueDirtyPieces(const Move& m, int ply);
 
     std::atomic<long long> fixedTimePerMoveMs{1000};
     std::atomic<long long> timeLeftMs{300000};
@@ -38,8 +42,8 @@ private:
     long long startTime = 0;
     std::atomic<bool> stop{false};
     std::atomic<bool> isStoppedManually{false};
-    std::atomic<uint64_t> nodes;
-    uint64_t localNodes;
+    std::atomic<uint64_t> nodes{0};
+    uint64_t localNodes = 0;
 
     std::shared_ptr<ImprovedTT::TranspositionTable> tt;
 
@@ -48,12 +52,16 @@ private:
 
     int historyMoves[2][SQUARE_COUNT][SQUARE_COUNT];
     Move killerMoves[MAX_KILLER_HISTORY][2];
+    Move counterMoves[PIECE_TYPE_COUNT][SQUARE_COUNT];
 
     alignas(64) NNUEdata nnue_state[MAX_PLY];
 
+    static constexpr int SCORE_UNSEARCHED = -1000000;
+
     struct RootMove {
         Move m;
-        int score;
+        int score = SCORE_UNSEARCHED;
+        int prevScore = SCORE_UNSEARCHED;
     };
 
     std::vector<RootMove> rootMoves;
@@ -65,6 +73,7 @@ private:
 
     void ClearKillers();
     void ClearHistory();
+    void ClearCounterMoves();
     // void AgeHistory();
 
     SearcherSettings currentSettings = SearcherSettings::getSettings(Difficulty::IMPOSSIBLE);
@@ -85,6 +94,7 @@ public:
         tt = std::make_shared<ImprovedTT::TranspositionTable>(TT_SIZE_MB);
         ClearHistory();
         ClearKillers();
+        ClearCounterMoves();
         ImprovedLMR::LMR::Init();
         std::memset(nnue_state, 0, sizeof(nnue_state));
     }
@@ -92,6 +102,7 @@ public:
     Searcher(std::shared_ptr<ImprovedTT::TranspositionTable> sharedTT) : board(), tt(sharedTT), threads(1) {
         ClearHistory();
         ClearKillers();
+        ClearCounterMoves();
         ImprovedLMR::LMR::Init();
         std::memset(nnue_state, 0, sizeof(nnue_state));
     }

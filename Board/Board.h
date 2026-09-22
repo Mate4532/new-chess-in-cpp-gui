@@ -195,7 +195,8 @@ public:
     uint64_t getNewXRayAttacks(Square to, uint64_t occupied) const;
     bool IsInsufficientMaterial() const;
     bool IsStalemate();
-	bool IsDraw();
+    bool IsDraw(bool inSearch = false);
+    bool isDrawWithoutStealmate(bool inSearch = false);
     bool IsCheckMate();
     bool isSquareAttacked(Square sq, Color attackerColor) const;
     bool isPassedPawn(Color color, Square sq) const;

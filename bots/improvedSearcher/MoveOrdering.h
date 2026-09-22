@@ -16,6 +16,7 @@ namespace ImprovedMoveOrdering {
             Move ttMove,
             const int history[2][SQUARE_COUNT][SQUARE_COUNT],
             const Move killers[2],
+            Move counterMove,
             int scores[SCORE_SIZE]
         );
     };

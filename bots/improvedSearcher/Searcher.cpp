@@ -21,9 +21,8 @@ inline long long now_ms() {
 }
 
 bool Searcher::shouldStop() {
-    localNodes++;
-    if ((localNodes & 2047) == 0) {
-        nodes += 2047;
+    if ((++localNodes & 1023) == 0) {
+        nodes += localNodes;
         localNodes = 0;
         if (now_ms() - startTime >= hardTimeLimit) return true;
     }
@@ -41,15 +40,111 @@ void Searcher::stopSearch() {
     isStoppedManually = true;
 }
 
+void Searcher::SetupNnueDirtyPieces(const Move& m, int ply) {
+    NNUEdata& next = nnue_state[ply + 1];
+
+    next.dirtyPiece.dirtyNum = 0;
+    next.accumulator.computedAccumulation = 0;
+
+    const Color player = board.getSideToMove();
+    const Color enemy = (Color)(player ^ 1);
+
+    const MoveFlag flags = m.getFlags();
+    const PieceType mPieceType = m.getPieceType();
+    const Square mFrom = m.getFrom();
+    const Square mTo = m.getTo();
+
+    const bool isCapture = flags & CAPTURE_FLAG;
+    const bool isPromo = flags & PROMOTION_FLAG;
+    const bool isCastle = (flags == KINGSIDE_CASTLE || flags == QUEENSIDE_CASTLE);
+    const bool isEp = (flags == EN_PASSANT);
+
+    if (isCapture) {
+        if (isEp) {
+            next.dirtyPiece.dirtyNum = 2;
+
+            next.dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(PAWN, player);
+            next.dirtyPiece.from[0] = mFrom;
+            next.dirtyPiece.to[0] = mTo;
+
+            int epSquare = mTo + (player == WHITE ? MoveGenerator::WHITE_ENPASSANT_PIECE_OFFSET : MoveGenerator::BLACK_ENPASSANT_PIECE_OFFSET);
+            next.dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(PAWN, enemy);
+            next.dirtyPiece.from[1] = epSquare;
+            next.dirtyPiece.to[1] = 64;
+        }
+        else {
+            next.dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(mPieceType, player);
+            next.dirtyPiece.from[0] = mFrom;
+            next.dirtyPiece.to[0] = isPromo ? 64 : mTo;
+
+            PieceType capPiece = board.getPieceAt(mTo, enemy);
+            next.dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(capPiece, enemy);
+            next.dirtyPiece.from[1] = mTo;
+            next.dirtyPiece.to[1] = 64;
+
+            if (isPromo) {
+                PieceType promoPiece = Board::GetPromotionPiece(flags);
+                next.dirtyPiece.dirtyNum = 3;
+
+                next.dirtyPiece.pc[2] = Evaluation::GetNnuePieceNum(promoPiece, player);
+                next.dirtyPiece.from[2] = 64;
+                next.dirtyPiece.to[2] = mTo;
+            }
+            else {
+                next.dirtyPiece.dirtyNum = 2;
+            }
+        }
+    }
+
+    else if (isPromo) {
+        next.dirtyPiece.dirtyNum = 2;
+
+        next.dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(PAWN, player);
+        next.dirtyPiece.from[0] = mFrom;
+        next.dirtyPiece.to[0] = 64;
+
+        PieceType promoPiece = Board::GetPromotionPiece(flags);
+        next.dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(promoPiece, player);
+        next.dirtyPiece.from[1] = 64;
+        next.dirtyPiece.to[1] = mTo;
+    }
+
+    else if (isCastle) {
+        next.dirtyPiece.dirtyNum = 2;
+
+        next.dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(KING, player);
+        next.dirtyPiece.from[0] = mFrom;
+        next.dirtyPiece.to[0] = mTo;
+
+        next.dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(ROOK, player);
+
+        if (flags == KINGSIDE_CASTLE) {
+            next.dirtyPiece.from[1] = player == WHITE ? MoveGenerator::WHITE_KINGSIDE_CASTLE_ROOK_POS_FROM : MoveGenerator::BLACK_KINGSIDE_CASTLE_ROOK_POS_FROM;
+            next.dirtyPiece.to[1] = player == WHITE ? MoveGenerator::WHITE_KINGSIDE_CASTLE_ROOK_POS_TO : MoveGenerator::BLACK_KINGSIDE_CASTLE_ROOK_POS_TO;
+        }
+        else {
+            next.dirtyPiece.from[1] = player == WHITE ? MoveGenerator::WHITE_QUEENSIDE_CASTLE_ROOK_POS_FROM : MoveGenerator::BLACK_QUEENSIDE_CASTLE_ROOK_POS_FROM;
+            next.dirtyPiece.to[1] = player == WHITE ? MoveGenerator::WHITE_QUEENSIDE_CASTLE_ROOK_POS_TO : MoveGenerator::BLACK_QUEENSIDE_CASTLE_ROOK_POS_TO;
+        }
+    }
+
+    else {
+        next.dirtyPiece.dirtyNum = 1;
+
+        next.dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(mPieceType, player);
+        next.dirtyPiece.from[0] = mFrom;
+        next.dirtyPiece.to[0] = mTo;
+    }
+}
+
 int Searcher::quiescence(int alpha, int beta, int ply) {
     pvLength[ply] = 0;
 
     if (shouldStop()) stop = true;
     if (isStopped()) return alpha;
 
-    uint64_t hash = board.getHash();
     if (ply > 0) {
-        if (board.getHalfMoveClock() >= 100 || board.getRepetitionTable().Contains(hash) || board.IsInsufficientMaterial()) {
+        if (board.isDrawWithoutStealmate(true)) {
             return 0;
         }
         alpha = std::max(alpha, -MATE_SCORE + ply);
@@ -57,16 +152,9 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         if (alpha >= beta) return alpha;
     }
 
-    int originalAlpha = alpha;
     if (ply >= MAXIMUM_DEPTH - 1) return Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
 
     bool inCheck = board.isSquareAttacked(board.getKingSquare(board.getSideToMove()), (Color)(board.getSideToMove() ^ 1));
-
-    if (inCheck && ply >= 30) {
-        return currentSettings.worseEvaluationEnabled
-                   ? WorseEvaluation::Evaluation::EvaluatePos(board)
-                   : Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
-    }
 
     Color player = board.getSideToMove();
 
@@ -91,7 +179,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
 
     Move dummyKillers[2] = { Move(), Move() };
     int scores[MoveOrdering::SCORE_SIZE];
-    MoveOrdering::ScoreMoves(board, moves, Move(), historyMoves, dummyKillers, scores);
+    MoveOrdering::ScoreMoves(board, moves, Move(), historyMoves, dummyKillers, Move(), scores);
 
     int n = moves.count;
     int movesSearched = 0;
@@ -111,126 +199,38 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         const Move& m = moves[i];
         int currentScore = scores[i];
 
-        nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
-        nnue_state[ply + 1].accumulator.computedAccumulation = 0;
-
         MoveFlag flags = m.getFlags();
-        PieceType mPieceType = m.getPieceType();
         bool isCapture = flags & CAPTURE_FLAG;
         bool isPromo = flags & PROMOTION_FLAG;
-        bool isCastle = (flags == KINGSIDE_CASTLE || flags == QUEENSIDE_CASTLE) && mPieceType == KING;
-
-        Color enemy = (Color)(player ^ 1);
-        Square mFrom = m.getFrom();
-        Square mTo = m.getTo();
 
         if (isPromo) {
-            PieceType promoPiece = Board::GetPromotionPiece(flags);
-            if (promoPiece != QUEEN) {
+            PieceType promoPiece = Board::GetPromotionPiece(m);
+            if (promoPiece != QUEEN && promoPiece != KNIGHT) {
                 continue;
             }
         }
 
-        if (!inCheck && isCapture && !isPromo) {
+        if (!inCheck && isCapture) {
             if (currentScore < 0) {
                 continue;
             }
         }
 
-        bool isEp = flags == EN_PASSANT;
-
-        if (isCapture) {
-
-            if (isEp) {
-                nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
-
-                nnue_state[ply + 1].dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(PAWN, player);
-                nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
-                nnue_state[ply + 1].dirtyPiece.to[0] = mTo;
-
-                int epSquare = mTo + (player == WHITE ? MoveGenerator::WHITE_ENPASSANT_PIECE_OFFSET : MoveGenerator::BLACK_ENPASSANT_PIECE_OFFSET);
-                nnue_state[ply + 1].dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(PAWN, enemy);
-                nnue_state[ply + 1].dirtyPiece.from[1] = epSquare;
-                nnue_state[ply + 1].dirtyPiece.to[1] = 64;
-            }
-
-            else {
-                nnue_state[ply + 1].dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(mPieceType, player);
-                nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
-                nnue_state[ply + 1].dirtyPiece.to[0] = isPromo ? 64 : mTo;
-
-                PieceType capPiece = board.getPieceAt(mTo, enemy);
-                nnue_state[ply + 1].dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(capPiece, enemy);
-                nnue_state[ply + 1].dirtyPiece.from[1] = mTo;
-                nnue_state[ply + 1].dirtyPiece.to[1] = 64;
-
-                if (isPromo) {
-                    PieceType promoPiece = Board::GetPromotionPiece(flags);
-                    nnue_state[ply + 1].dirtyPiece.dirtyNum = 3;
-
-                    nnue_state[ply + 1].dirtyPiece.pc[2] = Evaluation::GetNnuePieceNum(promoPiece, player);
-                    nnue_state[ply + 1].dirtyPiece.from[2] = 64;
-                    nnue_state[ply + 1].dirtyPiece.to[2] = mTo;
-                }
-
-                else {
-                    nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
-                }
-            }
-        }
-
-        else if (isPromo) {
-            nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
-
-            nnue_state[ply + 1].dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(PAWN, player);
-            nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
-            nnue_state[ply + 1].dirtyPiece.to[0] = 64;
-
-            PieceType promoPiece = Board::GetPromotionPiece(flags);
-            nnue_state[ply + 1].dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(promoPiece, player);
-            nnue_state[ply + 1].dirtyPiece.from[1] = 64;
-            nnue_state[ply + 1].dirtyPiece.to[1] = mTo;
-        }
-
-        else if (isCastle) {
-            nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
-            if (flags == KINGSIDE_CASTLE) {
-                nnue_state[ply + 1].dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(KING, player);
-                nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
-                nnue_state[ply + 1].dirtyPiece.to[0] = mTo;
-
-                nnue_state[ply + 1].dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(ROOK, player);
-                nnue_state[ply + 1].dirtyPiece.from[1] = player == WHITE ? MoveGenerator::WHITE_KINGSIDE_CASTLE_ROOK_POS_FROM : MoveGenerator::BLACK_KINGSIDE_CASTLE_ROOK_POS_FROM;
-                nnue_state[ply + 1].dirtyPiece.to[1] = player == WHITE ? MoveGenerator::WHITE_KINGSIDE_CASTLE_ROOK_POS_TO : MoveGenerator::BLACK_KINGSIDE_CASTLE_ROOK_POS_TO;
-
-            }
-
-            else if (flags == QUEENSIDE_CASTLE) {
-                nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
-                nnue_state[ply + 1].dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(KING, player);
-                nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
-                nnue_state[ply + 1].dirtyPiece.to[0] = mTo;
-
-                nnue_state[ply + 1].dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(ROOK, player);
-                nnue_state[ply + 1].dirtyPiece.from[1] = player == WHITE ? MoveGenerator::WHITE_QUEENSIDE_CASTLE_ROOK_POS_FROM : MoveGenerator::BLACK_QUEENSIDE_CASTLE_ROOK_POS_FROM;
-                nnue_state[ply + 1].dirtyPiece.to[1] = player == WHITE ? MoveGenerator::WHITE_QUEENSIDE_CASTLE_ROOK_POS_TO : MoveGenerator::BLACK_QUEENSIDE_CASTLE_ROOK_POS_TO;
-            }
-        }
-
-        else {
-            nnue_state[ply + 1].dirtyPiece.dirtyNum = 1;
-
-            nnue_state[ply + 1].dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(mPieceType, player);
-            nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
-            nnue_state[ply + 1].dirtyPiece.to[0] = mTo;
-        }
+        SetupNnueDirtyPieces(m, ply);
 
         if (!board.MakeMove(m, true)) continue;
+
         movesSearched++;
+        int score = 0;
 
-        if (!bestMoveThisNode.isValid()) bestMoveThisNode = m;
+        if (board.isDrawWithoutStealmate(true)) {
+            score = 0;
+        }
+        else {
+            if (!bestMoveThisNode.isValid()) bestMoveThisNode = m;
+            score = -quiescence(-beta, -alpha, ply + 1);
+        }
 
-        int score = -quiescence(-beta, -alpha, ply + 1);
         board.UndoMove(m, true);
 
         if (isStopped()) return alpha;
@@ -250,7 +250,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
     return alpha;
 }
 
-int Searcher::negamax(int depth, int alpha, int beta, int ply) {
+int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove, Move prevMove) {
     pvLength[ply] = 0;
 
     if (shouldStop()) stop = true;
@@ -258,8 +258,12 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
     if (ply >= MAXIMUM_DEPTH - 1) return Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
     uint64_t hash = board.getHash();
+
+    const bool isExclusionSearch = excludedMove.isValid();
+    if (isExclusionSearch) hash ^= 0x9E3779B97F4A7C15ULL;
+
     if (ply > 0) {
-        if (board.getHalfMoveClock() >= 100 || board.getRepetitionTable().Contains(hash) || board.IsInsufficientMaterial()) {
+        if (board.isDrawWithoutStealmate(true)) {
             return 0;
         }
         alpha = std::max(alpha, -MATE_SCORE + ply);
@@ -285,12 +289,12 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
         return ttScore;
     }
 
+    if (depth <= 0) return quiescence(alpha, beta, ply);
+
     if (!ttMove.isValid() && depth >= 4 && ply > 0) {
-
         int iidDepth = (isPvNode) ? depth - 2 : depth / 2;
-
-        negamax(iidDepth, alpha, beta, ply);
-
+        negamax(iidDepth, alpha, beta, ply, excludedMove, prevMove);
+        if (isStopped()) return alpha;
         tt->Probe(hash, ply, iidDepth, alpha, beta, ttScore, ttMove, ttDepth, ttFlag);
     }
 
@@ -330,6 +334,16 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
                          ? WorseEvaluation::Evaluation::EvaluatePos(board)
                          : Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
 
+        if (ttDepth > 0) {
+            if (ttFlag == TT_EXACT) {
+                staticEval = ttScore;
+            } else if (ttFlag == TT_BETA && ttScore > staticEval) {
+                staticEval = ttScore;
+            } else if (ttFlag == TT_ALPHA && ttScore < staticEval) {
+                staticEval = ttScore;
+            }
+        }
+
         evalHistory[ply] = staticEval;
     }
 
@@ -342,20 +356,33 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
         if (ply >= 2 && evalHistory[ply - 2] != SCORE_NONE) {
             improving = staticEval > evalHistory[ply - 2];
         }
-        else if (ply >= 4 && evalHistory[ply - 4] != SCORE_NONE) {
-            improving = staticEval > evalHistory[ply - 4];
+        else if (ply == 3 && evalHistory[0] != SCORE_NONE) {
+            improving = staticEval > evalHistory[0];
         }
         else {
             improving = true;
         }
     }
 
-    if (!inCheck && !isPvNode && depth <= 4 && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
+    if (!inCheck && !isPvNode && depth <= 3 && ply > 0 && abs(alpha) < MATE_SCORE_BOUND) {
+        int razorMargin = 200 + 150 * depth;
+        if (staticEval + razorMargin < alpha) {
+            if (depth == 1) {
+                return quiescence(alpha, beta, ply);
+            }
+            int razorScore = quiescence(alpha - 1, alpha, ply);
+            if (razorScore < alpha) {
+                return razorScore;
+            }
+        }
+    }
 
-        int evalMargin = 120 * depth;
+    if (!inCheck && !isPvNode && depth <= 6 && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
+
+        int evalMargin = 100 * depth;
 
         if (improving) {
-            evalMargin -= 65;
+            evalMargin -= 75;
         }
 
         if (staticEval - evalMargin >= beta) {
@@ -363,17 +390,17 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
         }
     }
 
-    if (!inCheck && !isPvNode && depth >= 3 && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
+    if (!inCheck && !isPvNode && depth >= 2 && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
         if (staticEval >= beta && board.HasNonPawnMaterial(board.getSideToMove())) {
             if (!board.hasAdvancedPassedPawn(board.getSideToMove())) {
 
-                int R = 3 + (depth / 6);
+                int R = 3 + (depth / 4);
 
                 nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
                 nnue_state[ply + 1].accumulator.computedAccumulation = 0;
 
                 board.MakeNullMove();
-                int score = -negamax(depth - 1 - R, -beta, -beta + 1, ply + 1);
+                int score = -negamax(std::max(depth - 1 - R, 0), -beta, -beta + 1, ply + 1, Move(), Move());
                 board.UndoNullMove();
 
                 if (isStopped()) return alpha;
@@ -382,13 +409,16 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
         }
     }
 
-    if (depth <= 0) return quiescence(alpha, beta, ply);
-
     Move currentKillers[2] = { Move(), Move() };
 
     if (ply < MAX_KILLER_HISTORY) {
         currentKillers[0] = killerMoves[ply][0];
         currentKillers[1] = killerMoves[ply][1];
+    }
+
+    Move counterMoveHint = Move();
+    if (prevMove.isValid()) {
+        counterMoveHint = counterMoves[prevMove.getPieceType()][prevMove.getTo()];
     }
 
     int scores[MoveOrdering::SCORE_SIZE];
@@ -397,7 +427,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
             scores[i] = 1000000 - i;
         }
     } else {
-        MoveOrdering::ScoreMoves(board, moves, ttMove, historyMoves, currentKillers, scores);
+        MoveOrdering::ScoreMoves(board, moves, ttMove, historyMoves, currentKillers, counterMoveHint, scores);
     }
 
     Move bestMoveThisNode;
@@ -417,207 +447,199 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
 
         const Move& m = moves[i];
 
-        nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
-        nnue_state[ply + 1].accumulator.computedAccumulation = 0;
+        if (isExclusionSearch && m == excludedMove) continue;
 
         Color player = board.getSideToMove();
         Color enemy = (Color)(player ^ 1);
         Square mFrom = m.getFrom();
         Square mTo = m.getTo();
 
-
         MoveFlag flags = m.getFlags();
         PieceType mPieceType = m.getPieceType();
         bool isCapture = flags & CAPTURE_FLAG;
         bool isPromo = flags & PROMOTION_FLAG;
         bool quiet = !isCapture && !isPromo;
-        bool isCastle = (flags == KINGSIDE_CASTLE || flags == QUEENSIDE_CASTLE) && mPieceType == KING;
-        bool isEp = flags == EN_PASSANT;
         bool isAdvancedPassedPawnPush = (mPieceType == PAWN) && board.isAdvancedPassedPawnPush(m);
 
-        if (isCapture) {
-
-            if (isEp) {
-                nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
-
-                nnue_state[ply + 1].dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(PAWN, player);
-                nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
-                nnue_state[ply + 1].dirtyPiece.to[0] = mTo;
-
-                int epSquare = mTo + (player == WHITE ? MoveGenerator::WHITE_ENPASSANT_PIECE_OFFSET : MoveGenerator::BLACK_ENPASSANT_PIECE_OFFSET);
-                nnue_state[ply + 1].dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(PAWN, enemy);
-                nnue_state[ply + 1].dirtyPiece.from[1] = epSquare;
-                nnue_state[ply + 1].dirtyPiece.to[1] = 64;
-            }
-
-            else {
-                nnue_state[ply + 1].dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(mPieceType, player);
-                nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
-                nnue_state[ply + 1].dirtyPiece.to[0] = isPromo ? 64 : mTo;
-
-                PieceType capPiece = board.getPieceAt(mTo, enemy);
-                nnue_state[ply + 1].dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(capPiece, enemy);
-                nnue_state[ply + 1].dirtyPiece.from[1] = mTo;
-                nnue_state[ply + 1].dirtyPiece.to[1] = 64;
-
-                if (isPromo) {
-                    PieceType promoPiece = Board::GetPromotionPiece(flags);
-                    nnue_state[ply + 1].dirtyPiece.dirtyNum = 3;
-
-                    nnue_state[ply + 1].dirtyPiece.pc[2] = Evaluation::GetNnuePieceNum(promoPiece, player);
-                    nnue_state[ply + 1].dirtyPiece.from[2] = 64;
-                    nnue_state[ply + 1].dirtyPiece.to[2] = mTo;
-                }
-
-                else {
-                    nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
-                }
-            }
-        }
-
-        else if (isPromo) {
-            nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
-
-            nnue_state[ply + 1].dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(PAWN, player);
-            nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
-            nnue_state[ply + 1].dirtyPiece.to[0] = 64;
-
-            PieceType promoPiece = Board::GetPromotionPiece(flags);
-            nnue_state[ply + 1].dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(promoPiece, player);
-            nnue_state[ply + 1].dirtyPiece.from[1] = 64;
-            nnue_state[ply + 1].dirtyPiece.to[1] = mTo;
-        }
-
-        else if (isCastle) {
-            nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
-            if (flags == KINGSIDE_CASTLE) {
-                nnue_state[ply + 1].dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(KING, player);
-                nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
-                nnue_state[ply + 1].dirtyPiece.to[0] = mTo;
-
-                nnue_state[ply + 1].dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(ROOK, player);
-                nnue_state[ply + 1].dirtyPiece.from[1] = player == WHITE ? MoveGenerator::WHITE_KINGSIDE_CASTLE_ROOK_POS_FROM : MoveGenerator::BLACK_KINGSIDE_CASTLE_ROOK_POS_FROM;
-                nnue_state[ply + 1].dirtyPiece.to[1] = player == WHITE ? MoveGenerator::WHITE_KINGSIDE_CASTLE_ROOK_POS_TO : MoveGenerator::BLACK_KINGSIDE_CASTLE_ROOK_POS_TO;
-
-            }
-
-            else if (flags == QUEENSIDE_CASTLE) {
-                nnue_state[ply + 1].dirtyPiece.dirtyNum = 2;
-                nnue_state[ply + 1].dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(KING, player);
-                nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
-                nnue_state[ply + 1].dirtyPiece.to[0] = mTo;
-
-                nnue_state[ply + 1].dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(ROOK, player);
-                nnue_state[ply + 1].dirtyPiece.from[1] = player == WHITE ? MoveGenerator::WHITE_QUEENSIDE_CASTLE_ROOK_POS_FROM : MoveGenerator::BLACK_QUEENSIDE_CASTLE_ROOK_POS_FROM;
-                nnue_state[ply + 1].dirtyPiece.to[1] = player == WHITE ? MoveGenerator::WHITE_QUEENSIDE_CASTLE_ROOK_POS_TO : MoveGenerator::BLACK_QUEENSIDE_CASTLE_ROOK_POS_TO;
-            }
-        }
-
-        else {
-            nnue_state[ply + 1].dirtyPiece.dirtyNum = 1;
-
-            nnue_state[ply + 1].dirtyPiece.pc[0] = Evaluation::GetNnuePieceNum(mPieceType, player);
-            nnue_state[ply + 1].dirtyPiece.from[0] = mFrom;
-            nnue_state[ply + 1].dirtyPiece.to[0] = mTo;
-        }
+        SetupNnueDirtyPieces(m, ply);
 
         if (!board.MakeMove(m, true)) {
             continue;
         }
+
         movesSearched++;
-
-        if (movesSearched == 1)
-            bestMoveThisNode = m;
-
-        bool givesCheck = board.isSquareAttacked(board.getKingSquare(enemy), player);
-        bool isKiller = (ply < MAX_KILLER_HISTORY) && (m == killerMoves[ply][0] || m == killerMoves[ply][1]);
-
-        if (depth <= 4 && movesSearched > 1 && !inCheck && !givesCheck && quiet && abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
-
-            int futilityMargin = 150 * depth;
-
-            if (staticEval + futilityMargin <= alpha) {
-                board.UndoMove(m, true);
-                continue;
-            }
-        }
-
-        uint64_t hash_after_move = board.getHash();
-        tt->Prefetch(hash_after_move);
-
         int score = 0;
 
-        int extension = 0;
-
-        if (isSingleReply) {
-            extension = 1;
-        }
-        else if (isPvNode && givesCheck && movesSearched == 1) {
-            extension = 1;
-        }
-
-        if (movesSearched == 1) {
-            score = -negamax(depth + extension - 1, -beta, -alpha, ply + 1);
+        if (board.isDrawWithoutStealmate(true)) {
+            score = 0;
         }
         else {
-            int reduction = 0;
-            int seeScore = MoveOrdering::See(board, m);
-            bool badQuiet = quiet && (seeScore < 0);
+            if (movesSearched == 1)
+                bestMoveThisNode = m;
 
-            if (depth >= 3 && movesSearched > 1 && !inCheck) { // movesSearched > 1 + quiet is not here
-                if (quiet) { // quiet
-                    reduction = LMR::LMR::GetReduction(depth, movesSearched, isPvNode); // PVNode
+            bool givesCheck = board.isSquareAttacked(board.getKingSquare(enemy), player);
+            bool isKiller = (ply < MAX_KILLER_HISTORY) && (m == killerMoves[ply][0] || m == killerMoves[ply][1]);
+            const bool isTTMove = ttMove.isValid() && (m == ttMove);
 
-                    if (!improving) {
-                        reduction += 1;
+            if (!inCheck && !isPvNode && movesSearched > 1 && !givesCheck && !isTTMove) {
+
+                if (quiet && !isKiller && depth <= 8) {
+                    int lmpThreshold = (improving ? 4 : 2) + depth * depth;
+                    if (movesSearched > lmpThreshold) {
+                        board.UndoMove(m, true);
+                        continue;
+                    }
+                }
+
+                if (abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
+
+                    if (quiet && depth <= 6) {
+                        int futilityMargin = 120 * depth;
+
+                        if (staticEval + futilityMargin <= alpha) {
+                            board.UndoMove(m, true);
+                            continue;
+                        }
                     }
 
-                    if (badQuiet) {
-                         reduction += 1;
+                    if (!isKiller && depth <= 7) {
+                        int seeMargin = quiet ? -50 * depth : -90 * depth;
+                        if (MoveOrdering::See(board, m) < seeMargin) {
+                            board.UndoMove(m, true);
+                            continue;
+                        }
                     }
-
-                    if (isKiller){
-                        reduction -= 1;
-                    }
-
-                    if (isPvNode) {
-                        reduction -= 1;
-                    }
-
-                    if (isAdvancedPassedPawnPush) {
-                        reduction -= 1;
-                    }
-
-                    if (givesCheck) {
-                        reduction -= 1;
-                    }
-
-                    int histScore = historyMoves[player][mFrom][mTo];
-
-                    int historyModifier = -(histScore / 2048);
-
-                    historyModifier = std::clamp(historyModifier, -1, 2);
-
-                    reduction += historyModifier;
-
-                    reduction = std::clamp(reduction, 0, depth);
                 }
             }
 
-            score = -negamax(depth - 1 - reduction, -alpha - 1, -alpha, ply + 1);
+            uint64_t hash_after_move = board.getHash();
+            tt->Prefetch(hash_after_move);
 
-            if (score > alpha) {
+            int extension = 0;
 
-                if (reduction > 0) {
-                    score = -negamax(depth - 1, -alpha - 1, -alpha, ply + 1);
+            const bool canSingular =
+                isTTMove
+                && !isExclusionSearch
+                && ply > 0
+                && ply < MAXIMUM_DEPTH
+                && depth >= 8
+                && !inCheck
+                && ttDepth >= depth - 3
+                && ttFlag == TT_BETA
+                && std::abs(ttScore) < MATE_SCORE_BOUND;
+
+            if (canSingular) {
+                const int singularMargin = 3 + depth / 2;
+                const int singularBeta   = ttScore - singularMargin;
+                const int singularDepth  = (depth - 1) / 2;
+
+                const int savedPvLength = pvLength[ply];
+                Move savedPvTable[MAXIMUM_DEPTH];
+                for (int k = 0; k < savedPvLength; k++) savedPvTable[k] = pvTable[ply][k];
+
+                board.UndoMove(m, true);
+
+                int singularScore = negamax(singularDepth,
+                                            singularBeta - 1, singularBeta,
+                                            ply, m, prevMove);
+
+                pvLength[ply] = savedPvLength;
+                for (int k = 0; k < savedPvLength; k++) pvTable[ply][k] = savedPvTable[k];
+
+                SetupNnueDirtyPieces(m, ply);
+                if (!board.MakeMove(m, true)) {
+                    movesSearched--;
+                    continue;
                 }
 
-                if (score > alpha && score < beta) {
-                    score = -negamax(depth - 1, -beta, -alpha, ply + 1);
+                if (isStopped()) {
+                    board.UndoMove(m, true);
+                    return alpha;
+                }
+
+                if (singularScore < singularBeta) {
+                    extension = 1;
+                }
+                else if (singularBeta >= beta) {
+                    board.UndoMove(m, true);
+                    tt->Store(hash, singularBeta, ply, depth, TT_BETA, m);
+                    return singularBeta;
+                }
+                else if (ttScore >= beta) {
+                    extension = -1;
+                }
+            }
+
+            if (isSingleReply) {
+                extension = std::max(extension, 1);
+            }
+            else if (givesCheck && depth <= 10 && (isPvNode || movesSearched <= 2)) {
+                extension = std::max(extension, 1);
+            }
+
+            if (movesSearched == 1) {
+                score = -negamax(depth + extension - 1, -beta, -alpha, ply + 1, Move(), m);
+            }
+            else {
+                int reduction = 0;
+
+                int seeScore = 0;
+                if (isCapture) {
+                    seeScore = MoveOrdering::See(board, m);
+                }
+
+                if (depth >= 3) {
+                    reduction = LMR::LMR::GetReduction(depth, movesSearched, isPvNode);
+
+                    if (quiet) {
+                        if (!improving) reduction += 1;
+
+                        if (isKiller) reduction -= 1;
+                        if (isAdvancedPassedPawnPush) reduction -= 1;
+
+                        int histScore = historyMoves[player][mFrom][mTo];
+                        int historyModifier = -(histScore / 2048);
+                        historyModifier = std::clamp(historyModifier, -2, 2);
+                        reduction += historyModifier;
+                    }
+                    else if (isCapture) {
+                        if (seeScore >= 0) {
+                            reduction = 0;
+                        } else {
+                            reduction += 1;
+
+                            if (seeScore < -300) {
+                                reduction += 1;
+                            }
+                        }
+                    }
+
+                    if (reduction > 0) {
+                        if (givesCheck) reduction -= 1;
+                        if (inCheck) reduction -= 1;
+                        if (isPvNode) reduction -= 1;
+                        if (isPromo) reduction = 0;
+                    }
+
+                    reduction = std::clamp(reduction, 0, depth - 2);
+                }
+
+                const int fullDepth = depth + extension - 1;
+
+                score = -negamax(fullDepth - reduction, -alpha - 1, -alpha, ply + 1, Move(), m);
+
+                if (score > alpha) {
+
+                    if (reduction > 0) {
+                        score = -negamax(fullDepth, -alpha - 1, -alpha, ply + 1, Move(), m);
+                    }
+
+                    if (score > alpha && score < beta) {
+                        score = -negamax(fullDepth, -beta, -alpha, ply + 1, Move(), m);
+                    }
                 }
             }
         }
-
         board.UndoMove(m, true);
         if (isStopped()) return alpha;
 
@@ -636,6 +658,11 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
                     killerMoves[ply][1] = killerMoves[ply][0];
                     killerMoves[ply][0] = m;
                 }
+
+                if (prevMove.isValid()) {
+                    counterMoves[prevMove.getPieceType()][prevMove.getTo()] = m;
+                }
+
                 int bonus = depth * depth;
                 if (bonus > 1024) bonus = 1024;
 
@@ -670,6 +697,9 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply) {
     }
 
     if (movesSearched == 0) {
+        if (isExclusionSearch) {
+            return alpha;
+        }
         return inCheck ? -MATE_SCORE + ply : 0;
     }
 
@@ -685,6 +715,11 @@ void Searcher::PrepareSearcher() {
     isStoppedManually = false;
     isSearching = true;
     nodes = 0;
+    localNodes = 0;
+
+    for (int i = 0; i < MAXIMUM_DEPTH; i++) {
+        pvLength[i] = 0;
+    }
 
     if (rtum == RobotTimeUsageMode::FIXED_TIME) {
         softTimeLimit = fixedTimePerMoveMs;
@@ -724,12 +759,20 @@ void Searcher::ClearKillers() {
     }
 }
 
-//void Searcher::AgeHistory() {
+void Searcher::ClearCounterMoves() {
+    for (int p = 0; p < PIECE_TYPE_COUNT; p++) {
+        for (int sq = 0; sq < SQUARE_COUNT; sq++) {
+            counterMoves[p][sq] = Move();
+        }
+    }
+}
+
+// void Searcher::AgeHistory() {
 //    for (int c = 0; c < 2; c++)
 //        for (int f = 0; f < SQUARE_COUNT; f++)
 //            for (int t = 0; t < SQUARE_COUNT; t++)
 //                historyMoves[c][f][t] /= 2;
-//}
+// }
 
 void Searcher::ClearHistory() {
     for (int c = 0; c < 2; c++)
@@ -762,7 +805,7 @@ Move Searcher::IterativeDeepening(bool silent) {
     rootMoves.clear();
     for (const Move& m : rawRootMoves) {
         if (board.MakeMove(m, true)) {
-            rootMoves.push_back({m, -MATE_SCORE});
+            rootMoves.push_back({m, SCORE_UNSEARCHED, SCORE_UNSEARCHED});
             board.UndoMove(m, true);
         }
     }
@@ -788,37 +831,58 @@ Move Searcher::IterativeDeepening(bool silent) {
 
         int alpha = -MATE_SCORE;
         int beta = MATE_SCORE;
-        int delta = 60;
+        int delta = 25;
 
-        if (depth >= 4) {
-            int expectedScore = scoreHistory[depth - 2];
+        if (depth >= 4 && std::abs(scoreHistory[depth - 1]) < MATE_SCORE_BOUND) {
+            int expectedScore = scoreHistory[depth - 1];
             alpha = std::max(-MATE_SCORE, expectedScore - delta);
             beta = std::min(MATE_SCORE, expectedScore + delta);
         }
 
-        int score;
+        int score = 0;
 
-        while (true) {
+        for (int failCount = 0; ; ++failCount) {
+
+            for (RootMove& rm : rootMoves) {
+                rm.score = SCORE_UNSEARCHED;
+            }
+
             score = negamax(depth, alpha, beta, 0);
 
             if (isStopped()) break;
+            if (score > alpha && score < beta) break;
 
-            if (score <= alpha) {
+            if (failCount >= 8) {
                 alpha = -MATE_SCORE;
-            }
-            else if (score >= beta) {
                 beta = MATE_SCORE;
-            }
-            else {
+                for (RootMove& rm : rootMoves) {
+                    rm.score = SCORE_UNSEARCHED;
+                }
+                score = negamax(depth, alpha, beta, 0);
                 break;
             }
+
+            if (score <= alpha) {
+                beta = (alpha + beta) / 2;
+                alpha = std::max(-MATE_SCORE, score - delta);
+            }
+            else {
+                beta = std::min(MATE_SCORE, score + delta);
+            }
+
+            delta += delta / 2 + 5;
         }
 
         if (isStopped()) break;
 
         std::stable_sort(rootMoves.begin(), rootMoves.end(), [](const RootMove& a, const RootMove& b) {
-            return a.score > b.score;
+            if (a.score != b.score) return a.score > b.score;
+            return a.prevScore > b.prevScore;
         });
+
+        for (RootMove& rm : rootMoves) {
+            rm.prevScore = rm.score;
+        }
 
         int prevScore = lastScore;
         lastScore = score;
@@ -853,13 +917,13 @@ Move Searcher::IterativeDeepening(bool silent) {
 
         if (!silent) LOG_DEBUG("info depth " << depth << " score "
                       << ((abs(score) > MATE_SCORE_BOUND)
-                              ? "mate " + std::to_string((score > 0) ? (MATE_SCORE + 1 - score) / 2 : -(MATE_SCORE + 1 + score) / 2)
+                              ? "mate " + std::to_string((score > 0) ? (MATE_SCORE + 1 - score) / 2 : (MATE_SCORE + 1 + score) / 2)
                               : "cp " + std::to_string(board.getSideToMove() == WHITE ? score : -score))
                       << " time " << timeSpent
                       << " nodes " << (nodes + localNodes)
                                     << " | pv " << currentPvString);
 
-        if (IsMateScore(score) && score > 0) break;
+        if (score >= MATE_SCORE_BOUND) break;
 
         if (rtum == RobotTimeUsageMode::FIXED_TIME) {
             if (timeSpent >= fixedTimePerMoveMs) {
@@ -889,7 +953,7 @@ Move Searcher::IterativeDeepening(bool silent) {
         LOG_DEBUG("Final Score: ");
 
         if (isMate) {
-            int mateIn = (lastScore > 0) ? (MATE_SCORE + 1 - lastScore) / 2 : -(MATE_SCORE + 1 + lastScore) / 2;
+            int mateIn = (lastScore > 0) ? (MATE_SCORE + 1 - lastScore) / 2 : (MATE_SCORE + 1 + lastScore) / 2;
             LOG_DEBUG("mate " << mateIn << " ");
         } else {
             int cpScore = (board.getSideToMove() == WHITE ? lastScore : -lastScore);
@@ -922,7 +986,7 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
 
     Move dummyKillers[2] = { Move(), Move() };
     int scores[MoveOrdering::SCORE_SIZE];
-    MoveOrdering::ScoreMoves(board, moves, Move(), historyMoves, dummyKillers, scores);
+    MoveOrdering::ScoreMoves(board, moves, Move(), historyMoves, dummyKillers, Move(), scores);
 
     int n = (int)moves.size();
     for (int i = 0; i < n - 1; i++) {
@@ -949,6 +1013,7 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
     if (lastCompletedScores.empty()) return IterativeDeepening();
 
     int targetDepth = std::max(settings.maxDepth - 2, 3);
+    bool anyDepthCompleted = false;
 
     for (int d = 1; d <= targetDepth; d++) {
         std::vector<ScoredMove> currentDepthScores;
@@ -956,14 +1021,13 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
         Color us = board.getSideToMove();
 
         for (auto& sm : lastCompletedScores) {
-            nnue_state[1].dirtyPiece.dirtyNum = 0;
-            nnue_state[1].accumulator.computedAccumulation = 0;
+            SetupNnueDirtyPieces(sm.m, 0);
 
             if (!board.MakeMove(sm.m, true)) continue;
-            int score = -negamax(d - 1, -MATE_SCORE, MATE_SCORE, 1);
+            int score = -negamax(d - 1, -MATE_SCORE, MATE_SCORE, 1, Move(), sm.m);
             board.UndoMove(sm.m, true);
 
-            if (stop) {
+            if (isStopped()) {
                 depthFinished = false;
                 break;
             }
@@ -973,10 +1037,11 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
             currentDepthScores.push_back({sm.m, realScore});
         }
 
-        if (depthFinished && !currentDepthScores.empty()) {
+        if (depthFinished && currentDepthScores.size() == lastCompletedScores.size()) {
             std::sort(currentDepthScores.begin(), currentDepthScores.end(),
                       [us](const ScoredMove& a, const ScoredMove& b) { return us == WHITE ? a.score > b.score : a.score < b.score; });
             lastCompletedScores = currentDepthScores;
+            anyDepthCompleted = true;
             if (std::abs(lastCompletedScores[0].score) > MATE_SCORE_BOUND) break;
         } else {
             break;
@@ -985,6 +1050,14 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
         if (now_ms() - startTime >= softTimeLimit) {
             break;
         }
+    }
+
+    if (!anyDepthCompleted) {
+        if (board.isDebugMode) {
+            LOG_DEBUG("info string [FALLBACK] No depth completed, using full search.");
+        }
+        movesWithoutBlunderOnPropuse++;
+        return IterativeDeepening();
     }
 
     isSearching = false;
@@ -1020,10 +1093,11 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
 
                 if (!isProtected) {
                     if (board.isDebugMode) {
-                        LOG_DEBUG("info string [FREE PIECE] Found in 1 depth, best move made: " << m.toAlgebraic()
-                        << " (rank 1 | score " << lastCompletedScores[0].score << ")");
+                        LOG_DEBUG("info string [FREE PIECE] Taking undefended piece: " << m.toAlgebraic()
+                        << " (rank " << (i + 1) << " | score " << lastCompletedScores[i].score << ")");
                     }
-                    return lastCompletedScores[0].m;
+                    movesWithoutBlunderOnPropuse = 0;
+                    return m;
                 }
             }
         }
@@ -1037,7 +1111,7 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
                 Move candidateMove = lastCompletedScores[i].m;
                 Color us = board.getSideToMove();
 
-                if (!isEmbarrassingBlunder && board.MakeMove(candidateMove, true)) {
+                if (board.MakeMove(candidateMove, true)) {
                     MoveList enemyCaptures;
                     MoveGenerator::GenerateMoves(board, enemyCaptures, true);
 
@@ -1048,6 +1122,9 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
                         PieceType enemyAttackingPiece = enemyMove.getPieceType();
 
                         if (myCapturedPiece >= KNIGHT && myCapturedPiece <= QUEEN) {
+                            if (!board.MakeMove(enemyMove, true)) continue;
+                            board.UndoMove(enemyMove, true);
+
                             bool isProtectedByUs = board.isSquareAttacked(enemyMove.getTo(), us);
                             int valMyPiece = Evaluation::GetPieceValue(myCapturedPiece);
                             int valEnemyPiece = Evaluation::GetPieceValue(enemyAttackingPiece);
@@ -1102,13 +1179,11 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
 }
 
 Move Searcher::GetRobotMove() {
-    Move bestMove = GetMultiThreadedBestMove();
-
     if (currentSettings.areBlundersOnPurposeEnabled) {
         return GetBestAmongTopMoves(currentSettings);
     }
 
-    return bestMove;
+    return GetMultiThreadedBestMove();
 }
 
 Move Searcher::GetMultiThreadedBestMove() {
@@ -1123,28 +1198,27 @@ Move Searcher::GetMultiThreadedBestMove() {
     this->stop = false;
     Board board_snapshot = this->board;
 
-    struct HistorySnapshot {
-        int moves[2][SQUARE_COUNT][SQUARE_COUNT];
-    };
-    HistorySnapshot histCopy;
-    std::memcpy(histCopy.moves, this->historyMoves, sizeof(this->historyMoves));
+    std::vector<std::unique_ptr<Searcher>> tmpHelpers;
 
     for (int i = 0; i < numThreads - 1; ++i) {
-        helpers.emplace_back([this, board_snapshot, histCopy]() mutable {
-            auto helper = std::make_unique<Searcher>(this->tt);
-            helper->isHelper = true;
-            helper->abortPtr = &this->stop;
-            helper->board = board_snapshot;
-            helper->currentDiff = this->currentDiff;
-            helper->currentSettings = this->currentSettings;
-            helper->rtum = this->rtum;
-            helper->fixedTimePerMoveMs.store(this->fixedTimePerMoveMs.load());
-            helper->timeLeftMs.store(this->timeLeftMs.load());
-            helper->incrementMs.store(this->incrementMs.load());
+        auto helper = std::make_unique<Searcher>(this->tt);
+        helper->isHelper = true;
+        helper->abortPtr = &this->stop;
+        helper->board = board_snapshot;
 
-            std::memcpy(helper->historyMoves, histCopy.moves, sizeof(histCopy.moves));
+        helper->currentSettings  = this->currentSettings;
+        helper->currentDiff      = this->currentDiff;
+        helper->rtum             = this->rtum;
+        helper->fixedTimePerMoveMs = this->fixedTimePerMoveMs.load();
 
-            helper->IterativeDeepening(true);
+        helper->setTournamentTime(this->timeLeftMs, this->incrementMs);
+
+        tmpHelpers.push_back(std::move(helper));
+    }
+
+    for (int i = 0; i < numThreads - 1; ++i) {
+        helpers.emplace_back([i, &tmpHelpers]() {
+            tmpHelpers[i]->IterativeDeepening(true);
         });
     }
 
@@ -1161,6 +1235,7 @@ Move Searcher::GetMultiThreadedBestMove() {
 void Searcher::ClearSearcher() {
     ClearKillers();
     ClearHistory();
+    ClearCounterMoves();
     tt->Clear();
     movesWithoutBlunderOnPropuse = 0;
 }

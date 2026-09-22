@@ -2,6 +2,8 @@
 #include "Zobrist.h"
 #include "PGNFormatter.h"
 #include <mutex>
+#include <iterator>
+#include <algorithm>
 
 static std::once_flag init_flag;
 
@@ -296,7 +298,6 @@ std::string Board::GetFEN() const {
                 else if (pt_white == KING) piece_char = 'K';
             }
             else {
-                // Ha nincs világos, megnézzük a sötétet
                 PieceType pt_black = getPieceAt(sq, BLACK);
                 if (pt_black != PIECE_NONE) {
                     if (pt_black == PAWN) piece_char = 'p';
@@ -603,8 +604,8 @@ bool Board::IsInsufficientMaterial() const {
         Square wBishopSq = (Square)std::countr_zero(wB);
         Square bBishopSq = (Square)std::countr_zero(bB);
 
-        bool wBishopIsLight = (LIGHT_SQUARES & (1ULL << wBishopSq));
-        bool bBishopIsLight = (DARK_SQUARES & (1ULL << bBishopSq));
+        bool wBishopIsLight = (LIGHT_SQUARES & (1ULL << wBishopSq)) != 0;
+        bool bBishopIsLight = (LIGHT_SQUARES & (1ULL << bBishopSq)) != 0; // was DARK_SQUARES -- inverted, same-colour bishops were NOT detected as draws
 
         if (wBishopIsLight == bBishopIsLight) {
             return true;
@@ -634,21 +635,31 @@ bool Board::IsStalemate() {
     return true;
 }
 
-bool Board::IsDraw() {
+bool Board::IsDraw(bool inSearch) {
 
-    if (boardStateHistory[m_ply].half_move_clock >= 100)
-        return true;
-
-    if (repetition_history.IsDraw(boardStateHistory[m_ply].zobrist_hash))
+    if (isDrawWithoutStealmate(inSearch))
         return true;
 
 	if (IsStalemate())
         return true;
 
-    if (IsInsufficientMaterial()) return true;
+    return false;
+}
+
+bool Board::isDrawWithoutStealmate(bool inSearch) {
+
+    if (boardStateHistory[m_ply].half_move_clock >= 100)
+        return true;
+
+    if (repetition_history.IsDraw(boardStateHistory[m_ply].zobrist_hash, inSearch))
+        return true;
+
+    if (IsInsufficientMaterial())
+        return true;
 
     return false;
 }
+
 
 
 bool Board::isSquareAttacked(Square sq, Color attackerColor) const {
@@ -687,6 +698,10 @@ bool Board::isAdvancedPassedPawnPush(Move move) const {
 
 bool Board::MakeMove(Move move, bool in_search) {
 
+    if (m_ply + 1 >= (int)std::size(boardStateHistory)) {
+        return false; // prevents write past end of boardStateHistory on very long game+search stacks
+    }
+
     Square from_sq = move.getFrom();
     Square to_sq = move.getTo();
     MoveFlag flags = move.getFlags();
@@ -719,6 +734,10 @@ bool Board::MakeMove(Move move, bool in_search) {
         else {
             PieceType captured = getPieceAt(to_sq, enemy);
 
+            if (captured == PIECE_NONE || captured == KING) {
+                return false;
+            }
+
             newHash ^= Zobrist::pieceKeys[enemy][captured][to_sq];
 
             newBoardState.captured_piece_type = captured;
@@ -728,7 +747,7 @@ bool Board::MakeMove(Move move, bool in_search) {
         }
     }
 
-    if (piece == PAWN || (move.getFlags() & CAPTURE_FLAG)) {
+    if (piece == PAWN) {
         newBoardState.half_move_clock = 0;
     }
 
@@ -914,11 +933,17 @@ void Board::MakeNullMove() {
         boardStateHistory[m_ply].en_passant_sq = SQUARE_NONE;
     }
 
+    boardStateHistory[m_ply].captured_piece_type = PIECE_NONE;
+    boardStateHistory[m_ply].half_move_clock++;
+
     m_side_to_move = (m_side_to_move == WHITE) ? BLACK : WHITE;
     boardStateHistory[m_ply].zobrist_hash ^= Zobrist::sideKey;
+
+    repetition_history.Push(boardStateHistory[m_ply].zobrist_hash, false);
 }
 
 void Board::UndoNullMove() {
+    repetition_history.TryPop();
     m_side_to_move = (m_side_to_move == WHITE) ? BLACK : WHITE;
     m_ply--;
 }
@@ -1158,7 +1183,7 @@ GameResult Board::getGameResult() {
     if (gr != GameResult::GAME_DID_NOT_END)
         return gr;
 
-    if (IsDraw() || IsInsufficientMaterial())
+    if (IsDraw()) // IsInsufficientMaterial() is already called inside isDrawWithoutStealmate
         return GameResult::DRAW;
 
     if (IsCheckMate()) {
@@ -1176,6 +1201,7 @@ void Board::ClearBoard() {
     gr = GameResult::GAME_DID_NOT_END;
 
     beginnerFen = newPosFen;
+    std::fill(std::begin(boardStateHistory), std::end(boardStateHistory), BoardState());
     repetition_history.Clear();
     move_history.clear();
     pieceHistory.clear();
@@ -1266,12 +1292,11 @@ uint64_t Board::MultiThreadedPerft(int depth) {
 PieceType Board::GetPromotionPiece(Move m) {
     MoveFlag mf = m.getFlags();
 
-    MoveFlag cleanPromotionFlag = static_cast<MoveFlag>(mf & ~CAPTURE_FLAG);
-
-    return GetPromotionPiece(cleanPromotionFlag);
+    return GetPromotionPiece(mf);
 }
 
-PieceType Board::GetPromotionPiece(MoveFlag promotion_piece) {
+PieceType Board::GetPromotionPiece(MoveFlag promotion_flag) {
+    MoveFlag promotion_piece = (MoveFlag)(promotion_flag & 0b1011);
     switch (promotion_piece) {
     case PROMOTION_TYPE_KNIGHT:
         return KNIGHT;

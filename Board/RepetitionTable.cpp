@@ -3,14 +3,19 @@
 
 void RepetitionTable::Init(const Board& board) {
     Clear();
-	std::vector<uint64_t> repetition_hashes = board.getRepetitionHash();
-    count = repetition_hashes.size();
+    std::vector<uint64_t> repetition_hashes = board.getRepetitionHash();
 
-    for (int i = 0; i < repetition_hashes.size(); i++) {
-        hashes[i] = repetition_hashes[i];
-        startIndices[i] = 0;
+    // getRepetitionHash already strips entries before the last irreversible move
+    // (it returns hashes from startIndices[count] onward). Treat them all as one
+    // continuous window with start index 0, matching what Push(hash, false) would do.
+    // The old code set startIndices[i]=0 for all entries but then wrote
+    // startIndices[count]=0 again AFTER the loop, which was harmless but only
+    // correct by accident; be explicit.
+    for (int i = 0; i < (int)repetition_hashes.size(); i++) {
+        hashes[count] = repetition_hashes[i];
+        startIndices[count + 1] = startIndices[count]; // no reset: all share the same window
+        ++count;
     }
-    startIndices[count] = 0;
 }
 
 void RepetitionTable::Push(uint64_t hash, bool reset)
@@ -41,7 +46,7 @@ bool RepetitionTable::Contains(uint64_t hash) const {
     return false;
 }
 
-bool RepetitionTable::IsDraw(uint64_t hash) const
+bool RepetitionTable::IsDraw(uint64_t hash, bool inSearch) const
 {
     int start = startIndices[count];
 	int counter = 0;
@@ -52,7 +57,7 @@ bool RepetitionTable::IsDraw(uint64_t hash) const
         }
     }
 
-    return counter >= 3;
+    return inSearch ? counter >= 2 : counter >= 3;
 }
 
 void RepetitionTable::Clear(){

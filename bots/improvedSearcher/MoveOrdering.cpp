@@ -83,7 +83,8 @@ static inline int ScoreMove(
     const Move& m,
     const Move& ttMove,
     const int history[2][SQUARE_COUNT][SQUARE_COUNT],
-    const Move killers[2]
+    const Move killers[2],
+    const Move& counterMove
     ) {
 
     if (m.isValid() && ttMove.isValid() && m == ttMove) {
@@ -94,16 +95,15 @@ static inline int ScoreMove(
     Color enemy = (Color)(us ^ 1);
 
     MoveFlag moveFlag = m.getFlags();
-
-    int promotionFlag = moveFlag & 0b1011;
+    PieceType promotionPiece = board.GetPromotionPiece(m);
 
     if (moveFlag & CAPTURE_FLAG) {
 
         if (moveFlag & PROMOTION_FLAG) {
-            switch (promotionFlag) {
-            case PROMOTION_TYPE_QUEEN:
+            switch (promotionPiece) {
+            case QUEEN:
                 return 9'000'000;
-            case PROMOTION_TYPE_KNIGHT:
+            case KNIGHT:
                 return 8'000'000;
             default:
                 return -2'000'000;
@@ -126,10 +126,10 @@ static inline int ScoreMove(
     }
 
     if (moveFlag & PROMOTION_FLAG) {
-        switch(promotionFlag) {
-        case PROMOTION_TYPE_QUEEN:
+        switch(promotionPiece) {
+        case QUEEN:
             return 4'000'000;
-        case PROMOTION_TYPE_KNIGHT:
+        case KNIGHT:
             return 3'000'000;
         default:
             return -2'000'000;
@@ -139,13 +139,14 @@ static inline int ScoreMove(
     if (m.isValid()) {
         if (m == killers[0]) return 2'000'000;
         if (m == killers[1]) return 1'500'000;
+        if (counterMove.isValid() && m == counterMove) return 1'200'000;
     }
 
     Square mFrom = m.getFrom();
     Square mTo = m.getTo();
 
     int histScore = history[us][mFrom][mTo];
-    return std::min(histScore, 999'999);
+    return histScore;
 }
 
 void MoveOrdering::ScoreMoves(
@@ -154,6 +155,7 @@ void MoveOrdering::ScoreMoves(
     Move ttMove,
     const int history[2][SQUARE_COUNT][SQUARE_COUNT],
     const Move killers[2],
+    Move counterMove,
     int scores[SCORE_SIZE]
     ) {
 
@@ -164,7 +166,8 @@ void MoveOrdering::ScoreMoves(
             moves[i],
             ttMove,
             history,
-            killers
+            killers,
+            counterMove
             );
     }
 }
