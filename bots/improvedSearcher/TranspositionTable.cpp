@@ -57,8 +57,7 @@ void TranspositionTable::Store(uint64_t hash, int score, int ply, int depth, TTF
             break;
         }
 
-        int age = (int)generation - (int)e.gen;
-        if (age < 0) age = 0;
+        int age = (uint8_t)(generation - e.gen); // wraps correctly after 256 generations
         int badness = (age * 4) - (int)e.depth;
 
         if (badness > worstScore) {

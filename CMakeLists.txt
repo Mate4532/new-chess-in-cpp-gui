@@ -77,6 +77,12 @@ install(TARGETS new-chess-in-cpp-gui
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+add_custom_command(TARGET new-chess-in-cpp-gui POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${CMAKE_CURRENT_SOURCE_DIR}/old-nnues/nn-62ef826d1a6d.nnue
+        $<TARGET_FILE_DIR:new-chess-in-cpp-gui>
+)
+
 if(Qt6_FOUND)
     qt_finalize_executable(new-chess-in-cpp-gui)
 endif()

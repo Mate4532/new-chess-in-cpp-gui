@@ -68,6 +68,7 @@ private:
 
     Move pvTable[MAXIMUM_DEPTH][MAXIMUM_DEPTH];
     int pvLength[MAXIMUM_DEPTH];
+    int rootDepth = 0;
 
     void PrepareSearcher();
 

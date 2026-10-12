@@ -490,7 +490,7 @@ bool Board::IsCheckMate() {
 }
 
 bool Board::HasNonPawnMaterial(Color color) const {
-if (getPieceBitboard(color, KNIGHT)) return true;
+    if (getPieceBitboard(color, KNIGHT)) return true;
     if (getPieceBitboard(color, BISHOP)) return true;
     if (getPieceBitboard(color, ROOK))   return true;
     if (getPieceBitboard(color, QUEEN))  return true;
@@ -513,6 +513,19 @@ bool Board::hasAdvancedPawn() const {
     else {
         return (m_bitboards[BLACK][PAWN] & (RANK_2 | RANK_3)) != 0;
     }
+}
+
+bool Board::hasPassedPawn(Color color) const {
+    uint64_t tempPawns = m_bitboards[color][PAWN];
+    while (tempPawns) {
+        Square sq = PopBit(tempPawns);
+
+        if (isPassedPawn(color, sq)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 bool Board::hasAdvancedPassedPawn(Color color) const {
@@ -939,7 +952,7 @@ void Board::MakeNullMove() {
     m_side_to_move = (m_side_to_move == WHITE) ? BLACK : WHITE;
     boardStateHistory[m_ply].zobrist_hash ^= Zobrist::sideKey;
 
-    repetition_history.Push(boardStateHistory[m_ply].zobrist_hash, false);
+    repetition_history.Push(boardStateHistory[m_ply].zobrist_hash, true); // a null move breaks the repetition window
 }
 
 void Board::UndoNullMove() {

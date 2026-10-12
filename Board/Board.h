@@ -189,6 +189,7 @@ public:
     bool HasNonPawnMaterial(Color color) const;
     bool hasPromotingPawn() const;
     bool hasAdvancedPawn() const;
+    bool hasPassedPawn(Color color) const;
     bool hasAdvancedPassedPawn(Color color) const;
     uint64_t getAttacksTo(Square sq, uint64_t occupied) const;
     Square getSmallestAttacker(uint64_t attackers, Color side, PieceType& attackerType) const;

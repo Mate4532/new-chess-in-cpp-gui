@@ -144,7 +144,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
     if (isStopped()) return alpha;
 
     if (ply > 0) {
-        if (board.isDrawWithoutStealmate(true)) {
+        if (board.isDrawWithoutStealmate(true)) { // 2-fold inside the search tree
             return 0;
         }
         alpha = std::max(alpha, -MATE_SCORE + ply);
@@ -223,13 +223,8 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         movesSearched++;
         int score = 0;
 
-        if (board.isDrawWithoutStealmate(true)) {
-            score = 0;
-        }
-        else {
-            if (!bestMoveThisNode.isValid()) bestMoveThisNode = m;
-            score = -quiescence(-beta, -alpha, ply + 1);
-        }
+        if (!bestMoveThisNode.isValid()) bestMoveThisNode = m;
+        score = -quiescence(-beta, -alpha, ply + 1);
 
         board.UndoMove(m, true);
 
@@ -263,7 +258,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
     if (isExclusionSearch) hash ^= 0x9E3779B97F4A7C15ULL;
 
     if (ply > 0) {
-        if (board.isDrawWithoutStealmate(true)) {
+        if (board.isDrawWithoutStealmate(true)) { // 2-fold inside the search tree
             return 0;
         }
         alpha = std::max(alpha, -MATE_SCORE + ply);
@@ -281,12 +276,10 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
 
     bool foundInTT = tt->Probe(hash, ply, depth, alpha, beta, ttScore, ttMove, ttDepth, ttFlag);
 
-    if (foundInTT && ply > 0 && !isPvNode) {
-        if (ttMove.isValid()) {
-            pvTable[ply][0] = ttMove;
-            pvLength[ply] = 1;
+    if (foundInTT && ply > 0) {
+        if (!isPvNode) {
+            return ttScore;
         }
-        return ttScore;
     }
 
     if (depth <= 0) return quiescence(alpha, beta, ply);
@@ -296,6 +289,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
         negamax(iidDepth, alpha, beta, ply, excludedMove, prevMove);
         if (isStopped()) return alpha;
         tt->Probe(hash, ply, iidDepth, alpha, beta, ttScore, ttMove, ttDepth, ttFlag);
+        pvLength[ply] = 0; // drop the IID line so a fail-low here doesn't pass a stale PV up
     }
 
     MoveList moves;
@@ -311,20 +305,20 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
 
     bool isSingleReply = false;
 
-    if (inCheck) {
-        int legalEvasions = 0;
-        for (int i = 0; i < moves.count; i++) {
-            if (board.MakeMove(moves[i], true)) {
-                legalEvasions++;
-                board.UndoMove(moves[i], true);
+    // if (inCheck) {
+    //     int legalEvasions = 0;
+    //     for (int i = 0; i < moves.count; i++) {
+    //         if (board.MakeMove(moves[i], true)) {
+    //             legalEvasions++;
+    //             board.UndoMove(moves[i], true);
 
-                if (legalEvasions > 1) {
-                    break;
-                }
-            }
-        }
-        isSingleReply = (legalEvasions == 1);
-    }
+    //             if (legalEvasions > 1) {
+    //                 break;
+    //             }
+    //         }
+    //     }
+    //     isSingleReply = (legalEvasions == 1);
+    // }
 
     int staticEval = SCORE_NONE;
     evalHistory[ply] = SCORE_NONE;
@@ -356,8 +350,8 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
         if (ply >= 2 && evalHistory[ply - 2] != SCORE_NONE) {
             improving = staticEval > evalHistory[ply - 2];
         }
-        else if (ply == 3 && evalHistory[0] != SCORE_NONE) {
-            improving = staticEval > evalHistory[0];
+        else if (ply >= 4 && evalHistory[ply - 4] != SCORE_NONE) {
+            improving = staticEval > evalHistory[ply - 4];
         }
         else {
             improving = true;
@@ -377,7 +371,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
         }
     }
 
-    if (!inCheck && !isPvNode && depth <= 6 && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
+    if (!inCheck && !isPvNode && depth <= 6 && ply > 0 && abs(beta) < MATE_SCORE_BOUND && abs(staticEval) < MATE_SCORE_BOUND) {
 
         int evalMargin = 100 * depth;
 
@@ -392,9 +386,9 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
 
     if (!inCheck && !isPvNode && depth >= 2 && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
         if (staticEval >= beta && board.HasNonPawnMaterial(board.getSideToMove())) {
-            if (!board.hasAdvancedPassedPawn(board.getSideToMove())) {
+            if (!board.hasPassedPawn(board.getSideToMove())) {
 
-                int R = 3 + (depth / 4);
+                int R = (823 + 67 * depth) / 256 + std::min((staticEval - beta) / 200, 3);
 
                 nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
                 nnue_state[ply + 1].accumulator.computedAccumulation = 0;
@@ -460,6 +454,12 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
         bool isPromo = flags & PROMOTION_FLAG;
         bool quiet = !isCapture && !isPromo;
         bool isAdvancedPassedPawnPush = (mPieceType == PAWN) && board.isAdvancedPassedPawnPush(m);
+        bool isKiller = (ply < MAX_KILLER_HISTORY) && (m == killerMoves[ply][0] || m == killerMoves[ply][1]);
+        const bool isTTMove = ttMove.isValid() && (m == ttMove);
+
+        // SEE must be computed before MakeMove: it assumes the move has not been played yet
+        const bool needSee = isCapture || (!inCheck && !isPvNode && !isKiller && !isTTMove && depth <= 7);
+        const int seeScore = needSee ? MoveOrdering::See(board, m) : 0;
 
         SetupNnueDirtyPieces(m, ply);
 
@@ -470,173 +470,161 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
         movesSearched++;
         int score = 0;
 
-        if (board.isDrawWithoutStealmate(true)) {
-            score = 0;
-        }
-        else {
-            if (movesSearched == 1)
-                bestMoveThisNode = m;
+        if (movesSearched == 1)
+            bestMoveThisNode = m;
 
-            bool givesCheck = board.isSquareAttacked(board.getKingSquare(enemy), player);
-            bool isKiller = (ply < MAX_KILLER_HISTORY) && (m == killerMoves[ply][0] || m == killerMoves[ply][1]);
-            const bool isTTMove = ttMove.isValid() && (m == ttMove);
+        bool givesCheck = board.isSquareAttacked(board.getKingSquare(enemy), player);
 
-            if (!inCheck && !isPvNode && movesSearched > 1 && !givesCheck && !isTTMove) {
+        if (!inCheck && !isPvNode && movesSearched > 1 && !givesCheck && !isTTMove) {
 
-                if (quiet && !isKiller && depth <= 8) {
-                    int lmpThreshold = (improving ? 4 : 2) + depth * depth;
-                    if (movesSearched > lmpThreshold) {
+            if (quiet && !isKiller && depth <= 8) {
+                int lmpThreshold = (improving ? 4 : 2) + depth * depth;
+                if (movesSearched > lmpThreshold) {
+                    board.UndoMove(m, true);
+                    continue;
+                }
+            }
+
+            if (abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
+
+                if (quiet && depth <= 6) {
+                    int futilityMargin = 120 * depth;
+
+                    if (staticEval + futilityMargin <= alpha) {
                         board.UndoMove(m, true);
                         continue;
                     }
                 }
 
-                if (abs(alpha) < MATE_SCORE_BOUND && abs(beta) < MATE_SCORE_BOUND) {
-
-                    if (quiet && depth <= 6) {
-                        int futilityMargin = 120 * depth;
-
-                        if (staticEval + futilityMargin <= alpha) {
-                            board.UndoMove(m, true);
-                            continue;
-                        }
-                    }
-
-                    if (!isKiller && depth <= 7) {
-                        int seeMargin = quiet ? -50 * depth : -90 * depth;
-                        if (MoveOrdering::See(board, m) < seeMargin) {
-                            board.UndoMove(m, true);
-                            continue;
-                        }
+                if (!isKiller && depth <= 7) {
+                    int seeMargin = quiet ? -50 * depth : -90 * depth;
+                    if (seeScore < seeMargin) {
+                        board.UndoMove(m, true);
+                        continue;
                     }
                 }
             }
+        }
 
-            uint64_t hash_after_move = board.getHash();
-            tt->Prefetch(hash_after_move);
+        uint64_t hash_after_move = board.getHash();
+        tt->Prefetch(hash_after_move);
 
-            int extension = 0;
+        int extension = 0;
 
-            const bool canSingular =
-                isTTMove
-                && !isExclusionSearch
-                && ply > 0
-                && ply < MAXIMUM_DEPTH
-                && depth >= 8
-                && !inCheck
-                && ttDepth >= depth - 3
-                && ttFlag == TT_BETA
-                && std::abs(ttScore) < MATE_SCORE_BOUND;
+        const bool canSingular =
+            isTTMove
+            && !isExclusionSearch
+            && ply > 0
+            && ply < 2 * rootDepth // caps the depth singular extensions can push a line to
+            && depth >= 8
+            && !inCheck
+            && ttDepth >= depth - 3
+            && ttFlag == TT_BETA
+            && std::abs(ttScore) < MATE_SCORE_BOUND;
 
-            if (canSingular) {
-                const int singularMargin = 3 + depth / 2;
-                const int singularBeta   = ttScore - singularMargin;
-                const int singularDepth  = (depth - 1) / 2;
+        if (canSingular) {
+            const int singularMargin = 3 + depth / 2;
+            const int singularBeta   = ttScore - singularMargin;
+            const int singularDepth  = (depth - 1) / 2;
 
-                const int savedPvLength = pvLength[ply];
-                Move savedPvTable[MAXIMUM_DEPTH];
-                for (int k = 0; k < savedPvLength; k++) savedPvTable[k] = pvTable[ply][k];
+            const int savedPvLength = pvLength[ply];
+            Move savedPvTable[MAXIMUM_DEPTH];
+            for (int k = 0; k < savedPvLength; k++) savedPvTable[k] = pvTable[ply][k];
 
+            board.UndoMove(m, true);
+
+            int singularScore = negamax(singularDepth,
+                                        singularBeta - 1, singularBeta,
+                                        ply, m, prevMove);
+
+            pvLength[ply] = savedPvLength;
+            for (int k = 0; k < savedPvLength; k++) pvTable[ply][k] = savedPvTable[k];
+
+            SetupNnueDirtyPieces(m, ply);
+            if (!board.MakeMove(m, true)) {
+                movesSearched--;
+                continue;
+            }
+
+            if (isStopped()) {
                 board.UndoMove(m, true);
-
-                int singularScore = negamax(singularDepth,
-                                            singularBeta - 1, singularBeta,
-                                            ply, m, prevMove);
-
-                pvLength[ply] = savedPvLength;
-                for (int k = 0; k < savedPvLength; k++) pvTable[ply][k] = savedPvTable[k];
-
-                SetupNnueDirtyPieces(m, ply);
-                if (!board.MakeMove(m, true)) {
-                    movesSearched--;
-                    continue;
-                }
-
-                if (isStopped()) {
-                    board.UndoMove(m, true);
-                    return alpha;
-                }
-
-                if (singularScore < singularBeta) {
-                    extension = 1;
-                }
-                else if (singularBeta >= beta) {
-                    board.UndoMove(m, true);
-                    tt->Store(hash, singularBeta, ply, depth, TT_BETA, m);
-                    return singularBeta;
-                }
-                else if (ttScore >= beta) {
-                    extension = -1;
-                }
+                return alpha;
             }
 
-            if (isSingleReply) {
-                extension = std::max(extension, 1);
+            if (singularScore < singularBeta) {
+                extension = 1;
             }
-            else if (givesCheck && depth <= 10 && (isPvNode || movesSearched <= 2)) {
-                extension = std::max(extension, 1);
+            else if (singularBeta >= beta) {
+                // not stored in the TT: singularBeta comes from a reduced-depth search
+                board.UndoMove(m, true);
+                return singularBeta;
             }
+            else if (ttScore >= beta) {
+                extension = -1;
+            }
+        }
 
-            if (movesSearched == 1) {
-                score = -negamax(depth + extension - 1, -beta, -alpha, ply + 1, Move(), m);
-            }
-            else {
-                int reduction = 0;
+        // if (isSingleReply) {
+        //     extension = std::max(extension, 1);
+        // }
+        // else if (givesCheck && depth <= 10 && (isPvNode || movesSearched <= 2)) {
+        //     extension = std::max(extension, 1);
+        // }
 
-                int seeScore = 0;
-                if (isCapture) {
-                    seeScore = MoveOrdering::See(board, m);
+        if (movesSearched == 1) {
+            score = -negamax(depth + extension - 1, -beta, -alpha, ply + 1, Move(), m);
+        }
+        else {
+            int reduction = 0;
+
+            if (depth >= 3) {
+                reduction = LMR::LMR::GetReduction(depth, movesSearched, isPvNode);
+
+                if (quiet) {
+                    if (!improving) reduction += 1;
+
+                    if (isKiller) reduction -= 1;
+                    if (isAdvancedPassedPawnPush) reduction -= 1;
+
+                    int histScore = historyMoves[player][mFrom][mTo];
+                    int historyModifier = -(histScore / 2048);
+                    historyModifier = std::clamp(historyModifier, -2, 2);
+                    reduction += historyModifier;
                 }
+                else if (isCapture) {
+                    if (seeScore >= 0) {
+                        reduction = 0;
+                    } else {
+                        reduction += 1;
 
-                if (depth >= 3) {
-                    reduction = LMR::LMR::GetReduction(depth, movesSearched, isPvNode);
-
-                    if (quiet) {
-                        if (!improving) reduction += 1;
-
-                        if (isKiller) reduction -= 1;
-                        if (isAdvancedPassedPawnPush) reduction -= 1;
-
-                        int histScore = historyMoves[player][mFrom][mTo];
-                        int historyModifier = -(histScore / 2048);
-                        historyModifier = std::clamp(historyModifier, -2, 2);
-                        reduction += historyModifier;
-                    }
-                    else if (isCapture) {
-                        if (seeScore >= 0) {
-                            reduction = 0;
-                        } else {
+                        if (seeScore < -300) {
                             reduction += 1;
-
-                            if (seeScore < -300) {
-                                reduction += 1;
-                            }
                         }
                     }
-
-                    if (reduction > 0) {
-                        if (givesCheck) reduction -= 1;
-                        if (inCheck) reduction -= 1;
-                        if (isPvNode) reduction -= 1;
-                        if (isPromo) reduction = 0;
-                    }
-
-                    reduction = std::clamp(reduction, 0, depth - 2);
                 }
 
-                const int fullDepth = depth + extension - 1;
+                if (reduction > 0) {
+                    if (givesCheck) reduction -= 1;
+                    if (inCheck) reduction -= 1;
+                    if (isPvNode) reduction -= 1;
+                    if (isPromo) reduction = 0;
+                }
 
-                score = -negamax(fullDepth - reduction, -alpha - 1, -alpha, ply + 1, Move(), m);
+                reduction = std::clamp(reduction, 0, depth - 2);
+            }
 
-                if (score > alpha) {
+            const int fullDepth = depth + extension - 1;
 
-                    if (reduction > 0) {
-                        score = -negamax(fullDepth, -alpha - 1, -alpha, ply + 1, Move(), m);
-                    }
+            score = -negamax(fullDepth - reduction, -alpha - 1, -alpha, ply + 1, Move(), m);
 
-                    if (score > alpha && score < beta) {
-                        score = -negamax(fullDepth, -beta, -alpha, ply + 1, Move(), m);
-                    }
+            if (score > alpha) {
+
+                if (reduction > 0) {
+                    score = -negamax(fullDepth, -alpha - 1, -alpha, ply + 1, Move(), m);
+                }
+
+                if (score > alpha && score < beta) {
+                    score = -negamax(fullDepth, -beta, -alpha, ply + 1, Move(), m);
                 }
             }
         }
@@ -828,6 +816,7 @@ Move Searcher::IterativeDeepening(bool silent) {
     std::string bestPvStringSoFar = "";
 
     for (int depth = 1; depth <= currentSettings.maxDepth; depth++) {
+        rootDepth = depth;
 
         int alpha = -MATE_SCORE;
         int beta = MATE_SCORE;
@@ -1016,6 +1005,7 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
     bool anyDepthCompleted = false;
 
     for (int d = 1; d <= targetDepth; d++) {
+        rootDepth = d;
         std::vector<ScoredMove> currentDepthScores;
         bool depthFinished = true;
         Color us = board.getSideToMove();
@@ -1050,6 +1040,11 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
         if (now_ms() - startTime >= softTimeLimit) {
             break;
         }
+    }
+
+    if (isStoppedManually) {
+        isSearching = false;
+        return Move();
     }
 
     if (!anyDepthCompleted) {
