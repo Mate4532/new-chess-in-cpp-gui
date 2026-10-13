@@ -386,7 +386,6 @@ QWidget* SettingsDialog::createTimeControlTab() {
     darkPalette.setColor(QPalette::Base, QColor("#444444"));
     darkPalette.setColor(QPalette::Text, Qt::white);
 
-    // one "min : sec" row of spin boxes, used for both colors' base time
     auto createBaseTimeRow = [&](int totalSec, QSpinBox*& spinMin, QSpinBox*& spinSec) {
         spinMin = new QSpinBox();
         spinMin->setRange(0, 180);

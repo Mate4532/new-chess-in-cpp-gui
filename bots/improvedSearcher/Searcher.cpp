@@ -145,7 +145,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
     if (isStopped()) return alpha;
 
     if (ply > 0) {
-        if (board.isDrawWithoutStealmate(true)) { // 2-fold inside the search tree
+        if (board.isDrawWithoutStealmate(true)) {
             return 0;
         }
         alpha = std::max(alpha, -MATE_SCORE + ply);
@@ -155,7 +155,6 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
 
     if (ply >= MAXIMUM_DEPTH - 1) return Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
 
-    // TT in quiescence: cut at non-PV nodes, and use the stored move for ordering
     const uint64_t hash = board.getHash();
     const int originalAlpha = alpha;
     Move ttMove;
@@ -171,7 +170,6 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
 
     Color player = board.getSideToMove();
 
-    // fail-soft: return the best score found, not just alpha, so TT bounds stay tight
     int bestScore = -MATE_SCORE + ply;
 
     if (!inCheck) {
@@ -261,7 +259,6 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         return -MATE_SCORE + ply;
     }
 
-    // only bounds are stored from quiescence, so a depth-0 EXACT never overwrites a deeper entry's score
     tt->Store(hash, bestScore, ply, 0, bestScore > originalAlpha ? TT_BETA : TT_ALPHA, bestMoveThisNode);
     return bestScore;
 }
@@ -279,7 +276,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
     if (isExclusionSearch) hash ^= 0x9E3779B97F4A7C15ULL;
 
     if (ply > 0) {
-        if (board.isDrawWithoutStealmate(true)) { // 2-fold inside the search tree
+        if (board.isDrawWithoutStealmate(true)) {
             return 0;
         }
         alpha = std::max(alpha, -MATE_SCORE + ply);
@@ -297,7 +294,6 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
 
     bool foundInTT = tt->Probe(hash, ply, depth, alpha, beta, ttScore, ttMove, ttDepth, ttFlag);
 
-    // near the 50-move limit a stored score may not know the position is about to be drawn
     if (board.getHalfMoveClock() >= 90) foundInTT = false;
 
     if (foundInTT && ply > 0) {
@@ -308,7 +304,6 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
 
     if (depth <= 0) return quiescence(alpha, beta, ply);
 
-    // IIR: without a TT move, search one ply shallower instead of running a separate IID search
     if (!ttMove.isValid() && depth >= 4 && ply > 0 && !isExclusionSearch) {
         depth--;
     }
@@ -443,7 +438,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
     }
 
     Move bestMoveThisNode;
-    int bestScore = -MATE_SCORE - 1; // fail-soft best; below any real score
+    int bestScore = -MATE_SCORE - 1;
     int n = moves.count;
     int movesSearched = 0;
     for (int i = 0; i < n; ++i) {
@@ -476,7 +471,6 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
         bool isKiller = (ply < MAX_KILLER_HISTORY) && (m == killerMoves[ply][0] || m == killerMoves[ply][1]);
         const bool isTTMove = ttMove.isValid() && (m == ttMove);
 
-        // SEE must be computed before MakeMove: it assumes the move has not been played yet
         const bool needSee = isCapture || (!inCheck && !isPvNode && !isKiller && !isTTMove && depth <= 7);
         const int seeScore = needSee ? MoveOrdering::See(board, m) : 0;
 
@@ -534,7 +528,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
             isTTMove
             && !isExclusionSearch
             && ply > 0
-            && ply < rootDepth // caps how far singular extensions can push a line
+            && ply < rootDepth
             && depth >= 8
             && !inCheck
             && ttDepth >= depth - 3
@@ -574,7 +568,6 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
                 extension = 1;
             }
             else if (singularBeta >= beta) {
-                // not stored in the TT: singularBeta comes from a reduced-depth search
                 board.UndoMove(m, true);
                 return singularBeta;
             }
@@ -686,7 +679,6 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
                     }
                 }
             }
-            // singular verification searches use a modified key that is never probed again
             if (!isExclusionSearch) tt->Store(hash, score, ply, depth, TT_BETA, m);
             return score;
         }
@@ -712,7 +704,6 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
         return inCheck ? -MATE_SCORE + ply : 0;
     }
 
-    // every searched move was pruned: fall back to alpha as the bound
     if (bestScore < -MATE_SCORE) bestScore = alpha;
 
     TTFlag flag = (bestScore <= originalAlpha) ? TT_ALPHA : TT_EXACT;
@@ -888,7 +879,7 @@ Move Searcher::IterativeDeepening(bool silent) {
 
         if (depth >= 4 && std::abs(scoreHistory[depth - 1]) < MATE_SCORE_BOUND) {
             int expectedScore = scoreHistory[depth - 1];
-            delta = 25 + std::abs(expectedScore) / 8; // large scores swing more between iterations
+            delta = 25 + std::abs(expectedScore) / 8;
             alpha = std::max(-MATE_SCORE, expectedScore - delta);
             beta = std::min(MATE_SCORE, expectedScore + delta);
         }
@@ -954,8 +945,6 @@ Move Searcher::IterativeDeepening(bool silent) {
 
         bestMoveToPlay = currentBest;
 
-        // a drop only matters while the position is still undecided: going from +2000 to +1900
-        // (or from -900 to -1000) changes nothing, and must not burn extra time
         bool inCrisis = (depth > 3 && score < prevScore - 50 && std::abs(prevScore) < CRISIS_SCORE_LIMIT);
         long long timeSpent = now_ms() - startTime;
 

@@ -10,8 +10,6 @@ namespace ImprovedTT {
 
    enum TTFlag : uint8_t { TT_NONE, TT_EXACT, TT_ALPHA, TT_BETA };
 
-   // Lockless entry: the payload is packed into one 64-bit word, and the key is stored XOR-ed with it.
-   // A torn write (key and data from different stores) fails the key check, so no locks are needed.
    struct TTEntry {
        std::atomic<uint64_t> keyXorData{0};
        std::atomic<uint64_t> data{0};
@@ -19,7 +17,6 @@ namespace ImprovedTT {
 
    constexpr int CLUSTER_SIZE = 4;
 
-   // one cluster = one 64-byte cache line
    struct alignas(64) TTCluster {
        TTEntry entry[CLUSTER_SIZE];
    };

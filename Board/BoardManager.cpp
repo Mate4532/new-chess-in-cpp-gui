@@ -3,9 +3,14 @@
 #include "UCIParsing.h"
 #include "openingloader.h"
 #include "versioncontrol.h"
+#include "filemanager.h"
 
 #include <sstream>
 #include <atomic>
+
+#ifndef NNUE_FILE
+#error "NNUE_FILE is not defined, set it in CMakeLists.txt"
+#endif
 
 using ImpSearcher = ImprovedSearcher::Searcher;
 using OSearcher = OldSearcher::Searcher;
@@ -25,7 +30,12 @@ BoardManager::BoardManager() : board(), resultManager() {
     static std::once_flag initFlag;
     std::call_once(initFlag, [this]() {
         Attacks::InitAll();
-        nnue_init("nn-62ef826d1a6d.nnue");
+        const std::string nnuePath = FileManager::findNnueFile(NNUE_FILE);
+        if (nnuePath.empty()) {
+            std::cerr << "ERROR: NNUE file not found: nnues/" << NNUE_FILE << std::endl;
+        } else {
+            nnue_init(nnuePath.c_str());
+        }
     });
 }
 
@@ -720,7 +730,6 @@ void BoardManager::startBotSimulation(int totalRounds, int threadId) {
             roundSummary[gameInRound] += ", " + std::to_string(board.getMoveHistory().size()) + " moves been made";
 			roundResults[gameInRound] = result;
 
-            // simBotTypes[0] is white in game 0 and black in game 1 of each round
             if (result == GameResult::DRAW) simDraws++;
             else if (result & GameResult::WHITE_WON) simBotWins[gameInRound]++;
             else if (result & GameResult::BLACK_WON) simBotWins[1 - gameInRound]++;
@@ -754,7 +763,6 @@ void BoardManager::startBotSimulation(int totalRounds, int threadId) {
             std::cout << "  Game 2: " << roundSummary[1] << std::endl;
         }
         {
-            // every thread writes the same results file, so this needs the lock just like game 1
             std::lock_guard<std::mutex> lock(consoleMutex);
             writeGameResult(roundResults[1], board.getMoveHistroyInSAN(), board.getBeginnerFen());
         }

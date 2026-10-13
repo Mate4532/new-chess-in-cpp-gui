@@ -9,7 +9,6 @@ using namespace ImprovedSearcher;
 
 namespace {
 
-// payload layout (64 bits): score 16 | move 16 | piece type 8 | depth 8 | flag 8 | generation 8
 struct Unpacked {
     int16_t  score;
     uint16_t moveData;
@@ -39,7 +38,6 @@ inline Unpacked Unpack(uint64_t d) {
     return u;
 }
 
-// a stored entry always has a non-zero flag, so data == 0 means the slot is empty
 inline bool IsEmpty(uint64_t data) { return data == 0; }
 
 inline void Write(TTEntry& e, uint64_t hash, uint64_t data) {
@@ -103,7 +101,7 @@ void TranspositionTable::Store(uint64_t hash, int score, int ply, int depth, TTF
         }
 
         const Unpacked u = Unpack(data);
-        const int age = (uint8_t)(generation - u.gen); // wraps correctly after 256 generations
+        const int age = (uint8_t)(generation - u.gen);
         const int badness = (age * 4) - (int)u.depth;
 
         if (badness > worstScore) {
@@ -118,7 +116,6 @@ void TranspositionTable::Store(uint64_t hash, int score, int ply, int depth, TTF
     if (sameKey) {
         u = Unpack(replaceData);
 
-        // a much shallower search (e.g. quiescence) must not clobber the move found by a deeper one
         if (bestMove.isValid() && (u.moveData == 0 || storeDepth + 2 >= u.depth)) {
             u.moveData = bestMove.getMoveData();
             u.movePieceType = bestMove.getPieceType();

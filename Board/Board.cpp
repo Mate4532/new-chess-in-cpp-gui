@@ -952,7 +952,7 @@ void Board::MakeNullMove() {
     m_side_to_move = (m_side_to_move == WHITE) ? BLACK : WHITE;
     boardStateHistory[m_ply].zobrist_hash ^= Zobrist::sideKey;
 
-    repetition_history.Push(boardStateHistory[m_ply].zobrist_hash, true); // a null move breaks the repetition window
+    repetition_history.Push(boardStateHistory[m_ply].zobrist_hash, true);
 }
 
 void Board::UndoNullMove() {

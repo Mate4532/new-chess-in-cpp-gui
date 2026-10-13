@@ -77,10 +77,25 @@ install(TARGETS new-chess-in-cpp-gui
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
+set(NNUE_FILE "halfkp/nn-62ef826d1a6d.nnue" CACHE STRING "NNUE net used by the bots, relative to the nnues folder")
+
+file(GLOB NNUE_CHOICES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/nnues" "${CMAKE_CURRENT_SOURCE_DIR}/nnues/halfkp/*.nnue")
+set_property(CACHE NNUE_FILE PROPERTY STRINGS ${NNUE_CHOICES})
+
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nnues/${NNUE_FILE}")
+    message(FATAL_ERROR "NNUE_FILE not found: nnues/${NNUE_FILE}")
+endif()
+message(STATUS "NNUE net: nnues/${NNUE_FILE}")
+
+set_property(SOURCE Board/BoardManager.cpp APPEND PROPERTY COMPILE_DEFINITIONS "NNUE_FILE=\"${NNUE_FILE}\"")
+
+get_filename_component(NNUE_SUBDIR "${NNUE_FILE}" DIRECTORY)
 add_custom_command(TARGET new-chess-in-cpp-gui POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+        $<TARGET_FILE_DIR:new-chess-in-cpp-gui>/nnues/${NNUE_SUBDIR}
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        ${CMAKE_CURRENT_SOURCE_DIR}/old-nnues/nn-62ef826d1a6d.nnue
-        $<TARGET_FILE_DIR:new-chess-in-cpp-gui>
+        ${CMAKE_CURRENT_SOURCE_DIR}/nnues/${NNUE_FILE}
+        $<TARGET_FILE_DIR:new-chess-in-cpp-gui>/nnues/${NNUE_FILE}
 )
 
 if(Qt6_FOUND)

@@ -35,10 +35,9 @@ private:
     bool isInBotSimulation = false;
     std::string currentSimFen;
 
-    // bot vs bot simulation config; simBotTypes[0] plays white in the first game of each round
     SearcherType simBotTypes[2] = { SearcherType::IMPROVED_SEARCHER, SearcherType::OLD_SEARCHER };
     bool saveSimGames = true;
-    std::string simSaveName; // empty: results folder is named after the two bots
+    std::string simSaveName;
     int simBotWins[2] = { 0, 0 };
     int simDraws = 0;
 
@@ -124,8 +123,6 @@ public:
     }
 
     void startBotSimulation(int numGames, int threadId = -1);
-    // firstBot plays white in the first game of every round, then the colors swap.
-    // saveName overrides the results folder name under botvsbotresults (empty: "<bot1>-<bot2>").
     void startMultiThreadedSimulation(int totalGames, int numThreads,
                                       SearcherType firstBot = SearcherType::IMPROVED_SEARCHER,
                                       SearcherType secondBot = SearcherType::OLD_SEARCHER,
