@@ -396,11 +396,10 @@ void ChessViewModel::stopClock() {
 void ChessViewModel::resetClock() {
     TimeSettings ts = currentSettings.timeSettings;
 
-    bm.setTournementTime(ts.getTournementTimeMs(), ts.getIncrementMs());
-    QString timerString = formatTime(ts.getTournementTimeMs());
+    bm.setTournementTime(ts.getWhiteTimeMs(), ts.getBlackTimeMs(), ts.getIncrementMs());
     emit tournementModeStarted();
-    emit timerChanged(WHITE, timerString);
-    emit timerChanged(BLACK, timerString);
+    emit timerChanged(WHITE, formatTime(ts.getWhiteTimeMs()));
+    emit timerChanged(BLACK, formatTime(ts.getBlackTimeMs()));
     emit disableTimers();
 }
 

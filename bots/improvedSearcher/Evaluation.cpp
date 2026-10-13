@@ -84,10 +84,5 @@ int Evaluation::EvaluatePos(const Board& board, int ply, NNUEdata* nnue_state) {
     pieces[index] = 0;
     squares[index] = 0;
 
-    int score = nnue_evaluate_incremental(player, pieces, squares, nnue_data_pointers);
-
-    int clock = board.getHalfMoveClock();
-    if (score > 0) return score - clock;
-    if (score < 0) return score + clock;
-    return score;
+    return nnue_evaluate_incremental(player, pieces, squares, nnue_data_pointers);
 }

@@ -144,8 +144,8 @@ void SettingsDialog::onSaveClicked() {
     ts.gm = comboTimeMode->currentIndex() == 0 ? GameMode::UNLIMITED_THINKING_TIME : GameMode::TOURNAMENT_MODE;
     ts.rtum = comboTimeMode->currentIndex() == 0 ? RobotTimeUsageMode::FIXED_TIME : RobotTimeUsageMode::TOURNEMENT_TIME;
 
-    int totalSeconds = (spinTourTimeMin->value() * 60) + spinTourTimeSec->value();
-    ts.tournamentTimeSec = std::max(1, totalSeconds);
+    ts.whiteTimeSec = std::max(1, spinWhiteTimeMin->value() * 60 + spinWhiteTimeSec->value());
+    ts.blackTimeSec = std::max(1, spinBlackTimeMin->value() * 60 + spinBlackTimeSec->value());
     ts.incrementSec = spinIncrementSec->value();
 
     accept();
@@ -379,11 +379,6 @@ QWidget* SettingsDialog::createTimeControlTab() {
     tourLayout->setContentsMargins(0, 0, 0, 0);
     tourLayout->setSpacing(10);
 
-    int currentMin = ts.tournamentTimeSec / 60;
-    int currentSec = ts.tournamentTimeSec % 60;
-
-    QLabel* labelTourTimeTitle = new QLabel("Alapidő:");
-
     QFont bigFont;
     bigFont.setPointSize(12);
 
@@ -391,34 +386,44 @@ QWidget* SettingsDialog::createTimeControlTab() {
     darkPalette.setColor(QPalette::Base, QColor("#444444"));
     darkPalette.setColor(QPalette::Text, Qt::white);
 
-    spinTourTimeMin = new QSpinBox();
-    spinTourTimeMin->setRange(0, 180);
-    spinTourTimeMin->setValue(currentMin);
-    spinTourTimeMin->setFixedWidth(75);
-    spinTourTimeMin->setFixedHeight(35);
-    spinTourTimeMin->setFont(bigFont);
-    spinTourTimeMin->setPalette(darkPalette);
-    QLabel* labelUnitMin = new QLabel("p");
+    // one "min : sec" row of spin boxes, used for both colors' base time
+    auto createBaseTimeRow = [&](int totalSec, QSpinBox*& spinMin, QSpinBox*& spinSec) {
+        spinMin = new QSpinBox();
+        spinMin->setRange(0, 180);
+        spinMin->setValue(totalSec / 60);
+        spinMin->setFixedWidth(75);
+        spinMin->setFixedHeight(35);
+        spinMin->setFont(bigFont);
+        spinMin->setPalette(darkPalette);
+        QLabel* labelUnitMin = new QLabel("p");
 
-    spinTourTimeSec = new QSpinBox();
-    spinTourTimeSec->setRange(0, 59);
-    spinTourTimeSec->setValue(currentSec);
-    spinTourTimeSec->setFixedWidth(75);
-    spinTourTimeSec->setFixedHeight(35);
-    spinTourTimeSec->setFont(bigFont);
-    spinTourTimeSec->setPalette(darkPalette);
-    QLabel* labelUnitSec = new QLabel("mp");
+        spinSec = new QSpinBox();
+        spinSec->setRange(0, 59);
+        spinSec->setValue(totalSec % 60);
+        spinSec->setFixedWidth(75);
+        spinSec->setFixedHeight(35);
+        spinSec->setFont(bigFont);
+        spinSec->setPalette(darkPalette);
+        QLabel* labelUnitSec = new QLabel("mp");
 
-    QHBoxLayout* baseTimeLayout = new QHBoxLayout();
-    baseTimeLayout->setSpacing(0);
-    baseTimeLayout->addWidget(spinTourTimeMin);
-    baseTimeLayout->addSpacing(4);
-    baseTimeLayout->addWidget(labelUnitMin);
-    baseTimeLayout->addSpacing(20);
-    baseTimeLayout->addWidget(spinTourTimeSec);
-    baseTimeLayout->addSpacing(4);
-    baseTimeLayout->addWidget(labelUnitSec);
-    baseTimeLayout->addStretch();
+        QHBoxLayout* baseTimeLayout = new QHBoxLayout();
+        baseTimeLayout->setSpacing(0);
+        baseTimeLayout->addWidget(spinMin);
+        baseTimeLayout->addSpacing(4);
+        baseTimeLayout->addWidget(labelUnitMin);
+        baseTimeLayout->addSpacing(20);
+        baseTimeLayout->addWidget(spinSec);
+        baseTimeLayout->addSpacing(4);
+        baseTimeLayout->addWidget(labelUnitSec);
+        baseTimeLayout->addStretch();
+        return baseTimeLayout;
+    };
+
+    QLabel* labelWhiteTimeTitle = new QLabel("Fehér alapidő:");
+    QHBoxLayout* whiteTimeLayout = createBaseTimeRow(ts.whiteTimeSec, spinWhiteTimeMin, spinWhiteTimeSec);
+
+    QLabel* labelBlackTimeTitle = new QLabel("Fekete alapidő:");
+    QHBoxLayout* blackTimeLayout = createBaseTimeRow(ts.blackTimeSec, spinBlackTimeMin, spinBlackTimeSec);
 
     labelIncrement = new QLabel("Bónuszidő lépésenként:");
 
@@ -440,11 +445,14 @@ QWidget* SettingsDialog::createTimeControlTab() {
     incrementLayout->addWidget(labelUnitInc);
     incrementLayout->addStretch();
 
-    tourLayout->addWidget(labelTourTimeTitle, 0, 0);
-    tourLayout->addLayout(baseTimeLayout, 0, 1);
+    tourLayout->addWidget(labelWhiteTimeTitle, 0, 0);
+    tourLayout->addLayout(whiteTimeLayout, 0, 1);
 
-    tourLayout->addWidget(labelIncrement, 1, 0);
-    tourLayout->addLayout(incrementLayout, 1, 1);
+    tourLayout->addWidget(labelBlackTimeTitle, 1, 0);
+    tourLayout->addLayout(blackTimeLayout, 1, 1);
+
+    tourLayout->addWidget(labelIncrement, 2, 0);
+    tourLayout->addLayout(incrementLayout, 2, 1);
 
     mainLayout->addWidget(widgetTournamentTime);
     mainLayout->addStretch();

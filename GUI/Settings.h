@@ -38,18 +38,21 @@ struct TimeSettings {
     GameMode gm = GameMode::UNLIMITED_THINKING_TIME;
     RobotTimeUsageMode rtum = RobotTimeUsageMode::FIXED_TIME;
 
-    int tournamentTimeSec = 5 * 60;
+    int whiteTimeSec = 5 * 60;
+    int blackTimeSec = 5 * 60;
     double incrementSec = 5;
 
     bool operator!=(const TimeSettings& other) const {
         return gm != other.gm ||
                rtum != other.rtum ||
-               tournamentTimeSec != other.tournamentTimeSec ||
+               whiteTimeSec != other.whiteTimeSec ||
+               blackTimeSec != other.blackTimeSec ||
                incrementSec != other.incrementSec;
     }
 
-    long long getTournementTimeMs() { return tournamentTimeSec * 1000LL; }
-    long long getIncrementMs() { return (long long)(incrementSec * 1000.0); }
+    long long getWhiteTimeMs() const { return whiteTimeSec * 1000LL; }
+    long long getBlackTimeMs() const { return blackTimeSec * 1000LL; }
+    long long getIncrementMs() const { return (long long)(incrementSec * 1000.0); }
 };
 
 struct AllSettings {

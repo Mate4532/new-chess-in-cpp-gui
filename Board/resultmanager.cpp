@@ -31,23 +31,26 @@ void ResultManager::ensureDirectoryExists() {
     }
 }
 
-void ResultManager::updatePath(const std::string& name1, const std::string& name2) {
-    std::string n1 = name1;
-    std::string n2 = name2;
-    if (n1 > n2) std::swap(n1, n2);
-    std::string folderName = n1 + "-" + n2;
+void ResultManager::updatePath(const std::string& name1, const std::string& name2, const std::string& folderName) {
+    std::string folder = folderName;
+    if (folder.empty()) {
+        std::string n1 = name1;
+        std::string n2 = name2;
+        if (n1 > n2) std::swap(n1, n2);
+        folder = n1 + "-" + n2;
+    }
     fs::path root = FileManager::getProjectRoot();
-    fullFilePath = root / BASE_DIR / folderName / FILE_NAME;
+    fullFilePath = root / BASE_DIR / folder / FILE_NAME;
 }
 
 void ResultManager::saveGameResult(const GameResult& gameResult, const std::string& whiteName,
-                                   const std::string whiteSourcePath, const std::string& blackName,
+                                   const std::string& whiteSourcePath, const std::string& blackName,
                                    const std::string& blackSourcePath, const std::vector<std::string>& moveList,
-                                   const std::string& startingFen) {
+                                   const std::string& startingFen, const std::string& folderName) {
 
     if (gameResult == GAME_DID_NOT_END) return;
 
-    updatePath(whiteName, blackName);
+    updatePath(whiteName, blackName, folderName);
     fs::path pairRoot = fullFilePath.parent_path();
 
     std::string vNameWhite = VersionControl::getCurrentVersionName(whiteName, whiteSourcePath);
@@ -103,8 +106,13 @@ void ResultManager::saveMatch(const GameResult& gameResult, const std::string& w
     std::tm tm;
     localtime_s(&tm, &t);
     std::ostringstream oss;
-    oss << std::put_time(&tm, "%Y%m%d_%H%M%S") << ".pgn";
-    fs::path matchFile = targetDir / oss.str();
+    oss << std::put_time(&tm, "%Y%m%d_%H%M%S");
+    const std::string baseName = oss.str();
+
+    fs::path matchFile = targetDir / (baseName + ".pgn");
+    for (int i = 2; fs::exists(matchFile); i++) {
+        matchFile = targetDir / (baseName + "_" + std::to_string(i) + ".pgn");
+    }
 
     std::string fullContent = PGNFormatter::createFullPGN(gameResult, whiteName, blackName, moveList, startingFen);
 

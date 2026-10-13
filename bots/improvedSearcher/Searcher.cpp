@@ -2,6 +2,7 @@
 #include "Evaluation.h"
 #include "WorseEvaluation.h"
 #include "LMR.h"
+#include "UCIParsing.h"
 
 #include <chrono>
 #include <iostream>
@@ -154,9 +155,24 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
 
     if (ply >= MAXIMUM_DEPTH - 1) return Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
 
+    // TT in quiescence: cut at non-PV nodes, and use the stored move for ordering
+    const uint64_t hash = board.getHash();
+    const int originalAlpha = alpha;
+    Move ttMove;
+    {
+        int ttScore = 0, ttDepth = 0;
+        TTFlag ttFlag = TT_ALPHA;
+        if (tt->Probe(hash, ply, 0, alpha, beta, ttScore, ttMove, ttDepth, ttFlag) && beta - alpha == 1) {
+            return ttScore;
+        }
+    }
+
     bool inCheck = board.isSquareAttacked(board.getKingSquare(board.getSideToMove()), (Color)(board.getSideToMove() ^ 1));
 
     Color player = board.getSideToMove();
+
+    // fail-soft: return the best score found, not just alpha, so TT bounds stay tight
+    int bestScore = -MATE_SCORE + ply;
 
     if (!inCheck) {
         int standPat = currentSettings.worseEvaluationEnabled
@@ -169,9 +185,10 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
 
         int BIG_DELTA = 975;
         if (board.hasAdvancedPassedPawn(player)) BIG_DELTA += 775;
-        if (standPat < alpha - BIG_DELTA) return alpha;
+        if (standPat < alpha - BIG_DELTA) return standPat + BIG_DELTA;
 
         if (alpha < standPat) alpha = standPat;
+        bestScore = standPat;
     }
 
     MoveList moves;
@@ -179,7 +196,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
 
     Move dummyKillers[2] = { Move(), Move() };
     int scores[MoveOrdering::SCORE_SIZE];
-    MoveOrdering::ScoreMoves(board, moves, Move(), historyMoves, dummyKillers, Move(), scores);
+    MoveOrdering::ScoreMoves(board, moves, ttMove, historyMoves, dummyKillers, Move(), scores);
 
     int n = moves.count;
     int movesSearched = 0;
@@ -230,8 +247,10 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
 
         if (isStopped()) return alpha;
         if (score >= beta) {
+            tt->Store(hash, score, ply, 0, TT_BETA, m);
             return score;
         }
+        if (score > bestScore) bestScore = score;
         if (score > alpha) {
             alpha = score;
             bestMoveThisNode = m;
@@ -242,7 +261,9 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         return -MATE_SCORE + ply;
     }
 
-    return alpha;
+    // only bounds are stored from quiescence, so a depth-0 EXACT never overwrites a deeper entry's score
+    tt->Store(hash, bestScore, ply, 0, bestScore > originalAlpha ? TT_BETA : TT_ALPHA, bestMoveThisNode);
+    return bestScore;
 }
 
 int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove, Move prevMove) {
@@ -276,6 +297,9 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
 
     bool foundInTT = tt->Probe(hash, ply, depth, alpha, beta, ttScore, ttMove, ttDepth, ttFlag);
 
+    // near the 50-move limit a stored score may not know the position is about to be drawn
+    if (board.getHalfMoveClock() >= 90) foundInTT = false;
+
     if (foundInTT && ply > 0) {
         if (!isPvNode) {
             return ttScore;
@@ -284,12 +308,9 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
 
     if (depth <= 0) return quiescence(alpha, beta, ply);
 
-    if (!ttMove.isValid() && depth >= 4 && ply > 0) {
-        int iidDepth = (isPvNode) ? depth - 2 : depth / 2;
-        negamax(iidDepth, alpha, beta, ply, excludedMove, prevMove);
-        if (isStopped()) return alpha;
-        tt->Probe(hash, ply, iidDepth, alpha, beta, ttScore, ttMove, ttDepth, ttFlag);
-        pvLength[ply] = 0; // drop the IID line so a fail-low here doesn't pass a stale PV up
+    // IIR: without a TT move, search one ply shallower instead of running a separate IID search
+    if (!ttMove.isValid() && depth >= 4 && ply > 0 && !isExclusionSearch) {
+        depth--;
     }
 
     MoveList moves;
@@ -386,20 +407,17 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
 
     if (!inCheck && !isPvNode && depth >= 2 && ply > 0 && abs(beta) < MATE_SCORE_BOUND) {
         if (staticEval >= beta && board.HasNonPawnMaterial(board.getSideToMove())) {
-            if (!board.hasPassedPawn(board.getSideToMove())) {
+            int R = (823 + 67 * depth) / 256 + std::min((staticEval - beta) / 200, 3);
 
-                int R = (823 + 67 * depth) / 256 + std::min((staticEval - beta) / 200, 3);
+            nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
+            nnue_state[ply + 1].accumulator.computedAccumulation = 0;
 
-                nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
-                nnue_state[ply + 1].accumulator.computedAccumulation = 0;
+            board.MakeNullMove();
+            int score = -negamax(std::max(depth - 1 - R, 0), -beta, -beta + 1, ply + 1, Move(), Move());
+            board.UndoNullMove();
 
-                board.MakeNullMove();
-                int score = -negamax(std::max(depth - 1 - R, 0), -beta, -beta + 1, ply + 1, Move(), Move());
-                board.UndoNullMove();
-
-                if (isStopped()) return alpha;
-                if (score >= beta) return beta;
-            }
+            if (isStopped()) return alpha;
+            if (score >= beta) return beta;
         }
     }
 
@@ -425,6 +443,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
     }
 
     Move bestMoveThisNode;
+    int bestScore = -MATE_SCORE - 1; // fail-soft best; below any real score
     int n = moves.count;
     int movesSearched = 0;
     for (int i = 0; i < n; ++i) {
@@ -515,7 +534,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
             isTTMove
             && !isExclusionSearch
             && ply > 0
-            && ply < 2 * rootDepth // caps the depth singular extensions can push a line to
+            && ply < rootDepth // caps how far singular extensions can push a line
             && depth >= 8
             && !inCheck
             && ttDepth >= depth - 3
@@ -667,10 +686,12 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
                     }
                 }
             }
-            tt->Store(hash, score, ply, depth, TT_BETA, m);
+            // singular verification searches use a modified key that is never probed again
+            if (!isExclusionSearch) tt->Store(hash, score, ply, depth, TT_BETA, m);
             return score;
         }
 
+        if (score > bestScore) bestScore = score;
         if (score > alpha) {
             alpha = score;
             bestMoveThisNode = m;
@@ -691,10 +712,13 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
         return inCheck ? -MATE_SCORE + ply : 0;
     }
 
-    TTFlag flag = (alpha <= originalAlpha) ? TT_ALPHA : TT_EXACT;
-    tt->Store(hash, alpha, ply, depth, flag, bestMoveThisNode);
+    // every searched move was pruned: fall back to alpha as the bound
+    if (bestScore < -MATE_SCORE) bestScore = alpha;
 
-    return alpha;
+    TTFlag flag = (bestScore <= originalAlpha) ? TT_ALPHA : TT_EXACT;
+    if (!isExclusionSearch) tt->Store(hash, bestScore, ply, depth, flag, bestMoveThisNode);
+
+    return bestScore;
 }
 
 void Searcher::PrepareSearcher() {
@@ -769,6 +793,46 @@ void Searcher::ClearHistory() {
                 historyMoves[c][f][t] = 0;
 }
 
+std::string Searcher::BuildPvString() {
+    constexpr int MAX_PV_PRINT = 64;
+
+    std::vector<Move> played;
+    std::vector<uint64_t> seen{ board.getHash() };
+    std::string pv;
+
+    auto tryPlay = [&](const Move& candidate) {
+        MoveList legal;
+        MoveGenerator::GenerateMoves(board, legal);
+        for (const Move& m : legal) {
+            if (!(m == candidate)) continue;
+            if (!board.MakeMove(m, true)) return false;
+            played.push_back(m);
+            pv += UCIParsing::MoveToUCI(m) + " ";
+            return true;
+        }
+        return false;
+    };
+
+    bool pvComplete = true;
+    for (int i = 0; i < pvLength[0]; i++) {
+        if (!tryPlay(pvTable[0][i])) { pvComplete = false; break; }
+        seen.push_back(board.getHash());
+    }
+
+    while (pvComplete && (int)played.size() < MAX_PV_PRINT) {
+        Move ttMove = tt->getPvMove(board.getHash());
+        if (!ttMove.isValid() || !tryPlay(ttMove)) break;
+        const uint64_t h = board.getHash();
+        if (std::find(seen.begin(), seen.end(), h) != seen.end()) break;
+        seen.push_back(h);
+    }
+
+    for (int i = (int)played.size() - 1; i >= 0; i--) {
+        board.UndoMove(played[i], true);
+    }
+    return pv;
+}
+
 Move Searcher::IterativeDeepening(bool silent) {
 
     PrepareSearcher();
@@ -824,6 +888,7 @@ Move Searcher::IterativeDeepening(bool silent) {
 
         if (depth >= 4 && std::abs(scoreHistory[depth - 1]) < MATE_SCORE_BOUND) {
             int expectedScore = scoreHistory[depth - 1];
+            delta = 25 + std::abs(expectedScore) / 8; // large scores swing more between iterations
             alpha = std::max(-MATE_SCORE, expectedScore - delta);
             beta = std::min(MATE_SCORE, expectedScore + delta);
         }
@@ -859,7 +924,7 @@ Move Searcher::IterativeDeepening(bool silent) {
                 beta = std::min(MATE_SCORE, score + delta);
             }
 
-            delta += delta / 2 + 5;
+            delta += delta;
         }
 
         if (isStopped()) break;
@@ -889,13 +954,12 @@ Move Searcher::IterativeDeepening(bool silent) {
 
         bestMoveToPlay = currentBest;
 
-        bool inCrisis = (depth > 3 && score < prevScore - 50);
+        // a drop only matters while the position is still undecided: going from +2000 to +1900
+        // (or from -900 to -1000) changes nothing, and must not burn extra time
+        bool inCrisis = (depth > 3 && score < prevScore - 50 && std::abs(prevScore) < CRISIS_SCORE_LIMIT);
         long long timeSpent = now_ms() - startTime;
 
-        std::string currentPvString = "";
-        for (int i = 0; i < pvLength[0]; i++) {
-            currentPvString += pvTable[0][i].toAlgebraic() + " ";
-        }
+        std::string currentPvString = BuildPvString();
 
         if (pvLength[0] >= 2) {
             bestPvStringSoFar = currentPvString;
@@ -928,10 +992,7 @@ Move Searcher::IterativeDeepening(bool silent) {
 
     if (!silent) {
 
-        std::string currentPvString = "";
-        for (int i = 0; i < pvLength[0]; i++) {
-            currentPvString += pvTable[0][i].toAlgebraic() + " ";
-        }
+        std::string currentPvString = BuildPvString();
 
         if (pvLength[0] == 0 || currentPvString.empty() || isStopped()) {
             currentPvString = bestPvStringSoFar;

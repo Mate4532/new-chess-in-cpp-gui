@@ -5,12 +5,13 @@
 
 namespace OldLMR {
 
-    class LMR {
-    public:
-        static int table[64][64];
+   class LMR {
+   public:
+       static int table[64][64];
+       static int pvTable[64][64];
 
-        static void Init();
+       static void Init();
 
-        static int GetReduction(int depth, int moveCount);
-    };
+       static int GetReduction(int depth, int moveCount, bool isPvNode);
+   };
 }

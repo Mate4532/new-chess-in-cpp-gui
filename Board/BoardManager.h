@@ -35,6 +35,13 @@ private:
     bool isInBotSimulation = false;
     std::string currentSimFen;
 
+    // bot vs bot simulation config; simBotTypes[0] plays white in the first game of each round
+    SearcherType simBotTypes[2] = { SearcherType::IMPROVED_SEARCHER, SearcherType::OLD_SEARCHER };
+    bool saveSimGames = true;
+    std::string simSaveName; // empty: results folder is named after the two bots
+    int simBotWins[2] = { 0, 0 };
+    int simDraws = 0;
+
     AllSettings currentSettings;
 
     static inline std::mutex consoleMutex;
@@ -75,10 +82,11 @@ public:
     void ClearSearchers();
     void setupBotsForNormalGame(const RobotSettings& rs);
     void prepareImprovedBotVsOldBot();
+    void prepareBotVsBot(SearcherType whiteType, SearcherType blackType);
     void SwapRobots();
     void setDifficulty(Color c, Difficulty d);
     void setFixedTimePerMove(long long timePerMoveMs);
-    void setTournementTime(long long tournementTimeMs, long long incrementMs = 0);
+    void setTournementTime(long long whiteTimeMs, long long blackTimeMs, long long incrementMs = 0);
     void updateRobotTournementTime();
     void setSettings(const AllSettings& settings);
     void stopRobotCalculation();
@@ -116,7 +124,13 @@ public:
     }
 
     void startBotSimulation(int numGames, int threadId = -1);
-    void startMultiThreadedSimulation(int totalGames, int numThreads);
+    // firstBot plays white in the first game of every round, then the colors swap.
+    // saveName overrides the results folder name under botvsbotresults (empty: "<bot1>-<bot2>").
+    void startMultiThreadedSimulation(int totalGames, int numThreads,
+                                      SearcherType firstBot = SearcherType::IMPROVED_SEARCHER,
+                                      SearcherType secondBot = SearcherType::OLD_SEARCHER,
+                                      bool saveGames = true,
+                                      const std::string& saveName = "");
     void stopBotSimulation();
 
 };

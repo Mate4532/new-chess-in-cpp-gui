@@ -9,15 +9,15 @@ public:
     ResultManager();
 
     void saveGameResult(const GameResult& gameResult, const std::string& whiteName,
-                        const std::string whiteSourcePath, const std::string& blackName,
+                        const std::string& whiteSourcePath, const std::string& blackName,
                         const std::string& blackSourcePath, const std::vector<std::string>& moveList,
-                        const std::string& startingFen = "");
+                        const std::string& startingFen = "", const std::string& folderName = "");
     void resetStats(const std::string& whiteName, const std::string& blackName);
 
 private:
     std::filesystem::path fullFilePath;
 
-    void updatePath(const std::string& name1, const std::string& name2);
+    void updatePath(const std::string& name1, const std::string& name2, const std::string& folderName = "");
     std::map<std::string, int> readCurrentStats(const std::string& whiteRobotName, const std::string& blackRobotName);
     void writeStats(const std::map<std::string, int>& stats);
     void ensureDirectoryExists();

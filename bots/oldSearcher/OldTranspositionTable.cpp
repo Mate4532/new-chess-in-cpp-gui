@@ -1,5 +1,11 @@
 #include "OldTranspotitionTable.h"
-#include "oldSearcher.h"
+#include <cstring>
+#include <bit>
+#include <algorithm>
+#include <climits>
+#include <mutex>
+#include <vector>
+#include "oldsearcher.h"
 
 using namespace OldTT;
 using namespace OldSearcher;
@@ -7,8 +13,7 @@ using namespace OldSearcher;
 TranspositionTable::TranspositionTable(size_t mb) {
     size_t sizeInBytes = mb * 1024 * 1024;
     size_t clusterCount = sizeInBytes / sizeof(TTCluster);
-
-    size = std::bit_ceil(clusterCount);
+    size = clusterCount < 2 ? 1 : std::bit_floor(clusterCount);
 
     table.resize(size);
     Clear();
@@ -20,44 +25,41 @@ void TranspositionTable::Prefetch(uint64_t hash) {
 }
 
 int TranspositionTable::ScoreToTT(int score, int ply) {
-    if (std::abs(score) > Searcher::MATE_SCORE_BOUND) {
+    if (std::abs(score) >= Searcher::MATE_SCORE_BOUND) {
         return score > 0 ? score + ply : score - ply;
     }
     return score;
 }
 
 int TranspositionTable::ScoreFromTT(int score, int ply) {
-    if (std::abs(score) > Searcher::MATE_SCORE_BOUND) {
+    if (std::abs(score) >= Searcher::MATE_SCORE_BOUND) {
         return score > 0 ? score - ply : score + ply;
     }
     return score;
 }
 
 void TranspositionTable::Store(uint64_t hash, int score, int ply, int depth, TTFlag flag, Move bestMove) {
-    depth = std::max(0, depth);
+    const uint8_t storeDepth = (uint8_t)std::clamp(depth, 0, 127);
 
     size_t index = hash & (size - 1);
+    std::lock_guard<SpinLock> lock(ttLocks[index % NUM_LOCKS]);
     TTCluster& cluster = table[index];
 
-    int replaceIndex = -1;
+    int replaceIndex = 0;
     int worstScore = INT_MIN;
-
     int writeScore = ScoreToTT(score, ply);
 
     for (int i = 0; i < CLUSTER_SIZE; i++) {
         TTEntry& e = cluster.entry[i];
 
-        if (e.key == hash) {
+        if (e.key == hash || e.key == 0) {
             replaceIndex = i;
             break;
         }
 
-        if (e.key == 0) {
-            replaceIndex = i;
-            break;
-        }
-
-        int badness = ((e.gen != generation) * 1000) - e.depth;
+        int age = (int)generation - (int)e.gen;
+        if (age < 0) age = 0;
+        int badness = (age * 4) - (int)e.depth;
 
         if (badness > worstScore) {
             worstScore = badness;
@@ -67,62 +69,65 @@ void TranspositionTable::Store(uint64_t hash, int score, int ply, int depth, TTF
 
     TTEntry& e = cluster.entry[replaceIndex];
 
-    if (e.key == hash && depth < e.depth && e.gen == generation) {
+    if (e.key == hash) {
         e.gen = generation;
 
-        if (bestMove.isValid() && e.moveData == 0) {
+        if (bestMove.isValid()) {
             e.moveData = bestMove.getMoveData();
             e.movePieceType = bestMove.getPieceType();
         }
-        return;
-    }
 
-    if (e.key != hash) {
-        e.moveData = 0;
-        e.movePieceType = 0;
+        if (storeDepth >= e.depth || flag == TT_EXACT) {
+            e.score = (int16_t)writeScore;
+            e.depth = storeDepth;
+            e.type = (uint8_t)flag;
+        }
+
+        return;
     }
 
     e.key = hash;
     e.score = (int16_t)writeScore;
-    e.depth = (int8_t)depth;
+    e.depth = storeDepth;
     e.type = (uint8_t)flag;
     e.gen = generation;
 
     if (bestMove.isValid()) {
         e.moveData = bestMove.getMoveData();
         e.movePieceType = bestMove.getPieceType();
+    } else {
+        e.moveData = 0;
+        e.movePieceType = 0;
     }
 }
 
-bool TranspositionTable::Probe(uint64_t hash, int ply, int depth, int alpha, int beta, int& score, Move& bestMove) {
+bool TranspositionTable::Probe(uint64_t hash, int ply, int depth, int alpha, int beta, int& score, Move& bestMove, int& ttDepth, TTFlag& ttFlag) {
     size_t index = hash & (size - 1);
+    std::lock_guard<SpinLock> lock(ttLocks[index % NUM_LOCKS]);
     TTCluster& cluster = table[index];
 
     for (int i = 0; i < CLUSTER_SIZE; i++) {
         TTEntry& e = cluster.entry[i];
 
         if (e.key == hash) {
-
             if (e.moveData != 0) {
                 bestMove = Move(e.moveData, e.movePieceType);
-            }
-            else {
+            } else {
                 bestMove = Move();
             }
 
+            int retrievedScore = ScoreFromTT(e.score, ply);
+            score = retrievedScore;
+            ttDepth = e.depth;
+            ttFlag = static_cast<TTFlag>(e.type);
             if (e.depth >= depth) {
-                int retrievedScore = ScoreFromTT(e.score, ply);
-
                 if (e.type == TT_EXACT) {
-                    score = retrievedScore;
                     return true;
                 }
                 if (e.type == TT_ALPHA && retrievedScore <= alpha) {
-                    score = retrievedScore;
                     return true;
                 }
                 if (e.type == TT_BETA && retrievedScore >= beta) {
-                    score = retrievedScore;
                     return true;
                 }
             }
@@ -133,7 +138,31 @@ bool TranspositionTable::Probe(uint64_t hash, int ply, int depth, int alpha, int
     return false;
 }
 
+Move TranspositionTable::getPvMove(uint64_t hash) {
+    size_t index = hash & (size - 1);
+    std::lock_guard<SpinLock> lock(ttLocks[index % NUM_LOCKS]);
+    TTCluster& cluster = table[index];
+
+    for (int i = 0; i < CLUSTER_SIZE; i++) {
+        TTEntry& e = cluster.entry[i];
+
+        if (e.key == hash) {
+            if (e.type == TT_EXACT && e.moveData != 0) {
+                return Move(e.moveData, e.movePieceType);
+            }
+            break;
+        }
+    }
+    return Move();
+}
+
 void TranspositionTable::Clear() {
+    std::vector<std::unique_lock<SpinLock>> guards;
+    guards.reserve(NUM_LOCKS);
+    for (int i = 0; i < NUM_LOCKS; i++) {
+        guards.emplace_back(ttLocks[i]);
+    }
+
     std::memset(table.data(), 0, table.size() * sizeof(TTCluster));
     generation = 0;
 }

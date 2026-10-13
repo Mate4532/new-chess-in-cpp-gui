@@ -16,7 +16,7 @@ int Evaluation::GetPieceValue(PieceType p) {
 
 int Evaluation::GetNnuePieceNum(PieceType p, Color c) {
 
-    switch (p) {
+    switch(p){
 
     case KING:
         return (c == WHITE ? 1 : 7);
@@ -84,5 +84,10 @@ int Evaluation::EvaluatePos(const Board& board, int ply, NNUEdata* nnue_state) {
     pieces[index] = 0;
     squares[index] = 0;
 
-    return nnue_evaluate_incremental(player, pieces, squares, nnue_data_pointers);
+    int score = nnue_evaluate_incremental(player, pieces, squares, nnue_data_pointers);
+
+    int clock = board.getHalfMoveClock();
+    if (score > 0) return score - clock;
+    if (score < 0) return score + clock;
+    return score;
 }

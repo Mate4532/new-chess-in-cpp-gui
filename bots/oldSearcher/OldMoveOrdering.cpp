@@ -26,7 +26,13 @@ int MoveOrdering::See(const Board& board, Move m) {
     uint64_t occupied = board.getAllOccupancy();
     uint64_t attackers = board.getAttacksTo(to, occupied);
 
-    gain[d] = Evaluation::GetPieceValue(victim);
+    gain[0] = Evaluation::GetPieceValue(victim);
+
+    if (flags & PROMOTION_FLAG) {
+        PieceType promoPiece = Board::GetPromotionPiece(flags);
+        gain[0] += Evaluation::GetPieceValue(promoPiece) - Evaluation::GetPieceValue(PAWN);
+    }
+
     Color side = us;
 
     if (flags == EN_PASSANT) {
@@ -37,7 +43,7 @@ int MoveOrdering::See(const Board& board, Move m) {
     occupied ^= (1ULL << from);
 
     uint64_t sliderAttacks = (board.getBishopAttacks(to, occupied) & board.getBishopsQueens()) |
-        (board.getRookAttacks(to, occupied) & board.getRooksQueens());
+                             (board.getRookAttacks(to, occupied) & board.getRooksQueens());
     attackers |= sliderAttacks;
 
     while (true) {
@@ -60,7 +66,7 @@ int MoveOrdering::See(const Board& board, Move m) {
         occupied ^= (1ULL << nextSq);
 
         sliderAttacks = (board.getBishopAttacks(to, occupied) & board.getBishopsQueens()) |
-            (board.getRookAttacks(to, occupied) & board.getRooksQueens());
+                        (board.getRookAttacks(to, occupied) & board.getRooksQueens());
         attackers |= sliderAttacks;
     }
 
@@ -77,8 +83,9 @@ static inline int ScoreMove(
     const Move& m,
     const Move& ttMove,
     const int history[2][SQUARE_COUNT][SQUARE_COUNT],
-    const Move killers[2]
-) {
+    const Move killers[2],
+    const Move& counterMove
+    ) {
 
     if (m.isValid() && ttMove.isValid() && m == ttMove) {
         return 10'000'000;
@@ -88,16 +95,15 @@ static inline int ScoreMove(
     Color enemy = (Color)(us ^ 1);
 
     MoveFlag moveFlag = m.getFlags();
-
-    int promotionFlag = moveFlag & 0b1011;
+    PieceType promotionPiece = board.GetPromotionPiece(m);
 
     if (moveFlag & CAPTURE_FLAG) {
 
         if (moveFlag & PROMOTION_FLAG) {
-            switch (promotionFlag) {
-            case PROMOTION_TYPE_QUEEN:
+            switch (promotionPiece) {
+            case QUEEN:
                 return 9'000'000;
-            case PROMOTION_TYPE_KNIGHT:
+            case KNIGHT:
                 return 8'000'000;
             default:
                 return -2'000'000;
@@ -106,8 +112,8 @@ static inline int ScoreMove(
 
         PieceType victim =
             (moveFlag == EN_PASSANT)
-            ? PAWN
-            : board.getPieceAt(m.getTo(), enemy);
+                ? PAWN
+                : board.getPieceAt(m.getTo(), enemy);
 
         int v = Evaluation::GetPieceValue(victim);
         int a = Evaluation::GetPieceValue(m.getPieceType());
@@ -116,14 +122,14 @@ static inline int ScoreMove(
 
         if (v >= a) return 5'000'000 + mvv_lva;
         else if (MoveOrdering::See(board, m) >= 0) return 5'000'000 + mvv_lva;
-        else return -1'000'000 + mvv_lva;
+        else return -1'000'000;
     }
 
     if (moveFlag & PROMOTION_FLAG) {
-        switch (promotionFlag) {
-        case PROMOTION_TYPE_QUEEN:
+        switch(promotionPiece) {
+        case QUEEN:
             return 4'000'000;
-        case PROMOTION_TYPE_KNIGHT:
+        case KNIGHT:
             return 3'000'000;
         default:
             return -2'000'000;
@@ -133,44 +139,35 @@ static inline int ScoreMove(
     if (m.isValid()) {
         if (m == killers[0]) return 2'000'000;
         if (m == killers[1]) return 1'500'000;
+        if (counterMove.isValid() && m == counterMove) return 1'200'000;
     }
 
     Square mFrom = m.getFrom();
     Square mTo = m.getTo();
 
     int histScore = history[us][mFrom][mTo];
-    return std::min(histScore, 999'999);
+    return histScore;
 }
 
-void MoveOrdering::SortMoves(
+void MoveOrdering::ScoreMoves(
     const Board& board,
     MoveList& moves,
     Move ttMove,
     const int history[2][SQUARE_COUNT][SQUARE_COUNT],
-    const Move killers[2]
-) {
-    int scores[256];
+    const Move killers[2],
+    Move counterMove,
+    int scores[SCORE_SIZE]
+    ) {
 
-    int n = (int)moves.size();
+    int n = (int)moves.count;
     for (int i = 0; i < n; i++) {
         scores[i] = ScoreMove(
             board,
             moves[i],
             ttMove,
             history,
-            killers
-        );
-    }
-
-    for (int i = 0; i < n - 1; i++) {
-        int best = i;
-        for (int j = i + 1; j < n; j++) {
-            if (scores[j] > scores[best])
-                best = j;
-        }
-        if (best != i) {
-            std::swap(scores[i], scores[best]);
-            std::swap(moves[i], moves[best]);
-        }
+            killers,
+            counterMove
+            );
     }
 }

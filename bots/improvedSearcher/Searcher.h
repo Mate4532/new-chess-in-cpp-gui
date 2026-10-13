@@ -31,6 +31,7 @@ private:
     int quiescence(int alpha, int beta, int ply);
     Move GetBestAmongTopMoves(const SearcherSettings& settings);
     void SetupNnueDirtyPieces(const Move& m, int ply);
+    std::string BuildPvString();
 
     std::atomic<long long> fixedTimePerMoveMs{1000};
     std::atomic<long long> timeLeftMs{300000};
@@ -90,6 +91,7 @@ public:
 
     static constexpr int MATE_SCORE = 30000;
     static constexpr int MATE_SCORE_BOUND = 20000;
+    static constexpr int CRISIS_SCORE_LIMIT = 800;
 
     Searcher(int threads = 1) : board(), threads(threads) {
         tt = std::make_shared<ImprovedTT::TranspositionTable>(TT_SIZE_MB);

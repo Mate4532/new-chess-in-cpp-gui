@@ -57,8 +57,10 @@ private:
     QComboBox* comboTimeMode = nullptr;
     QWidget* widgetTournamentTime;
     QLabel* labelTourTime;
-    QSpinBox* spinTourTimeMin;
-    QSpinBox* spinTourTimeSec;
+    QSpinBox* spinWhiteTimeMin;
+    QSpinBox* spinWhiteTimeSec;
+    QSpinBox* spinBlackTimeMin;
+    QSpinBox* spinBlackTimeSec;
     QLabel* labelIncrement;
     QDoubleSpinBox* spinIncrementSec;
 

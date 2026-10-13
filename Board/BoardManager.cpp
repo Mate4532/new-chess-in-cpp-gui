@@ -250,6 +250,8 @@ std::string BoardManager::getGameResultString(GameResult gameResult) {
 
 void BoardManager::writeGameResult(GameResult gameResult, std::vector<std::string> moveList, std::string beginnerFen) {
 
+    if (!saveSimGames) return;
+
     if (!whiteRobot || !blackRobot || !isRobot(WHITE) || !isRobot(BLACK)) return;
 
     if (gameResult == GameResult::GAME_DID_NOT_END) return;
@@ -262,7 +264,7 @@ void BoardManager::writeGameResult(GameResult gameResult, std::vector<std::strin
     std::string whiteSourcePath = whiteRobot->getBotDirectoryPath();
     std::string blackSourcePath = blackRobot->getBotDirectoryPath();
 
-    resultManager.saveGameResult(gameResult, whiteNameToSaveInFile, whiteSourcePath, blackNameToSaveInFile, blackSourcePath, moveList, beginnerFen);
+    resultManager.saveGameResult(gameResult, whiteNameToSaveInFile, whiteSourcePath, blackNameToSaveInFile, blackSourcePath, moveList, beginnerFen, simSaveName);
 }
 
 void BoardManager::startGameLoop() {
@@ -444,7 +446,8 @@ void BoardManager::stopTurnClock() {
 }
 
 void BoardManager::restartClock() {
-	setTournementTime(currentSettings.timeSettings.getTournementTimeMs(), currentSettings.timeSettings.getIncrementMs());
+	const TimeSettings& ts = currentSettings.timeSettings;
+	setTournementTime(ts.getWhiteTimeMs(), ts.getBlackTimeMs(), ts.getIncrementMs());
 }
 
 long long BoardManager::getTimeRemaining(Color player) const {
@@ -489,26 +492,54 @@ void BoardManager::setupBotsForNormalGame(const RobotSettings& rs) {
     setRobotTimeUsageMode(currentSettings.timeSettings.rtum);
 }
 
+static bool isSearcherOfType(ISearcher* searcher, SearcherType type) {
+    if (searcher == nullptr) return false;
+
+    switch (type) {
+    case SearcherType::OLD_SEARCHER:
+        return dynamic_cast<OSearcher*>(searcher) != nullptr;
+    case SearcherType::IMPROVED_SEARCHER:
+        return dynamic_cast<ImpSearcher*>(searcher) != nullptr;
+    }
+    return false;
+}
+
+static std::string searcherTypeName(SearcherType type) {
+    switch (type) {
+    case SearcherType::OLD_SEARCHER:
+        return "Old searcher";
+    case SearcherType::IMPROVED_SEARCHER:
+        return "Improved searcher";
+    }
+    return "Unknown searcher";
+}
+
 void BoardManager::prepareImprovedBotVsOldBot() {
+    prepareBotVsBot(SearcherType::IMPROVED_SEARCHER, SearcherType::OLD_SEARCHER);
+}
+
+void BoardManager::prepareBotVsBot(SearcherType whiteType, SearcherType blackType) {
 
     loadOpenings();
 
-    if (whiteRobot == nullptr || dynamic_cast<ImpSearcher*>(whiteRobot.get()) == nullptr) {
-        whiteRobot = BotFactory::createBot(SearcherType::IMPROVED_SEARCHER, currentSettings.robotSettings);
+    if (!isSearcherOfType(whiteRobot.get(), whiteType)) {
+        whiteRobot = BotFactory::createBot(whiteType, currentSettings.robotSettings);
         setDifficulty(WHITE, Difficulty::IMPOSSIBLE);
         setRobot(WHITE);
     }
 
-    if (blackRobot == nullptr || dynamic_cast<OSearcher*>(blackRobot.get()) == nullptr) {
-        blackRobot = BotFactory::createBot(SearcherType::OLD_SEARCHER, currentSettings.robotSettings);
+    if (!isSearcherOfType(blackRobot.get(), blackType)) {
+        blackRobot = BotFactory::createBot(blackType, currentSettings.robotSettings);
         setDifficulty(BLACK, Difficulty::IMPOSSIBLE);
         setRobot(BLACK);
     }
 
     setRobotTimeUsageMode(currentSettings.timeSettings.rtum);
 
-    VersionControl::manageBotVersion(whiteRobot->getNameToSaveInFile(), whiteRobot->getBotDirectoryPath());
-    VersionControl::manageBotVersion(blackRobot->getNameToSaveInFile(), blackRobot->getBotDirectoryPath());
+    if (saveSimGames) {
+        VersionControl::manageBotVersion(whiteRobot->getNameToSaveInFile(), whiteRobot->getBotDirectoryPath());
+        VersionControl::manageBotVersion(blackRobot->getNameToSaveInFile(), blackRobot->getBotDirectoryPath());
+    }
 }
 
 void BoardManager::SwapRobots() {
@@ -571,13 +602,13 @@ void BoardManager::setSettings(const AllSettings& settings) {
 	setRobotTimeUsageMode(rtum);
 }
 
-void BoardManager::setTournementTime(long long tournementTimeMs, long long incrementMs) {
-    this->whiteTimeLeftMs = 1000000000;
-    this->blackTimeLeftMs = tournementTimeMs;
+void BoardManager::setTournementTime(long long whiteTimeMs, long long blackTimeMs, long long incrementMs) {
+    this->whiteTimeLeftMs = whiteTimeMs;
+    this->blackTimeLeftMs = blackTimeMs;
     this->incrementMs = incrementMs;
 
-    if (whiteRobot != nullptr) whiteRobot->setTournamentTime(tournementTimeMs, incrementMs);
-    if (blackRobot != nullptr) blackRobot->setTournamentTime(tournementTimeMs, incrementMs);
+    if (whiteRobot != nullptr) whiteRobot->setTournamentTime(whiteTimeMs, incrementMs);
+    if (blackRobot != nullptr) blackRobot->setTournamentTime(blackTimeMs, incrementMs);
 
     saveRemainingTime();
 }
@@ -659,7 +690,7 @@ void BoardManager::startBotSimulation(int totalRounds, int threadId) {
 
     if (whiteRobot == nullptr || blackRobot == nullptr) {
         std::lock_guard<std::mutex> lock(consoleMutex);
-        prepareImprovedBotVsOldBot();
+        prepareBotVsBot(simBotTypes[0], simBotTypes[1]);
     }
 
     int roundsFinished = 0;
@@ -689,6 +720,11 @@ void BoardManager::startBotSimulation(int totalRounds, int threadId) {
             roundSummary[gameInRound] += ", " + std::to_string(board.getMoveHistory().size()) + " moves been made";
 			roundResults[gameInRound] = result;
 
+            // simBotTypes[0] is white in game 0 and black in game 1 of each round
+            if (result == GameResult::DRAW) simDraws++;
+            else if (result & GameResult::WHITE_WON) simBotWins[gameInRound]++;
+            else if (result & GameResult::BLACK_WON) simBotWins[1 - gameInRound]++;
+
             {
                 std::lock_guard<std::mutex> lock(consoleMutex);
 				if (gameInRound == 0) {
@@ -717,33 +753,54 @@ void BoardManager::startBotSimulation(int totalRounds, int threadId) {
             std::cout << "  Game 1: " << roundSummary[0] << std::endl;
             std::cout << "  Game 2: " << roundSummary[1] << std::endl;
         }
-        writeGameResult(roundResults[1], board.getMoveHistroyInSAN(), board.getBeginnerFen());
+        {
+            // every thread writes the same results file, so this needs the lock just like game 1
+            std::lock_guard<std::mutex> lock(consoleMutex);
+            writeGameResult(roundResults[1], board.getMoveHistroyInSAN(), board.getBeginnerFen());
+        }
         SwapRobots();
     }
     isInBotSimulation = false;
 }
 
-void BoardManager::startMultiThreadedSimulation(int totalGames, int numThreads) {
+void BoardManager::startMultiThreadedSimulation(int totalGames, int numThreads,
+                                                SearcherType firstBot, SearcherType secondBot,
+                                                bool saveGames, const std::string& saveName) {
 
 	int totalRounds = totalGames / 2;
 
     std::atomic<int> roundsRemaining(totalRounds);
+    std::atomic<int> totalWins[2] = { 0, 0 };
+    std::atomic<int> totalDraws(0);
     std::vector<std::thread> threads;
 
-    std::cout << "[BoardManager] Simulation started on " << numThreads << " threads." << std::endl;
+    const std::string firstName = searcherTypeName(firstBot);
+    const std::string secondName = searcherTypeName(secondBot);
+
+    std::cout << "[BoardManager] Simulation started on " << numThreads << " threads: "
+              << firstName << " vs " << secondName
+              << (saveGames ? "" : " (games are not saved)") << std::endl;
 
     auto startTime = std::chrono::steady_clock::now();
 
     for (int i = 0; i < numThreads; ++i) {
-        threads.emplace_back([&roundsRemaining, i, this]() {
+        threads.emplace_back([&, i]() {
 
             BoardManager localManager;
 
 			localManager.setSettings(this->currentSettings);
+            localManager.simBotTypes[0] = firstBot;
+            localManager.simBotTypes[1] = secondBot;
+            localManager.saveSimGames = saveGames;
+            localManager.simSaveName = saveName;
 
             while (roundsRemaining.fetch_sub(1) > 0) {
                 localManager.startBotSimulation(1, i);
             }
+
+            totalWins[0] += localManager.simBotWins[0];
+            totalWins[1] += localManager.simBotWins[1];
+            totalDraws += localManager.simDraws;
             });
     }
 
@@ -754,8 +811,15 @@ void BoardManager::startMultiThreadedSimulation(int totalGames, int numThreads) 
     auto endTime = std::chrono::steady_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
 
+    const int played = totalWins[0] + totalWins[1] + totalDraws;
+    const double firstScore = played > 0 ? 100.0 * (totalWins[0] + 0.5 * totalDraws) / played : 0.0;
+
     std::cout << "\n[BoardManager] Simulation done: " << totalGames << " games." << std::endl;
     std::cout << "Simulation period of time: " << duration << " second." << std::endl;
+    std::cout << "  " << firstName << " wins: " << totalWins[0] << std::endl;
+    std::cout << "  " << secondName << " wins: " << totalWins[1] << std::endl;
+    std::cout << "  Draws: " << totalDraws << std::endl;
+    std::cout << "  " << firstName << " score: " << firstScore << "%" << std::endl;
 }
 
 void BoardManager::stopBotSimulation() {
