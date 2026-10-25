@@ -7,6 +7,7 @@ const std::unordered_map<PieceType, QString> PlayerPanel::whitePieceMap = {
     {PieceType::BISHOP, ":/resources/resources/white_bishop.png"},
     {PieceType::QUEEN, ":/resources/resources/white_queen.png"},
     {PieceType::KING, ":/resources/resources/white_king.png"},
+    {PieceType::AMAZON, ":/resources/resources/white_amazon.png"},
     };
 
 const std::unordered_map<PieceType, QString> PlayerPanel::blackPieceMap = {
@@ -16,6 +17,7 @@ const std::unordered_map<PieceType, QString> PlayerPanel::blackPieceMap = {
     {PieceType::BISHOP, ":/resources/resources/black_bishop.png"},
     {PieceType::QUEEN, ":/resources/resources/black_queen.png"},
     {PieceType::KING, ":/resources/resources/black_king.png"},
+    {PieceType::AMAZON, ":/resources/resources/black_amazon.png"},
     };
 
 PlayerPanel::PlayerPanel(PlayerInfo& player, bool isTimerLabelVisible, QWidget* parent) : QHBoxLayout(parent) {
@@ -103,6 +105,7 @@ int PlayerPanel::getPieceValue(PieceType p) {
     case BISHOP: return 3;
     case ROOK:   return 5;
     case QUEEN:  return 9;
+    case AMAZON: return 12;
     default:     return 0;
     }
     return 0;
@@ -115,6 +118,7 @@ int PlayerPanel::getPieceOrder(PieceType p) {
     case BISHOP: return 3;
     case ROOK:   return 4;
     case QUEEN:  return 5;
+    case AMAZON: return 6;
     default:     return 0;
     }
     return 0;
@@ -203,11 +207,12 @@ void PlayerPanel::updatePanel() {
     piecesContainer->setFixedSize(currentX, playerPanelPieceSide);
 }
 
-void PlayerPanel::syncPiecesWithPanel(int pieces[6]) {
+void PlayerPanel::syncPiecesWithPanel(int pieces[PIECE_TYPE_COUNT]) {
 
     clearPanel();
 
-    for (int type = PAWN; type < KING; ++type) {
+    for (int type = PAWN; type < PIECE_TYPE_COUNT; ++type) {
+        if (type == KING) continue;
 
         int count = pieces[type];
 

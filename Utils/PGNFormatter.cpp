@@ -1,7 +1,7 @@
 #include "PGNFormatter.h"
 #include "versioncontrol.h"
 
-std::string PGNFormatter::convertMoveToSAN(const Move& m, const MoveList& currentLegalMoves, bool wasMoveCheck, bool addPieceCharToString) {
+std::string PGNFormatter::convertMoveToSAN(const Move& m, const MoveList& currentLegalMoves, bool wasMoveCheck, bool addPieceCharToString, PieceType topPromotionPiece) {
     MoveFlag flags = m.getFlags();
     std::string result = "";
 
@@ -22,6 +22,7 @@ std::string PGNFormatter::convertMoveToSAN(const Move& m, const MoveList& curren
         case ROOK:   pieceChar = 'R'; break;
         case QUEEN:  pieceChar = 'Q'; break;
         case KING:   pieceChar = 'K'; break;
+        case AMAZON: pieceChar = 'A'; break;
         default: break;
         }
 
@@ -66,12 +67,14 @@ std::string PGNFormatter::convertMoveToSAN(const Move& m, const MoveList& curren
 
         if (flags & PROMOTION_FLAG) {
             PieceType promoPt = m.getPromotionPieceType();
+            if (promoPt == QUEEN) promoPt = topPromotionPiece;
             result += "=";
             switch (promoPt) {
             case KNIGHT: result += "N"; break;
             case BISHOP: result += "B"; break;
             case ROOK:   result += "R"; break;
             case QUEEN:  result += "Q"; break;
+            case AMAZON: result += "A"; break;
             default: break;
             }
         }

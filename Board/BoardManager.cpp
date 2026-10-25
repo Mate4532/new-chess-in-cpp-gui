@@ -545,6 +545,7 @@ void BoardManager::prepareImprovedBotVsOldBot() {
 
 void BoardManager::prepareBotVsBot(SearcherType whiteType, SearcherType blackType) {
 
+    board.setVariant(GameVariant::NORMAL);
     loadOpenings();
 
     if (!isSearcherOfType(whiteRobot.get(), whiteType)) {
@@ -609,6 +610,8 @@ void BoardManager::setSettings(const AllSettings& settings) {
 
     RobotTimeUsageMode rtum;
     currentSettings = settings;
+
+    board.setVariant(settings.robotSettings.isBotVsBot ? GameVariant::NORMAL : settings.variantSettings.variant);
 
     switch (settings.timeSettings.gm) {
     case GameMode::UNLIMITED_THINKING_TIME:

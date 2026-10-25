@@ -50,6 +50,7 @@ public:
     inline bool isUnderReview() const { return reviewingPly >= 0; }
     inline bool isBotVsBotMode() const { return currentSettings.robotSettings.isBotVsBot; }
     inline bool showLegalMoves() const { return currentSettings.boardSettings.showLegalMoves; }
+    inline PieceType getTopPromotionPiece() const { return bm.getTopPromotionPiece(); }
     std::vector<std::pair<int, int>> getLegalMovesForPiece(int file, int rank) { return bm.getLegalMovesForPiece(file, rank); }
 
     void loadSettings(AllSettings& allS);
@@ -69,7 +70,7 @@ signals:
     void newGameStarted();
     void flipBoardToRequest(bool isFlipped);
     void playerPanelsUpdateRequest(QString playerName, QString playerIconPath, Color playerColor);
-    void syncPiecesWithPanelsRequest(int pieces[2][6]);
+    void syncPiecesWithPanelsRequest(int pieces[2][PIECE_TYPE_COUNT], GameVariant variant);
     void endPromotion();
     void reviewEndedRequest(int currentPly);
     void tournementModeStarted();

@@ -15,6 +15,16 @@
 #define MAX_PLY 2048
 
 const std::string newPosFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+const std::string amazonPosFen = "rnbakbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBAKBNR w KQkq - 0 1";
+
+enum class GameVariant {
+    NORMAL,
+    AMAZON
+};
+
+inline const std::string& getVariantStartFen(GameVariant variant) {
+    return variant == GameVariant::AMAZON ? amazonPosFen : newPosFen;
+}
 
 enum GameResult : uint8_t {
     WHITE_WON_ON_TIME        = 0b00000001,
@@ -39,7 +49,7 @@ enum Color : uint8_t {
 };
 
 enum PieceType : uint8_t {
-    PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING,
+    PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING, AMAZON,
     PIECE_TYPE_COUNT, PIECE_NONE
 };
 
@@ -56,9 +66,9 @@ enum Square : uint8_t {
     SQUARE_NONE
 };
 
-const char piece_chars[2][7] = {
-    {'P', 'N', 'B', 'R', 'Q', 'K', '.'},
-    {'p', 'n', 'b', 'r', 'q', 'k', '.'}
+const char piece_chars[2][8] = {
+    {'P', 'N', 'B', 'R', 'Q', 'K', 'A', '.'},
+    {'p', 'n', 'b', 'r', 'q', 'k', 'a', '.'}
 };
 
 enum CastlingRight : uint8_t {
@@ -191,7 +201,12 @@ enum RobotTimeUsageMode {
     FIXED_TIME, TOURNEMENT_TIME
 };
 
-const int basePieceCounts[PieceType::PIECE_TYPE_COUNT] = { 8, 2, 2, 2, 1, 1 };
+const int basePieceCounts[PieceType::PIECE_TYPE_COUNT] = { 8, 2, 2, 2, 1, 1, 0 };
+const int amazonBasePieceCounts[PieceType::PIECE_TYPE_COUNT] = { 8, 2, 2, 2, 0, 1, 1 };
+
+inline const int* getVariantBasePieceCounts(GameVariant variant) {
+    return variant == GameVariant::AMAZON ? amazonBasePieceCounts : basePieceCounts;
+}
 
 struct MoveInfo {
     int fromFile = -1, fromRank = -1;

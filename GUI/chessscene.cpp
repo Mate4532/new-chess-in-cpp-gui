@@ -14,6 +14,7 @@ const std::unordered_map<PieceType, QString> ChessScene::whitePieceMap = {
     {PieceType::BISHOP, ":/resources/resources/white_bishop.png"},
     {PieceType::QUEEN, ":/resources/resources/white_queen.png"},
     {PieceType::KING, ":/resources/resources/white_king.png"},
+    {PieceType::AMAZON, ":/resources/resources/white_amazon.png"},
     };
 
 const std::unordered_map<PieceType, QString> ChessScene::blackPieceMap = {
@@ -23,6 +24,7 @@ const std::unordered_map<PieceType, QString> ChessScene::blackPieceMap = {
     {PieceType::BISHOP, ":/resources/resources/black_bishop.png"},
     {PieceType::QUEEN, ":/resources/resources/black_queen.png"},
     {PieceType::KING, ":/resources/resources/black_king.png"},
+    {PieceType::AMAZON, ":/resources/resources/black_amazon.png"},
     };
 
 ChessScene::ChessScene(QObject* parent) : QGraphicsScene(parent)
@@ -196,7 +198,7 @@ void ChessScene::drawPromotionPieces() {
     if (!cvm->isBoardUnderPromoption() || !cvm) return;
 
     Color promoColor = (promotionSquareTo.second == 7) ? Color::WHITE : Color::BLACK;
-    std::vector<PieceType> promoTypes = { PieceType::QUEEN, PieceType::ROOK, PieceType::BISHOP, PieceType::KNIGHT };
+    std::vector<PieceType> promoTypes = { cvm->getTopPromotionPiece(), PieceType::ROOK, PieceType::BISHOP, PieceType::KNIGHT };
     std::vector<std::pair<int, int>> targetSquares = getPromotionSquares(promotionSquareTo.first, promotionSquareTo.second);
 
     for (size_t i = 0; i < promoTypes.size(); ++i) {

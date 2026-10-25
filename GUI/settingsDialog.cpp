@@ -7,13 +7,13 @@
 #include <QPushButton>
 #include <QIntValidator>
 #include <QFrame>
+#include <QMessageBox>
+#include <QTabBar>
 
 SettingsDialog::SettingsDialog(AllSettings& allSettings, QWidget *parent)
     : allS(allSettings), QDialog(parent)
 {
     setWindowTitle("Beállítások");
-    setMinimumSize(525, 400);
-    resize(525, 400);
 
     applyStyles();
 
@@ -22,9 +22,15 @@ SettingsDialog::SettingsDialog(AllSettings& allSettings, QWidget *parent)
     tabWidget->addTab(createRobotTab(), "Robotok");
     tabWidget->addTab(createBoardTab(), "Tábla");
     tabWidget->addTab(createTimeControlTab(), "Időkontroll");
+    tabWidget->addTab(createVariantTab(), "Változatok");
     mainLayout->addWidget(tabWidget);
 
     setupActionButtons(mainLayout);
+
+    tabWidget->tabBar()->ensurePolished();
+    const QMargins margins = mainLayout->contentsMargins();
+    const int tabsWidth = tabWidget->tabBar()->sizeHint().width() + margins.left() + margins.right();
+    resize(std::max(tabsWidth, minimumSizeHint().width()), 400);
 }
 
 void SettingsDialog::applyStyles() {
@@ -37,7 +43,7 @@ void SettingsDialog::applyStyles() {
             top: -1px;
             border-radius: 2px;
         }
-        QTabWidget::tab-bar { left: 5px; }
+        QTabWidget::tab-bar { left: 0px; }
 
         QTabBar::tab {
             background: #262422;
@@ -54,6 +60,8 @@ void SettingsDialog::applyStyles() {
             margin-right: 4px;
             min-width: 80px;
         }
+
+        QTabBar::tab:last { margin-right: 0px; }
 
         QTabBar::tab:selected {
             background: #312E2B;
@@ -126,9 +134,30 @@ void SettingsDialog::setupActionButtons(QVBoxLayout* layout) {
 }
 
 void SettingsDialog::onSaveClicked() {
+    GameVariant selectedVariant = (GameVariant)comboVariant->currentIndex();
+    QString fen = beginnerPosFENTextEdit->toPlainText();
+
+    if (selectedVariant == GameVariant::NORMAL && fenHasAmazon(fen)) {
+        tabWidget->setCurrentIndex(tabWidget->count() - 1);
+        QMessageBox::warning(this, "Érvénytelen kezdő pozíció",
+                             "Az Amazon csak az \"Amazon sakk\" változatban használható.\n"
+                             "Válaszd az Amazon sakk változatot, vagy távolítsd el az Amazont (A/a) a FEN-ből.");
+        return;
+    }
+
+    if (selectedVariant == GameVariant::AMAZON && fenHasQueen(fen)) {
+        tabWidget->setCurrentIndex(tabWidget->count() - 1);
+        QMessageBox::warning(this, "Érvénytelen kezdő pozíció",
+                             "Az \"Amazon sakk\" változatban nincs vezér.\n"
+                             "Cseréld a vezért (Q/q) Amazonra (A/a) a FEN-ben.");
+        return;
+    }
+
     RobotSettings& rs = allS.robotSettings;
     BoardSettings& bs = allS.boardSettings;
     TimeSettings& ts = allS.timeSettings;
+
+    allS.variantSettings.variant = selectedVariant;
 
     rs.isWhiteRobot = checkWhiteRobot->isChecked();
     rs.whiteRobotDifficulty = (Difficulty)comboWhiteDiff->currentIndex();
@@ -336,7 +365,8 @@ QWidget* SettingsDialog::createBoardTab() {
     layout->setRowMinimumHeight(5, 45);
 
     connect(setBeginnerFenBtn, &QPushButton::clicked, this, [this](){
-        beginnerPosFENTextEdit->setPlainText(QString::fromStdString(newPosFen));
+        GameVariant variant = comboVariant ? (GameVariant)comboVariant->currentIndex() : allS.variantSettings.variant;
+        beginnerPosFENTextEdit->setPlainText(QString::fromStdString(getVariantStartFen(variant)));
     });
 
     layout->setRowStretch(6, 1);
@@ -467,4 +497,70 @@ void SettingsDialog::updateTimeUI() {
     widgetTournamentTime->setVisible(isTournement);
 
     updateSearchTimeEnable();
+}
+
+QWidget* SettingsDialog::createVariantTab() {
+    QWidget* tab = new QWidget();
+    QVBoxLayout* mainLayout = new QVBoxLayout(tab);
+    mainLayout->setSpacing(15);
+    mainLayout->setContentsMargins(30, 20, 30, 20);
+
+    QHBoxLayout* variantLayout = new QHBoxLayout();
+    QLabel* labelVariant = new QLabel("Játékváltozat:");
+    labelVariant->setFixedWidth(193);
+
+    comboVariant = new QComboBox();
+    comboVariant->addItems({"Normál", "Amazon sakk"});
+    comboVariant->setCurrentIndex((int)allS.variantSettings.variant);
+    comboVariant->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+
+    variantLayout->addWidget(labelVariant);
+    variantLayout->addWidget(comboVariant);
+    mainLayout->addLayout(variantLayout);
+
+    QFrame* line = new QFrame();
+    line->setFrameShape(QFrame::NoFrame);
+    line->setFixedHeight(2);
+    line->setStyleSheet("background-color: #262421; margin-top: 5px; margin-bottom: 5px;");
+    mainLayout->addWidget(line);
+
+    labelVariantDescription = new QLabel();
+    labelVariantDescription->setWordWrap(true);
+    labelVariantDescription->setStyleSheet("color: #bbb; font-size: 14px;");
+    mainLayout->addWidget(labelVariantDescription);
+
+    mainLayout->addStretch();
+
+    auto updateDescription = [this](int index) {
+        if ((GameVariant)index == GameVariant::AMAZON) {
+            labelVariantDescription->setText(
+                "<b>Amazon sakk</b><br>"
+                "Ebben a változatban a vezéreket Amazonok helyettesítik. "
+                "Az Amazon vezérként és huszárként is léphet.<br><br>");
+        } else {
+            labelVariantDescription->setText("<b>Normál</b><br>A klasszikus sakk szabályai.");
+        }
+    };
+    updateDescription(comboVariant->currentIndex());
+
+    connect(comboVariant, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this, updateDescription](int index) {
+        updateDescription(index);
+        onVariantChanged(index);
+    });
+
+    return tab;
+}
+
+void SettingsDialog::onVariantChanged(int index) {
+    beginnerPosFENTextEdit->setPlainText(QString::fromStdString(getVariantStartFen((GameVariant)index)));
+}
+
+bool SettingsDialog::fenHasAmazon(const QString& fen) const {
+    QString placement = fen.trimmed().section(' ', 0, 0);
+    return placement.contains('a', Qt::CaseInsensitive);
+}
+
+bool SettingsDialog::fenHasQueen(const QString& fen) const {
+    QString placement = fen.trimmed().section(' ', 0, 0);
+    return placement.contains('q', Qt::CaseInsensitive);
 }

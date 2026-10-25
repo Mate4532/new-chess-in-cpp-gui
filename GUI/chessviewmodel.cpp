@@ -191,8 +191,9 @@ void ChessViewModel::updateSettings(AllSettings& oldS, AllSettings& newS) {
     bool botVsBotGotTurnedOff = !newRs.isBotVsBot && oldRs.isBotVsBot;
 
     bool FENChanged = newBs.beginnerPosFEN != oldBs.beginnerPosFEN;
+    bool variantChanged = newS.variantSettings != oldS.variantSettings;
 
-    bool mustStartNewGame = botVsBotChanged || whiteRobotChanged || blackRobotChanged || FENChanged || timeConfigChanged;
+    bool mustStartNewGame = botVsBotChanged || whiteRobotChanged || blackRobotChanged || FENChanged || timeConfigChanged || variantChanged;
 
     if (mustStartNewGame) {
         endGame();
@@ -421,17 +422,17 @@ void ChessViewModel::updatePlayerPanelsIconAndLabel() {
 void ChessViewModel::updatePlayerPanelAtNewPos() {
     if (isUnderReview()) return;
 
-    int allPieces[2][6];
+    int allPieces[2][PIECE_TYPE_COUNT];
     bm.getPieceCounts(allPieces);
-    emit syncPiecesWithPanelsRequest(allPieces);
+    emit syncPiecesWithPanelsRequest(allPieces, currentSettings.variantSettings.variant);
     updatePlayerTimers();
 }
 
 void ChessViewModel::updatePlayerPanelAtReview() {
-    int allPieces[2][6];
+    int allPieces[2][PIECE_TYPE_COUNT];
     bm.getPieceCounts(allPieces, reviewingPly);
     updatePlayerTimers();
-    emit syncPiecesWithPanelsRequest(allPieces);
+    emit syncPiecesWithPanelsRequest(allPieces, currentSettings.variantSettings.variant);
     emit timerChanged(WHITE, formatTime(bm.getTimeLeft(WHITE, reviewingPly)));
     emit timerChanged(BLACK, formatTime(bm.getTimeLeft(BLACK, reviewingPly)));
 }

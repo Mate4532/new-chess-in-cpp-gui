@@ -6,7 +6,10 @@ namespace ImprovedEvaluation {
 
     class Evaluation {
     public:
+        static constexpr int AMAZON_BONUS = 300;
+
         static int GetPieceValue(PieceType p);
+        static int AmazonBonus(const Board& board);
         static int GetNnuePieceNum(PieceType p, Color c);
         static int NnuePieceNumToHalfKAv2(int nnuePieceNum);
         static int EvaluatePos(const Board& board, int ply, NNUEdata* nnue_state);

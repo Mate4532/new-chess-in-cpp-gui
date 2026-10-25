@@ -1,6 +1,6 @@
 #include "Zobrist.h"
 
-uint64_t Zobrist::pieceKeys[2][6][64];
+uint64_t Zobrist::pieceKeys[2][PIECE_TYPE_COUNT][64];
 uint64_t Zobrist::sideKey;
 uint64_t Zobrist::castlingKeys[16];
 uint64_t Zobrist::enPassantKeys[8];
@@ -10,7 +10,7 @@ void Zobrist::Init() {
     std::uniform_int_distribution<uint64_t> dist;
 
     for (int s = 0; s < 2; s++)
-        for (int p = 0; p < 6; p++)
+        for (int p = 0; p < PIECE_TYPE_COUNT; p++)
             for (int sq = 0; sq < 64; sq++)
                 pieceKeys[s][p][sq] = dist(rng);
 

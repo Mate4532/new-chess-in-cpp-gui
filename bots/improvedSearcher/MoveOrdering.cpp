@@ -17,7 +17,7 @@ int MoveOrdering::See(const Board& board, Move m) {
 
     PieceType pieceOnTarget = movingPiece;
     if (flags & PROMOTION_FLAG) {
-        pieceOnTarget = Board::GetPromotionPiece(flags);
+        pieceOnTarget = board.GetPromotionPiece(flags);
     }
 
     int gain[32];
@@ -29,7 +29,7 @@ int MoveOrdering::See(const Board& board, Move m) {
     gain[0] = Evaluation::GetPieceValue(victim);
 
     if (flags & PROMOTION_FLAG) {
-        PieceType promoPiece = Board::GetPromotionPiece(flags);
+        PieceType promoPiece = board.GetPromotionPiece(flags);
         gain[0] += Evaluation::GetPieceValue(promoPiece) - Evaluation::GetPieceValue(PAWN);
     }
 
@@ -102,6 +102,7 @@ static inline int ScoreMove(
         if (moveFlag & PROMOTION_FLAG) {
             switch (promotionPiece) {
             case QUEEN:
+            case AMAZON:
                 return 9'000'000;
             case KNIGHT:
                 return 8'000'000;
@@ -128,6 +129,7 @@ static inline int ScoreMove(
     if (moveFlag & PROMOTION_FLAG) {
         switch(promotionPiece) {
         case QUEEN:
+        case AMAZON:
             return 4'000'000;
         case KNIGHT:
             return 3'000'000;

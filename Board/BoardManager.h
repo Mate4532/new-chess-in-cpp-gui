@@ -99,12 +99,13 @@ public:
     std::string getRobotNameWithDifficulty(Color searcherColor);
 
     inline int getPly() { return board.getPly(); }
+    inline PieceType getTopPromotionPiece() const { return board.getTopPromotionPiece(); }
     inline int getFullMoveNumber() { return board.getFullMoveNumber(); }
     inline Color getSideToMove(int ply = -1) { return board.getCommittedSideToMove(ply); }
     inline MoveFlag getMoveFlagBasedOnPromotionPiece(PieceType promotionPiece) { return board.getMoveFlagBasedOnPromotionPiece(promotionPiece); }
     inline bool wasMoveCapture(Move m) { return m.getFlags() & MoveFlag::CAPTURE_FLAG; }
     inline bool wasMovePromotion(Move m) { return m.getFlags() & MoveFlag::PROMOTION_FLAG; }
-    inline PieceType getPromotionPiece(Move m) { return Board::GetPromotionPiece(m); }
+    inline PieceType getPromotionPiece(Move m) { return board.GetPromotionPiece(m); }
     inline PieceType getCapturedPieceTypeAt(int ply) { return board.getCapturePieceType(ply); }
     inline PieceType getLastCapturedPieceType() { return board.getLastCapturePieceType(); }
     inline Move getMove(int ply = -1) { return board.getMove(ply); }
@@ -112,7 +113,7 @@ public:
     inline bool isEnemyRobot() const { return (isRobot((Color)(board.getCommittedSideToMove() ^ 1)));}
     inline bool isRobotToMove() const { return (isRobot(WHITE) && board.getCommittedSideToMove() == WHITE) || (isRobot(BLACK) && board.getSideToMove() == BLACK); }
     inline std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix(int ply = -1) const { return board.getBoardMatrix(ply); }
-    inline void getPieceCounts(int piecesOut[2][6], int ply = -1) { board.getPieceCounts(piecesOut, ply); }
+    inline void getPieceCounts(int piecesOut[2][PIECE_TYPE_COUNT], int ply = -1) { board.getPieceCounts(piecesOut, ply); }
     inline MoveInfo getMoveInfo(int ply = -1) { return board.getMoveInfo(ply); }
     inline bool wasMoveCheck(int ply = -1) { return board.wasMoveCheck(ply); }
     inline std::string convertMoveToSAN(int ply = -1, bool addPieceCharToString = true) { return board.convertMoveToSAN(ply, addPieceCharToString); }

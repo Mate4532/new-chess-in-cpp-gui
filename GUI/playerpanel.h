@@ -26,8 +26,8 @@ private:
 
     int playerPanelPieceSide = 25;
 
-    int diffPiecesDistanePx[5] = {23, 23, 23, 23, 25};
-    int samePiecesDistanePx[5] = {10, 12, 8, 10, 15};
+    int diffPiecesDistanePx[PIECE_TYPE_COUNT] = {23, 23, 23, 23, 25, 0, 25};
+    int samePiecesDistanePx[PIECE_TYPE_COUNT] = {10, 12, 8, 10, 15, 0, 15};
 
     void preloadPixmaps();
 
@@ -38,7 +38,7 @@ public:
     void setLeftMargin(int pixels);
     void updateMaterialScore(int scoreDiff);
     void updatePanel();
-    void syncPiecesWithPanel(int pieces[6]);
+    void syncPiecesWithPanel(int pieces[PIECE_TYPE_COUNT]);
     void setTimerVisibility(bool isVisible);
     void setTimerActive(bool isActive);
     void setTimerText(const QString& timeStr);

@@ -34,6 +34,10 @@ private:
     QWidget* createRobotTab();
     QWidget* createBoardTab();
     QWidget* createTimeControlTab();
+    QWidget* createVariantTab();
+    void onVariantChanged(int index);
+    bool fenHasAmazon(const QString& fen) const;
+    bool fenHasQueen(const QString& fen) const;
 
     AllSettings& allS;
 
@@ -63,6 +67,9 @@ private:
     QSpinBox* spinBlackTimeSec;
     QLabel* labelIncrement;
     QDoubleSpinBox* spinIncrementSec;
+
+    QComboBox* comboVariant = nullptr;
+    QLabel* labelVariantDescription = nullptr;
 
     void updateTimeUI();
 };

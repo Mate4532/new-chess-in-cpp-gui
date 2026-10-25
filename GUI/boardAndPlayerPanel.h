@@ -18,7 +18,7 @@ private:
 public slots:
     void flipPlayerPanels(bool isFlipped);
     void playerPanelChanged(QString playerName, QString playerIconPath, Color playerColor);
-    void syncPiecesWithPanels(int pieces[2][6]);
+    void syncPiecesWithPanels(int pieces[2][PIECE_TYPE_COUNT], GameVariant variant);
     void onTimerChanged(Color c, QString timerStr);
     void onActivateTimers(bool isWhiteTimerActive, bool isBlackTimerActive);
     void onSetTimersVisibility(bool visibility);
@@ -31,7 +31,7 @@ public:
     int updateSize(int availableWidth, int availableHeight) ;
     QSize getMinimumOptimalSize();
 
-    void updateMaterialScoreBasedOnPieces(int pieces[2][6]);
+    void updateMaterialScoreBasedOnPieces(int pieces[2][PIECE_TYPE_COUNT]);
     int getMaterialScore(std::vector<PieceType> pieces);
 };
 

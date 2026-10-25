@@ -83,7 +83,7 @@ void Searcher::SetupNnueDirtyPieces(const Move& m, int ply) {
             next.dirtyPiece.to[1] = 64;
 
             if (isPromo) {
-                PieceType promoPiece = Board::GetPromotionPiece(flags);
+                PieceType promoPiece = board.GetPromotionPiece(flags);
                 next.dirtyPiece.dirtyNum = 3;
 
                 next.dirtyPiece.pc[2] = Evaluation::GetNnuePieceNum(promoPiece, player);
@@ -103,7 +103,7 @@ void Searcher::SetupNnueDirtyPieces(const Move& m, int ply) {
         next.dirtyPiece.from[0] = mFrom;
         next.dirtyPiece.to[0] = 64;
 
-        PieceType promoPiece = Board::GetPromotionPiece(flags);
+        PieceType promoPiece = board.GetPromotionPiece(flags);
         next.dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(promoPiece, player);
         next.dirtyPiece.from[1] = 64;
         next.dirtyPiece.to[1] = mTo;
@@ -204,7 +204,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         bool isPromo = flags & PROMOTION_FLAG;
 
         if (isPromo) {
-            PieceType promoPiece = Board::GetPromotionPiece(m);
+            PieceType promoPiece = board.GetPromotionPiece(m);
             if (promoPiece != QUEEN && promoPiece != KNIGHT) {
                 continue;
             }

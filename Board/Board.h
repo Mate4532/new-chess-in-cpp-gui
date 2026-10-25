@@ -2,6 +2,7 @@
 #include "Utils.h"
 #include <cstring>
 #include <cstdint>
+#include <bit>
 #include "BoardState.h"
 #include "Move.h"
 #include <memory>
@@ -34,6 +35,7 @@ private:
     uint16_t committedPly = 0;
 
     Color m_side_to_move = WHITE;
+    GameVariant m_variant = GameVariant::NORMAL;
 
     std::string beginnerFen = newPosFen;
 	RepetitionTable repetition_history;
@@ -108,6 +110,15 @@ public:
     inline Color getSideToMove() const {
         return m_side_to_move;
     }
+    inline void setVariant(GameVariant variant) {
+        m_variant = variant;
+    }
+    inline GameVariant getVariant() const {
+        return m_variant;
+    }
+    inline PieceType getTopPromotionPiece() const {
+        return m_variant == GameVariant::AMAZON ? AMAZON : QUEEN;
+    }
     inline Square getKingSquare(Color c) const {
         return (Square)GetLSB(m_bitboards[c][KING]);
     }
@@ -176,14 +187,22 @@ public:
         if (ply < 0) return false;
         return checkHistory[ply];
     }
+    inline uint64_t getAmazons() const {
+        return m_bitboards[WHITE][AMAZON] | m_bitboards[BLACK][AMAZON];
+    }
+
     inline uint64_t getBishopsQueens() const {
         return m_bitboards[WHITE][BISHOP] | m_bitboards[BLACK][BISHOP] |
-            m_bitboards[WHITE][QUEEN] | m_bitboards[BLACK][QUEEN];
+            m_bitboards[WHITE][QUEEN] | m_bitboards[BLACK][QUEEN] | getAmazons();
     }
 
     inline uint64_t getRooksQueens() const {
         return m_bitboards[WHITE][ROOK] | m_bitboards[BLACK][ROOK] |
-            m_bitboards[WHITE][QUEEN] | m_bitboards[BLACK][QUEEN];
+            m_bitboards[WHITE][QUEEN] | m_bitboards[BLACK][QUEEN] | getAmazons();
+    }
+
+    inline int getAmazonBalance(Color perspective) const {
+        return std::popcount(m_bitboards[perspective][AMAZON]) - std::popcount(m_bitboards[perspective ^ 1][AMAZON]);
     }
 
     bool HasNonPawnMaterial(Color color) const;
@@ -211,7 +230,7 @@ public:
     uint64_t MultiThreadedPerft(int depth);
     void PrintBoard(bool is_white_player = true, bool is_black_player = true) const;
     std::vector<std::vector<std::pair<PieceType, Color>>> getBoardMatrix(int ply = -1) const;
-    void getPieceCounts(int piecesOut[2][6], int ply = -1);
+    void getPieceCounts(int piecesOut[2][PIECE_TYPE_COUNT], int ply = -1);
     MoveFlag getMoveFlagBasedOnPromotionPiece(PieceType promotionPiece);
     std::string convertMoveToSAN(int ply = -1, bool addPieceCharToString = true);
     std::vector<std::string>  getMoveHistroyInSAN();
@@ -222,6 +241,6 @@ public:
     void ClearBoard();
 
     MoveInfo getMoveInfo(int ply = -1);
-    static PieceType GetPromotionPiece(Move m);
-    static PieceType GetPromotionPiece(MoveFlag promotion_piece);
+    PieceType GetPromotionPiece(Move m) const;
+    PieceType GetPromotionPiece(MoveFlag promotion_piece) const;
 };

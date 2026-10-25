@@ -42,8 +42,10 @@ void Searcher::stopSearch() {
 }
 
 int Searcher::EvaluateBoard(int ply) {
-    if (useHalfKAv2 && HalfKAv2::IsLoaded()) return HalfKAv2::Evaluate(board, halfkaStack.get(), halfkaDirty, ply);
-    return Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
+    const int nnueEval = (useHalfKAv2 && HalfKAv2::IsLoaded())
+                             ? HalfKAv2::Evaluate(board, halfkaStack.get(), halfkaDirty, ply)
+                             : Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
+    return nnueEval + Evaluation::Evaluation::AmazonBonus(board);
 }
 
 void Searcher::SetupNnueDirtyPieces(const Move& m, int ply) {
@@ -89,7 +91,7 @@ void Searcher::SetupNnueDirtyPieces(const Move& m, int ply) {
             next.dirtyPiece.to[1] = 64;
 
             if (isPromo) {
-                PieceType promoPiece = Board::GetPromotionPiece(flags);
+                PieceType promoPiece = board.GetPromotionPiece(flags);
                 next.dirtyPiece.dirtyNum = 3;
 
                 next.dirtyPiece.pc[2] = Evaluation::GetNnuePieceNum(promoPiece, player);
@@ -109,7 +111,7 @@ void Searcher::SetupNnueDirtyPieces(const Move& m, int ply) {
         next.dirtyPiece.from[0] = mFrom;
         next.dirtyPiece.to[0] = 64;
 
-        PieceType promoPiece = Board::GetPromotionPiece(flags);
+        PieceType promoPiece = board.GetPromotionPiece(flags);
         next.dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(promoPiece, player);
         next.dirtyPiece.from[1] = 64;
         next.dirtyPiece.to[1] = mTo;
@@ -189,7 +191,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
 
     if (!inCheck) {
         int standPat = currentSettings.worseEvaluationEnabled
-                           ? WorseEvaluation::Evaluation::EvaluatePos(board)
+                           ? WorseEvaluation::Evaluation::EvaluatePos(board) + Evaluation::Evaluation::AmazonBonus(board)
                            : EvaluateBoard(ply);
 
         if (standPat >= beta) {
@@ -234,8 +236,8 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         bool isPromo = flags & PROMOTION_FLAG;
 
         if (isPromo) {
-            PieceType promoPiece = Board::GetPromotionPiece(m);
-            if (promoPiece != QUEEN && promoPiece != KNIGHT) {
+            PieceType promoPiece = board.GetPromotionPiece(m);
+            if (promoPiece != QUEEN && promoPiece != AMAZON && promoPiece != KNIGHT) {
                 continue;
             }
         }
@@ -356,7 +358,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
 
     if (!inCheck) {
         staticEval = currentSettings.worseEvaluationEnabled
-                         ? WorseEvaluation::Evaluation::EvaluatePos(board)
+                         ? WorseEvaluation::Evaluation::EvaluatePos(board) + Evaluation::Evaluation::AmazonBonus(board)
                          : EvaluateBoard(ply);
 
         if (ttDepth > 0) {
@@ -1187,7 +1189,7 @@ Move Searcher::GetBestAmongTopMoves(const SearcherSettings& settings) {
                         PieceType myCapturedPiece = board.getPieceAt(enemyMove.getTo(), us);
                         PieceType enemyAttackingPiece = enemyMove.getPieceType();
 
-                        if (myCapturedPiece >= KNIGHT && myCapturedPiece <= QUEEN) {
+                        if ((myCapturedPiece >= KNIGHT && myCapturedPiece <= QUEEN) || myCapturedPiece == AMAZON) {
                             if (!board.MakeMove(enemyMove, true)) continue;
                             board.UndoMove(enemyMove, true);
 

@@ -104,28 +104,30 @@ void BoardAndPlayerPanel::playerPanelChanged(QString playerName, QString playerI
     }
 }
 
-void BoardAndPlayerPanel::syncPiecesWithPanels(int pieces[2][6]) {
+void BoardAndPlayerPanel::syncPiecesWithPanels(int pieces[2][PIECE_TYPE_COUNT], GameVariant variant) {
 
-    int displayPieces[2][6] = {{0}};
+    int displayPieces[2][PIECE_TYPE_COUNT] = {{0}};
+    const int* baseCounts = getVariantBasePieceCounts(variant);
 
     for (int color = WHITE; color <= BLACK; ++color) {
         int promotedPawnsCount = 0;
-        for (int type = KNIGHT; type <= QUEEN; ++type) {
-            if (pieces[color][type] > basePieceCounts[type]) {
-                promotedPawnsCount += (pieces[color][type] - basePieceCounts[type]);
+        for (int type = KNIGHT; type < PIECE_TYPE_COUNT; ++type) {
+            if (type == KING) continue;
+            if (pieces[color][type] > baseCounts[type]) {
+                promotedPawnsCount += (pieces[color][type] - baseCounts[type]);
             }
         }
 
-        for (int type = PAWN; type <= KING; ++type) {
+        for (int type = PAWN; type < PIECE_TYPE_COUNT; ++type) {
 
             int capturedCount = 0;
 
             if (type == PAWN) {
-                int calc = basePieceCounts[PAWN] - pieces[color][PAWN] - promotedPawnsCount;
+                int calc = baseCounts[PAWN] - pieces[color][PAWN] - promotedPawnsCount;
                 capturedCount = std::max(0, calc);
             }
             else if (type != KING) {
-                int calc = basePieceCounts[type] - pieces[color][type];
+                int calc = baseCounts[type] - pieces[color][type];
                 capturedCount = std::max(0, calc);
             }
 
@@ -171,12 +173,12 @@ int BoardAndPlayerPanel::getMaterialScore(std::vector<PieceType> pieces) {
     return sum;
 }
 
-void BoardAndPlayerPanel::updateMaterialScoreBasedOnPieces(int pieces[2][6]) {
+void BoardAndPlayerPanel::updateMaterialScoreBasedOnPieces(int pieces[2][PIECE_TYPE_COUNT]) {
 
     std::vector<PieceType> whitePieces;
     std::vector<PieceType> blackPieces;
 
-    for (int pieceType = PAWN; pieceType <= KING; ++pieceType) {
+    for (int pieceType = PAWN; pieceType < PIECE_TYPE_COUNT; ++pieceType) {
 
         for (int i = 0; i < pieces[WHITE][pieceType]; ++i) {
             whitePieces.push_back(static_cast<PieceType>(pieceType));

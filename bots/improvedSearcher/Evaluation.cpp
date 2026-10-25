@@ -10,9 +10,14 @@ int Evaluation::GetPieceValue(PieceType p) {
     case BISHOP: return 300;
     case ROOK:   return 500;
     case QUEEN:  return 900;
+    case AMAZON: return 900 + AMAZON_BONUS;
     case KING:   return 10000;
     default:     return 0;
     }
+}
+
+int Evaluation::AmazonBonus(const Board& board) {
+    return AMAZON_BONUS * board.getAmazonBalance(board.getSideToMove());
 }
 
 int Evaluation::GetNnuePieceNum(PieceType p, Color c) {
@@ -23,6 +28,7 @@ int Evaluation::GetNnuePieceNum(PieceType p, Color c) {
         return (c == WHITE ? 1 : 7);
 
     case QUEEN:
+    case AMAZON:
         return (c == WHITE ? 2 : 8);
 
     case ROOK:
@@ -69,7 +75,8 @@ int Evaluation::EvaluatePos(const Board& board, int ply, NNUEdata* nnue_state) {
     for (int c = WHITE; c <= BLACK; ++c) {
         Color color = (Color)c;
 
-        for (int p = PAWN; p < KING; ++p) {
+        for (int p = PAWN; p < PIECE_TYPE_COUNT; ++p) {
+            if (p == KING) continue;
             PieceType pt = (PieceType)p;
 
             uint64_t bb = board.getPieceBitboard(color, pt);

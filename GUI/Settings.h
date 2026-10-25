@@ -55,10 +55,19 @@ struct TimeSettings {
     long long getIncrementMs() const { return (long long)(incrementSec * 1000.0); }
 };
 
+struct VariantSettings {
+    GameVariant variant = GameVariant::NORMAL;
+
+    bool operator!=(const VariantSettings& other) const {
+        return variant != other.variant;
+    }
+};
+
 struct AllSettings {
     RobotSettings robotSettings;
     BoardSettings boardSettings;
     TimeSettings timeSettings;
+    VariantSettings variantSettings;
 };
 
 #endif // SETTINGS_H

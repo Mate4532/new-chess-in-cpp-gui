@@ -6,7 +6,7 @@
 class PGNFormatter
 {
 public:
-    static std::string convertMoveToSAN(const Move& m, const MoveList& currentLegalMoves, bool wasMoveCheck, bool addPieceCharToString = true);
+    static std::string convertMoveToSAN(const Move& m, const MoveList& currentLegalMoves, bool wasMoveCheck, bool addPieceCharToString = true, PieceType topPromotionPiece = QUEEN);
     static std::string createFullPGN(
         const GameResult& gameResult,
         const std::string& whiteName,

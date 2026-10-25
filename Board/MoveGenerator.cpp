@@ -11,7 +11,7 @@ void MoveGenerator::GenerateMoves(const Board& board, MoveList& moveList, bool g
     uint64_t enemy_occ = board.getSideOccupancy(enemy);
     uint64_t friendly_occ = board.getSideOccupancy(player);
 
-    for (int p = PAWN; p <= KING; p++) {
+    for (int p = PAWN; p < PIECE_TYPE_COUNT; p++) {
         PieceType piece_type = (PieceType)p;
         uint64_t piece_bb = board.getPieceBitboard(player, piece_type);
 
@@ -54,12 +54,14 @@ void MoveGenerator::GenerateMoves(const Board& board, MoveList& moveList, bool g
             case BISHOP:
             case ROOK:
             case QUEEN:
+            case AMAZON:
             case KING: {
                 uint64_t moves;
                 if (piece_type == KNIGHT) moves = board.getKnightAttacks(from_sq);
                 else if (piece_type == KING) moves = board.getKingAttacks(from_sq);
                 else if (piece_type == BISHOP) moves = board.getBishopAttacks(from_sq, all_occ);
                 else if (piece_type == ROOK) moves = board.getRookAttacks(from_sq, all_occ);
+                else if (piece_type == AMAZON) moves = board.getRookAttacks(from_sq, all_occ) | board.getBishopAttacks(from_sq, all_occ) | board.getKnightAttacks(from_sq);
                 else moves = board.getRookAttacks(from_sq, all_occ) | board.getBishopAttacks(from_sq, all_occ);
 
                 if (generate_only_captures) {

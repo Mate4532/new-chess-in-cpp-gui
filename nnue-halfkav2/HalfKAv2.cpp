@@ -166,7 +166,7 @@ namespace {
     int Bucket(const Board& board) {
         int pieces = 0;
         for (int c = WHITE; c <= BLACK; c++) {
-            for (int pt = PAWN; pt <= KING; pt++) {
+            for (int pt = PAWN; pt < PIECE_TYPE_COUNT; pt++) {
                 pieces += __builtin_popcountll(board.getPieceBitboard((Color)c, (PieceType)pt));
             }
         }
@@ -199,6 +199,7 @@ namespace {
 }
 
 int PieceCode(PieceType pt, Color c) {
+    if (pt == AMAZON) pt = QUEEN;
     return (int)c * 8 + (int)pt + 1;
 }
 
@@ -264,7 +265,7 @@ void Refresh(const Board& board, Color perspective, Accumulator& acc) {
 
     const int ksq = board.getKingSquare(perspective);
     for (int c = WHITE; c <= BLACK; c++) {
-        for (int pt = PAWN; pt <= KING; pt++) {
+        for (int pt = PAWN; pt < PIECE_TYPE_COUNT; pt++) {
             const int piece = PieceCode((PieceType)pt, (Color)c);
             uint64_t bb = board.getPieceBitboard((Color)c, (PieceType)pt);
             while (bb) {

@@ -136,7 +136,7 @@ void Board::InizializePassedPawnTable() {
 uint64_t Board::GenerateFullHash() const {
     uint64_t h = 0ULL;
     for (int c = 0; c < 2; c++) {
-        for (int p = PAWN; p <= KING; p++) {
+        for (int p = PAWN; p < PIECE_TYPE_COUNT; p++) {
             uint64_t bb = m_bitboards[c][p];
             while (bb) {
                 Square sq = PopBit(bb);
@@ -194,7 +194,7 @@ void Board::LoadFEN(std::string fen) {
 
     for (int c = 0; c < 2; c++) {
         m_side_occupancy[c] = 0ULL;
-        for (int p = PAWN; p <= KING; p++) {
+        for (int p = PAWN; p < PIECE_TYPE_COUNT; p++) {
             m_bitboards[c][p] = 0ULL;
             piece_count[c][p] = 0;
         }
@@ -225,6 +225,11 @@ void Board::LoadFEN(std::string fen) {
             else if (lowerC == 'r') type = ROOK;
             else if (lowerC == 'q') type = QUEEN;
             else if (lowerC == 'k') type = KING;
+            else if (lowerC == 'a') type = AMAZON;
+            else {
+                file++;
+                continue;
+            }
 
             Square sq = (Square)(rank * 8 + file);
             m_bitboards[color][type] |= (1ULL << sq);
@@ -260,7 +265,7 @@ void Board::LoadFEN(std::string fen) {
     state.captured_piece_type = PIECE_NONE;
 
     for (int c = 0; c < 2; c++) {
-        for (int p = PAWN; p <= KING; p++) {
+        for (int p = PAWN; p < PIECE_TYPE_COUNT; p++) {
             m_side_occupancy[c] |= m_bitboards[c][p];
         }
     }
@@ -296,6 +301,7 @@ std::string Board::GetFEN() const {
                 else if (pt_white == ROOK) piece_char = 'R';
                 else if (pt_white == QUEEN) piece_char = 'Q';
                 else if (pt_white == KING) piece_char = 'K';
+                else if (pt_white == AMAZON) piece_char = 'A';
             }
             else {
                 PieceType pt_black = getPieceAt(sq, BLACK);
@@ -306,6 +312,7 @@ std::string Board::GetFEN() const {
                     else if (pt_black == ROOK) piece_char = 'r';
                     else if (pt_black == QUEEN) piece_char = 'q';
                     else if (pt_black == KING) piece_char = 'k';
+                    else if (pt_black == AMAZON) piece_char = 'a';
                 }
             }
 
@@ -358,7 +365,7 @@ void Board::loadNewGame() {
 }
 
 PieceType Board::getPieceAt(Square sq, Color color) const {
-    for (int piece = PAWN; piece <= KING; piece++) {
+    for (int piece = PAWN; piece < PIECE_TYPE_COUNT; piece++) {
         if (m_bitboards[color][piece] & (1ULL << sq)) {
             return (PieceType)piece;
         }
@@ -494,6 +501,7 @@ bool Board::HasNonPawnMaterial(Color color) const {
     if (getPieceBitboard(color, BISHOP)) return true;
     if (getPieceBitboard(color, ROOK))   return true;
     if (getPieceBitboard(color, QUEEN))  return true;
+    if (getPieceBitboard(color, AMAZON)) return true;
     return false;
 }
 
@@ -554,17 +562,18 @@ bool Board::hasAdvancedPassedPawn(Color color) const {
 uint64_t Board::getAttacksTo(Square sq, uint64_t occupied) const {
     return (getPawnAttacks(sq, BLACK) & getPieceBitboard(WHITE, PAWN)) |
         (getPawnAttacks(sq, WHITE) & getPieceBitboard(BLACK, PAWN)) |
-        (getKnightAttacks(sq) & (getPieceBitboard(WHITE, KNIGHT) | getPieceBitboard(BLACK, KNIGHT))) |
-        (getBishopAttacks(sq, occupied) & (getPieceBitboard(WHITE, BISHOP) | getPieceBitboard(BLACK, BISHOP) | getPieceBitboard(WHITE, QUEEN) | getPieceBitboard(BLACK, QUEEN))) |
-        (getRookAttacks(sq, occupied) & (getPieceBitboard(WHITE, ROOK) | getPieceBitboard(BLACK, ROOK) | getPieceBitboard(WHITE, QUEEN) | getPieceBitboard(BLACK, QUEEN))) |
+        (getKnightAttacks(sq) & (getPieceBitboard(WHITE, KNIGHT) | getPieceBitboard(BLACK, KNIGHT) | getAmazons())) |
+        (getBishopAttacks(sq, occupied) & getBishopsQueens()) |
+        (getRookAttacks(sq, occupied) & getRooksQueens()) |
         (getKingAttacks(sq) & (getPieceBitboard(WHITE, KING) | getPieceBitboard(BLACK, KING)));
 }
 
 Square Board::getSmallestAttacker(uint64_t attackers, Color side, PieceType& attackerType) const {
-    for (int pt = PAWN; pt <= KING; pt++) {
-        uint64_t subset = attackers & getPieceBitboard(side, (PieceType)pt);
+    static constexpr PieceType attackerOrder[PIECE_TYPE_COUNT] = { PAWN, KNIGHT, BISHOP, ROOK, QUEEN, AMAZON, KING };
+    for (PieceType pt : attackerOrder) {
+        uint64_t subset = attackers & getPieceBitboard(side, pt);
         if (subset) {
-            attackerType = (PieceType)pt;
+            attackerType = pt;
             return PopBit(subset);
         }
     }
@@ -575,11 +584,9 @@ Square Board::getSmallestAttacker(uint64_t attackers, Color side, PieceType& att
 uint64_t Board::getNewXRayAttacks(Square to, uint64_t occupied) const {
     uint64_t attackers = 0;
 
-    uint64_t diagonalPieces = getPieceBitboard(WHITE, BISHOP) | getPieceBitboard(BLACK, BISHOP) |
-        getPieceBitboard(WHITE, QUEEN) | getPieceBitboard(BLACK, QUEEN);
+    uint64_t diagonalPieces = getBishopsQueens();
 
-    uint64_t straightPieces = getPieceBitboard(WHITE, ROOK) | getPieceBitboard(BLACK, ROOK) |
-        getPieceBitboard(WHITE, QUEEN) | getPieceBitboard(BLACK, QUEEN);
+    uint64_t straightPieces = getRooksQueens();
 
     attackers |= getBishopAttacks(to, occupied) & diagonalPieces;
 
@@ -592,6 +599,7 @@ bool Board::IsInsufficientMaterial() const {
     if (getPieceBitboard(WHITE, PAWN) || getPieceBitboard(BLACK, PAWN)) return false;
     if (getPieceBitboard(WHITE, ROOK) || getPieceBitboard(BLACK, ROOK)) return false;
     if (getPieceBitboard(WHITE, QUEEN) || getPieceBitboard(BLACK, QUEEN)) return false;
+    if (getAmazons()) return false;
 
     uint64_t wN = getPieceBitboard(WHITE, KNIGHT);
     uint64_t wB = getPieceBitboard(WHITE, BISHOP);
@@ -678,12 +686,14 @@ bool Board::isDrawWithoutStealmate(bool inSearch) {
 bool Board::isSquareAttacked(Square sq, Color attackerColor) const {
     if (pawn_attacks_table[attackerColor ^ 1][sq] & m_bitboards[attackerColor][PAWN]) return true;
 
-    if (knight_attacks_table[sq] & m_bitboards[attackerColor][KNIGHT]) return true;
+    const uint64_t amazons = m_bitboards[attackerColor][AMAZON];
+
+    if (knight_attacks_table[sq] & (m_bitboards[attackerColor][KNIGHT] | amazons)) return true;
     if (king_attacks_table[sq] & m_bitboards[attackerColor][KING]) return true;
 
     uint64_t occ = m_all_occupancy;
-    if (getBishopAttacks(sq, occ) & (m_bitboards[attackerColor][BISHOP] | m_bitboards[attackerColor][QUEEN])) return true;
-    if (getRookAttacks(sq, occ) & (m_bitboards[attackerColor][ROOK] | m_bitboards[attackerColor][QUEEN])) return true;
+    if (getBishopAttacks(sq, occ) & (m_bitboards[attackerColor][BISHOP] | m_bitboards[attackerColor][QUEEN] | amazons)) return true;
+    if (getRookAttacks(sq, occ) & (m_bitboards[attackerColor][ROOK] | m_bitboards[attackerColor][QUEEN] | amazons)) return true;
 
     return false;
 }
@@ -772,7 +782,7 @@ bool Board::MakeMove(Move move, bool in_search) {
         PieceType prom_piece;
 
         uint8_t promType = flags & 0b0011;
-        if (promType == 0b0011) prom_piece = QUEEN;
+        if (promType == 0b0011) prom_piece = getTopPromotionPiece();
         else if (promType == 0b0010) prom_piece = ROOK;
         else if (promType == 0b0001) prom_piece = BISHOP;
         else prom_piece = KNIGHT;
@@ -876,7 +886,7 @@ void Board::UndoMove(Move move, bool in_search) {
     if (flags & PROMOTION_FLAG) {
         PieceType promoted;
         uint8_t promType = flags & 0b0011;
-        if (promType == 0b0011) promoted = QUEEN;
+        if (promType == 0b0011) promoted = getTopPromotionPiece();
         else if (promType == 0b0010) promoted = ROOK;
         else if (promType == 0b0001) promoted = BISHOP;
         else promoted = KNIGHT;
@@ -1015,7 +1025,7 @@ void Board::PrintBoard(bool is_white_player, bool is_black_player) const {
 
             for (int color = 0; color < 2; color++)
             {
-                for (int piece_type = PAWN; piece_type <= KING; piece_type++)
+                for (int piece_type = PAWN; piece_type < PIECE_TYPE_COUNT; piece_type++)
                 {
                     uint64_t current_bb = m_bitboards[color][piece_type];
 
@@ -1047,12 +1057,14 @@ void Board::PrintBoard(bool is_white_player, bool is_black_player) const {
         std::cout << "White knights count: " << (int)piece_count[WHITE][KNIGHT] << std::endl;
         std::cout << "White bishops count: " << (int)piece_count[WHITE][BISHOP] << std::endl;
         std::cout << "White queens count: " << (int)piece_count[WHITE][QUEEN] << std::endl;
+        std::cout << "White amazons count: " << (int)piece_count[WHITE][AMAZON] << std::endl;
         std::cout << "White king count: " << (int)piece_count[WHITE][KING] << std::endl;
         std::cout << "Black pawns count: " << (int)piece_count[BLACK][PAWN] << std::endl;
         std::cout << "Black rooks count: " << (int)piece_count[BLACK][ROOK] << std::endl;
         std::cout << "Black knights count: " << (int)piece_count[BLACK][KNIGHT] << std::endl;
         std::cout << "Black bishops count: " << (int)piece_count[BLACK][BISHOP] << std::endl;
         std::cout << "Black queens count: " << (int)piece_count[BLACK][QUEEN] << std::endl;
+        std::cout << "Black amazons count: " << (int)piece_count[BLACK][AMAZON] << std::endl;
         std::cout << "Black king count: " << (int)piece_count[BLACK][KING] << std::endl << std::endl;
 
     }
@@ -1081,7 +1093,7 @@ std::vector<std::vector<std::pair<PieceType, Color>>> Board::getBoardMatrix(int 
 
             for (int color = WHITE; color <= BLACK; color++)
             {
-                for (int piece_type = PAWN; piece_type <= KING; piece_type++)
+                for (int piece_type = PAWN; piece_type < PIECE_TYPE_COUNT; piece_type++)
                 {
                     uint64_t current_bb = m_bitboards[color][piece_type];
 
@@ -1109,9 +1121,9 @@ std::vector<std::vector<std::pair<PieceType, Color>>> Board::getBoardMatrix(int 
     return boardMatrix;
 }
 
-void Board::getPieceCounts(int piecesOut[2][6], int ply) {
+void Board::getPieceCounts(int piecesOut[2][PIECE_TYPE_COUNT], int ply) {
     for(int i = 0; i < 2; ++i)
-        for(int  j= 0; j < 6; ++j) piecesOut[i][j] = 0;
+        for(int  j= 0; j < PIECE_TYPE_COUNT; ++j) piecesOut[i][j] = 0;
 
     auto pieces = getBoardMatrix(ply);
     for (const auto& rowPieces : pieces) {
@@ -1135,6 +1147,7 @@ MoveFlag Board::getMoveFlagBasedOnPromotionPiece(PieceType promotionPiece) {
         return MoveFlag::PROMOTION_TYPE_ROOK;
 
     case PieceType::QUEEN:
+    case PieceType::AMAZON:
         return MoveFlag::PROMOTION_TYPE_QUEEN;
 
     default:
@@ -1155,7 +1168,7 @@ std::string Board::convertMoveToSAN(int ply, bool addPieceCharToString) {
 
     bool isCheck = wasMoveCheck(currentPly);
 
-    return PGNFormatter::convertMoveToSAN(m, movesBefore, isCheck, addPieceCharToString);
+    return PGNFormatter::convertMoveToSAN(m, movesBefore, isCheck, addPieceCharToString, getTopPromotionPiece());
 }
 
 std::vector<std::string> Board::getMoveHistroyInSAN() {
@@ -1302,13 +1315,13 @@ uint64_t Board::MultiThreadedPerft(int depth) {
     return global_node_count;
 }
 
-PieceType Board::GetPromotionPiece(Move m) {
+PieceType Board::GetPromotionPiece(Move m) const {
     MoveFlag mf = m.getFlags();
 
     return GetPromotionPiece(mf);
 }
 
-PieceType Board::GetPromotionPiece(MoveFlag promotion_flag) {
+PieceType Board::GetPromotionPiece(MoveFlag promotion_flag) const {
     MoveFlag promotion_piece = (MoveFlag)(promotion_flag & 0b1011);
     switch (promotion_piece) {
     case PROMOTION_TYPE_KNIGHT:
@@ -1324,7 +1337,7 @@ PieceType Board::GetPromotionPiece(MoveFlag promotion_flag) {
         break;
 
     case PROMOTION_TYPE_QUEEN:
-        return QUEEN;
+        return getTopPromotionPiece();
 
     default:
         return PIECE_NONE;
