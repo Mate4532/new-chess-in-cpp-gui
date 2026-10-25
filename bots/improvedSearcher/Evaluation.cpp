@@ -1,4 +1,5 @@
 #include "Evaluation.h"
+#include "HalfKAv2.h"
 
 using namespace ImprovedEvaluation;
 
@@ -41,6 +42,12 @@ int Evaluation::GetNnuePieceNum(PieceType p, Color c) {
     }
 
 }
+int Evaluation::NnuePieceNumToHalfKAv2(int nnuePieceNum) {
+    static constexpr PieceType order[6] = { KING, QUEEN, ROOK, BISHOP, KNIGHT, PAWN };
+    const Color c = nnuePieceNum >= 7 ? BLACK : WHITE;
+    return HalfKAv2::PieceCode(order[(nnuePieceNum - 1) % 6], c);
+}
+
 int Evaluation::EvaluatePos(const Board& board, int ply, NNUEdata* nnue_state) {
     int player = (board.getSideToMove() == WHITE) ? 0 : 1;
 

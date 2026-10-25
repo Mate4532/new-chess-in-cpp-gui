@@ -47,6 +47,7 @@ if(Qt6_FOUND)
         Utils/PGNFormatter.h Utils/PGNFormatter.cpp
         bots/oldSearcher/OldWorseEvaluation.h bots/oldSearcher/OldWorseEvaluation.cpp
         Board/BotFactory.cpp Board/BotFactory.h
+        nnue-halfkav2/HalfKAv2.cpp nnue-halfkav2/HalfKAv2.h
     )
 endif()
 
@@ -68,6 +69,7 @@ target_include_directories(new-chess-in-cpp-gui PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Board
     ${CMAKE_CURRENT_SOURCE_DIR}/Utils
     ${CMAKE_CURRENT_SOURCE_DIR}/nnue-probe-master/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/nnue-halfkav2
 )
 
 include(GNUInstallDirs)
@@ -97,6 +99,31 @@ add_custom_command(TARGET new-chess-in-cpp-gui POST_BUILD
         ${CMAKE_CURRENT_SOURCE_DIR}/nnues/${NNUE_FILE}
         $<TARGET_FILE_DIR:new-chess-in-cpp-gui>/nnues/${NNUE_FILE}
 )
+
+set(NNUE_HALFKAV2_FILE "halfkav2_hm/nn-dabb1ed23026.nnue" CACHE STRING "HalfKAv2_hm net used by the improved bot, relative to the nnues folder (empty: HalfKP only)")
+
+file(GLOB NNUE_HALFKAV2_CHOICES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/nnues" "${CMAKE_CURRENT_SOURCE_DIR}/nnues/halfkav2_hm/*.nnue")
+set_property(CACHE NNUE_HALFKAV2_FILE PROPERTY STRINGS "" ${NNUE_HALFKAV2_CHOICES})
+
+set_property(SOURCE Board/BoardManager.cpp APPEND PROPERTY COMPILE_DEFINITIONS "NNUE_HALFKAV2_FILE=\"${NNUE_HALFKAV2_FILE}\"")
+
+if(NNUE_HALFKAV2_FILE)
+    if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/nnues/${NNUE_HALFKAV2_FILE}")
+        message(FATAL_ERROR "NNUE_HALFKAV2_FILE not found: nnues/${NNUE_HALFKAV2_FILE}")
+    endif()
+    message(STATUS "HalfKAv2 net: nnues/${NNUE_HALFKAV2_FILE}")
+
+    get_filename_component(NNUE_HALFKAV2_SUBDIR "${NNUE_HALFKAV2_FILE}" DIRECTORY)
+    add_custom_command(TARGET new-chess-in-cpp-gui POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory
+            $<TARGET_FILE_DIR:new-chess-in-cpp-gui>/nnues/${NNUE_HALFKAV2_SUBDIR}
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${CMAKE_CURRENT_SOURCE_DIR}/nnues/${NNUE_HALFKAV2_FILE}
+            $<TARGET_FILE_DIR:new-chess-in-cpp-gui>/nnues/${NNUE_HALFKAV2_FILE}
+    )
+else()
+    message(STATUS "HalfKAv2 net: disabled")
+endif()
 
 if(Qt6_FOUND)
     qt_finalize_executable(new-chess-in-cpp-gui)

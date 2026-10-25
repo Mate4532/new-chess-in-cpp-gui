@@ -4,12 +4,17 @@
 #include "openingloader.h"
 #include "versioncontrol.h"
 #include "filemanager.h"
+#include "HalfKAv2.h"
 
 #include <sstream>
 #include <atomic>
 
 #ifndef NNUE_FILE
 #error "NNUE_FILE is not defined, set it in CMakeLists.txt"
+#endif
+
+#ifndef NNUE_HALFKAV2_FILE
+#define NNUE_HALFKAV2_FILE ""
 #endif
 
 using ImpSearcher = ImprovedSearcher::Searcher;
@@ -35,6 +40,16 @@ BoardManager::BoardManager() : board(), resultManager() {
             std::cerr << "ERROR: NNUE file not found: nnues/" << NNUE_FILE << std::endl;
         } else {
             nnue_init(nnuePath.c_str());
+        }
+
+        const std::string halfkaFile = NNUE_HALFKAV2_FILE;
+        if (!halfkaFile.empty()) {
+            const std::string halfkaPath = FileManager::findNnueFile(halfkaFile);
+            if (halfkaPath.empty()) {
+                std::cerr << "ERROR: NNUE file not found: nnues/" << halfkaFile << std::endl;
+            } else {
+                HalfKAv2::Load(halfkaPath);
+            }
         }
     });
 }

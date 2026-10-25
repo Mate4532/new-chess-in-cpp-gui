@@ -41,6 +41,11 @@ void Searcher::stopSearch() {
     isStoppedManually = true;
 }
 
+int Searcher::EvaluateBoard(int ply) {
+    if (useHalfKAv2 && HalfKAv2::IsLoaded()) return HalfKAv2::Evaluate(board, halfkaStack.get(), halfkaDirty, ply);
+    return Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
+}
+
 void Searcher::SetupNnueDirtyPieces(const Move& m, int ply) {
     NNUEdata& next = nnue_state[ply + 1];
 
@@ -68,7 +73,7 @@ void Searcher::SetupNnueDirtyPieces(const Move& m, int ply) {
             next.dirtyPiece.from[0] = mFrom;
             next.dirtyPiece.to[0] = mTo;
 
-            int epSquare = mTo + (player == WHITE ? MoveGenerator::WHITE_ENPASSANT_PIECE_OFFSET : MoveGenerator::BLACK_ENPASSANT_PIECE_OFFSET);
+            int epSquare = mTo - (player == WHITE ? MoveGenerator::WHITE_ENPASSANT_PIECE_OFFSET : MoveGenerator::BLACK_ENPASSANT_PIECE_OFFSET);
             next.dirtyPiece.pc[1] = Evaluation::GetNnuePieceNum(PAWN, enemy);
             next.dirtyPiece.from[1] = epSquare;
             next.dirtyPiece.to[1] = 64;
@@ -136,6 +141,16 @@ void Searcher::SetupNnueDirtyPieces(const Move& m, int ply) {
         next.dirtyPiece.from[0] = mFrom;
         next.dirtyPiece.to[0] = mTo;
     }
+
+    HalfKAv2::DirtyPieces& dirty = halfkaDirty[ply + 1];
+    dirty.count = next.dirtyPiece.dirtyNum;
+    for (int i = 0; i < dirty.count; i++) {
+        dirty.piece[i] = Evaluation::NnuePieceNumToHalfKAv2(next.dirtyPiece.pc[i]);
+        dirty.from[i] = next.dirtyPiece.from[i];
+        dirty.to[i] = next.dirtyPiece.to[i];
+    }
+    halfkaStack[ply + 1].computed[WHITE] = false;
+    halfkaStack[ply + 1].computed[BLACK] = false;
 }
 
 int Searcher::quiescence(int alpha, int beta, int ply) {
@@ -153,7 +168,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
         if (alpha >= beta) return alpha;
     }
 
-    if (ply >= MAXIMUM_DEPTH - 1) return Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
+    if (ply >= MAXIMUM_DEPTH - 1) return EvaluateBoard(ply);
 
     const uint64_t hash = board.getHash();
     const int originalAlpha = alpha;
@@ -175,7 +190,7 @@ int Searcher::quiescence(int alpha, int beta, int ply) {
     if (!inCheck) {
         int standPat = currentSettings.worseEvaluationEnabled
                            ? WorseEvaluation::Evaluation::EvaluatePos(board)
-                           : Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
+                           : EvaluateBoard(ply);
 
         if (standPat >= beta) {
             return standPat;
@@ -269,7 +284,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
     if (shouldStop()) stop = true;
     if (isStopped()) return alpha;
 
-    if (ply >= MAXIMUM_DEPTH - 1) return Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
+    if (ply >= MAXIMUM_DEPTH - 1) return EvaluateBoard(ply);
     uint64_t hash = board.getHash();
 
     const bool isExclusionSearch = excludedMove.isValid();
@@ -342,7 +357,7 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
     if (!inCheck) {
         staticEval = currentSettings.worseEvaluationEnabled
                          ? WorseEvaluation::Evaluation::EvaluatePos(board)
-                         : Evaluation::Evaluation::EvaluatePos(board, ply, nnue_state);
+                         : EvaluateBoard(ply);
 
         if (ttDepth > 0) {
             if (ttFlag == TT_EXACT) {
@@ -406,6 +421,9 @@ int Searcher::negamax(int depth, int alpha, int beta, int ply, Move excludedMove
 
             nnue_state[ply + 1].dirtyPiece.dirtyNum = 0;
             nnue_state[ply + 1].accumulator.computedAccumulation = 0;
+            halfkaDirty[ply + 1].count = 0;
+            halfkaStack[ply + 1].computed[WHITE] = false;
+            halfkaStack[ply + 1].computed[BLACK] = false;
 
             board.MakeNullMove();
             int score = -negamax(std::max(depth - 1 - R, 0), -beta, -beta + 1, ply + 1, Move(), Move());
@@ -753,6 +771,9 @@ void Searcher::PrepareSearcher() {
 
     nnue_state[0].dirtyPiece.dirtyNum = 0;
     nnue_state[0].accumulator.computedAccumulation = 0;
+    halfkaDirty[0].count = 0;
+    halfkaStack[0].computed[WHITE] = false;
+    halfkaStack[0].computed[BLACK] = false;
 }
 
 void Searcher::ClearKillers() {
@@ -1255,6 +1276,7 @@ Move Searcher::GetMultiThreadedBestMove() {
         helper->currentDiff      = this->currentDiff;
         helper->rtum             = this->rtum;
         helper->fixedTimePerMoveMs = this->fixedTimePerMoveMs.load();
+        helper->useHalfKAv2 = this->useHalfKAv2;
 
         helper->setTournamentTime(this->timeLeftMs, this->incrementMs);
 

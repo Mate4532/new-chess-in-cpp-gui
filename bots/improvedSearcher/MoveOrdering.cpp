@@ -36,7 +36,7 @@ int MoveOrdering::See(const Board& board, Move m) {
     Color side = us;
 
     if (flags == EN_PASSANT) {
-        Square epSquare = (Square)((int)to + (us == WHITE ? MoveGenerator::WHITE_ENPASSANT_PIECE_OFFSET : MoveGenerator::BLACK_ENPASSANT_PIECE_OFFSET));
+        Square epSquare = (Square)((int)to - (us == WHITE ? MoveGenerator::WHITE_ENPASSANT_PIECE_OFFSET : MoveGenerator::BLACK_ENPASSANT_PIECE_OFFSET));
         occupied ^= (1ULL << epSquare);
     }
 

@@ -7,6 +7,7 @@
 #include "SearcherSettings.h"
 #include "LMR.h"
 #include "nnue.h"
+#include "HalfKAv2.h"
 
 #include <atomic>
 
@@ -56,6 +57,10 @@ private:
     Move counterMoves[PIECE_TYPE_COUNT][SQUARE_COUNT];
 
     alignas(64) NNUEdata nnue_state[MAX_PLY];
+    std::unique_ptr<HalfKAv2::Accumulator[]> halfkaStack = std::make_unique<HalfKAv2::Accumulator[]>(MAXIMUM_DEPTH + 1);
+    HalfKAv2::DirtyPieces halfkaDirty[MAXIMUM_DEPTH + 1];
+    bool useHalfKAv2 = true;
+    int EvaluateBoard(int ply);
 
     static constexpr int SCORE_UNSEARCHED = -1000000;
 
@@ -121,6 +126,7 @@ public:
     void setDifficulty(const Difficulty& diff) override;
     inline void setTimeUsageMode(const RobotTimeUsageMode& rtum) override { this->rtum = rtum; }
     inline void setFixedTimePerMove(long long timeMs) override { fixedTimePerMoveMs = timeMs; }
+    inline void setUseHalfKAv2(bool use) { useHalfKAv2 = use; }
     inline void updateTournementTime(long long timeLeftMs) override { this->timeLeftMs = timeLeftMs; }
     void setTournamentTime(long long timeLeftMs, long long incrementMs = 0) override;
     inline bool isUnderSearch() override { return isSearching; }
