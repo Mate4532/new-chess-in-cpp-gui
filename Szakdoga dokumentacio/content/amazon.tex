@@ -1,0 +1,74 @@
+%----------------------------------------------------------------------------
+\chapter{Tündérsakk-kiterjesztés: az Amazon sakk}\label{chap:amazon}
+%----------------------------------------------------------------------------
+
+\section{A változat szabályai}
+
+Az ,,Amazon sakk'' változatban mindkét fél vezérének helyén (d1, d8) egy Amazon áll, amely vezérként és huszárként is léphet (\aref{fig:amazonMoves}.~ábra). A változatban vezér egyáltalán nincs: a gyalog átváltozáskor huszárrá, futóvá, bástyává vagy Amazonná változhat. Minden más szabály (sáncolás, en passant, döntetlenek) változatlan. A kezdőállás FEN-jelöléssel \texttt{rnbakbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBAKBNR w KQkq - 0 1}, ahol az Amazon jele \texttt{A}, illetve \texttt{a}.
+
+\section{Megvalósítás a motorban}
+
+A kiterjesztés célja az volt, hogy a meglévő kódhoz minél kevesebb, jól körülhatárolt módosítással illeszkedjen.
+
+\paragraph{Bábutípus és állapot.} Az \texttt{AMAZON} új bábutípusként a \texttt{KING} után került a felsorolásba. Így a korábbi típusok indexei (és minden rájuk épülő tábla, pl. bábu-mező táblák) változatlanok maradtak, a bitboard-tömb és a Zobrist-kulcsok tömbje pedig automatikusan eggyel nőtt. Az összes ,,minden bábutípuson'' végigmenő ciklus a \texttt{PIECE\_TYPE\_COUNT} határig fut, így a FEN-olvasás és -írás, a hash-számítás és a táblakép is kezeli az új bábut.
+
+\paragraph{Lépésgenerálás és támadásszámítás.} Az Amazon célmezői a bástya-, futó- és huszártámadások uniója. Mivel a sakkfigyelés fordított irányú (\aref{chap:movegen}.~fejezet), elég volt az Amazon bitboardját a huszár- és mindkét csúszótámadás ellenőrzéséhez hozzáadni. Ugyanígy bővült a cserekiértékeléshez (SEE) használt \texttt{getAttacksTo}, a röntgentámadásokat adó \texttt{getBishopsQueens}/\texttt{getRooksQueens}, valamint a ,,legkisebb értékű támadó'' sorrend (gyalog, huszár, futó, bástya, vezér, Amazon, király).
+
+\paragraph{Átváltozás.} A lépéskódolásban az átváltozás két bitje pontosan négy bábut ír le, és mind a 16 jelzőkombináció foglalt. Mivel az Amazon változatban vezér nincs, a tábla ismeri az aktuális változatot, és ilyenkor a ,,vezérré változás'' kódú lépés Amazont tesz le. Így sem a lépésformátum, sem a transzpozíciós tábla nem változott. A SAN-jelölés ilyenkor \texttt{=A}, a felület bábuválasztója pedig a vezér helyett az Amazont kínálja (\ref{fig:amazonGui}.~ábra).
+
+\paragraph{Értékelés.} Mindkét NNUE-hálót klasszikus sakkra tanították, így Amazont nem ismernek. A megoldás: az értékelés az Amazont vezérként adja a hálónak (a HalfKP-kódolásban és a HalfKAv2 bábukódjában is), majd a kereső a háló eredményéhez Amazononként $+300$ centigyalogot ad a lépésre következő fél szemszögéből (saját Amazon $+300$, ellenséges $-300$). A kézzel írt értékelés ugyanezt teszi egy segédfüggvényen keresztül, amely minden bitboard-lekérdezésnél az Amazonokat a vezérekhez sorolja. A lépésrendezés és a SEE az Amazont $900+300=1200$ értékkel számolja, az Amazonná változás ugyanolyan prioritást kap, mint a vezérré változás, és a nyugalmi keresés sem dobja el.
+
+\paragraph{Felület.} A beállítások ,,Változatok'' fülén választható a játékváltozat; a változtatás új játszmát indít a változat kezdőállásával. A mentés ellenőrzi, hogy normál változatban ne legyen Amazon, Amazon változatban pedig vezér a megadott FEN-ben. Az Amazon saját képet kapott (vezér, előtte kisebb huszárfejjel), és a leütött bábuk panelje is a változat kiinduló bábukészletéhez viszonyít.
+
+\begin{figure}[!ht]
+	\centering
+	\screenshot{gui_amazon_start.png}{Amazon sakk kezdőállása a felületen (Amazon a d1/d8 mezőn).}{width=72mm,keepaspectratio}\hspace{4mm}
+	\screenshot{gui_amazon_promotion.png}{Átváltozás Amazon sakkban: a választóban Amazon áll a vezér helyén.}{width=72mm,keepaspectratio}
+	\caption{Az Amazon sakk a grafikus felületen: kezdőállás (balra) és átváltozás (jobbra).}
+	\label{fig:amazonGui}
+\end{figure}
+
+\section{Ellenőrzés}
+
+A klasszikus perft-értékek a módosítás után is pontosan egyeznek (\aref{tab:perft}.~táblázat), tehát a normál sakk működése nem változott. Az Amazon változatra nincs nyilvános referencia, ezért a helyességet célzott tesztekkel ellenőriztem: a kezdőállásban 22 szabályos lépés van (20 + az Amazon két huszárugrása c3-ra és e3-ra), egy üres tábla d4 mezőjén álló Amazon 35 mezőt ér el, az egyedül álló Amazon mattot ad, a perft minden csomópontjában az inkrementális és a teljes újraszámolt Zobrist-kulcs megegyezik, és az átváltozás utáni visszavonás is pontosan visszaállítja az állást. Az Amazon kezdőállás perft-értékei: 22, 484, 12\,483, 318\,185 és 9\,319\,911 (1--5 mélység).
+
+\section{Hogyan játszik a kereső Amazonnal?}
+
+A kereső viselkedését 64 önmaga elleni játszmán vizsgáltam (lépésenként 200~ms, ,,Mester'' szint, az első két lépés véletlenszerű, hogy a játszmák különbözzenek, ezek nem számítanak a statisztikába). Az eredmény 18 világos és 10 sötét győzelem, 33 döntetlen, 3 játszma pedig elérte a 300 félléptetéses korlátot. Néhány megfigyelés:
+\begin{itemize}
+	\item \emph{Kedvenc nyitólépés:} a kezdőállásból 30 független, 1 másodperces keresésből 28-szor \texttt{e2e4}, kétszer \texttt{d2d4} volt a választás. Az e-gyalog előlépése az e2 mezőt is felszabadítja, amely az Amazon leggyakoribb célmezője.
+	\item \emph{Mozgásmód:} az összes lépés 6,6\%-át (667 lépés) tette Amazon; ezek 28,5\%-a huszárugrás, 71,5\%-a vezérszerű lépés volt, és 118 alkalommal adott sakkot.
+	\item \emph{Csere:} az Amazon leggyakoribb ütött bábuja a gyalog (63) után az ellenséges Amazon (54). A 128 Amazonból 115 a játszma során lekerült a tábláról, átlagosan az 51. félléptetésben: a kereső egyértelműen törekszik az Amazonok cseréjére, ha az nem hátrányos.
+\end{itemize}
+
+\begin{figure}[!ht]
+	\centering
+	\begin{tikzpicture}
+		\begin{axis}[
+			width=6.6cm, height=6.6cm, enlargelimits=false, axis on top,
+			xtick={0,...,7}, xticklabels={a,b,c,d,e,f,g,h},
+			ytick={0,...,7}, yticklabels={1,2,3,4,5,6,7,8},
+			tick style={draw=none}, colormap/hot2, point meta min=0,
+			colorbar, colorbar style={width=2.5mm},
+			title={\small Célmezők (db)},
+		]
+			\addplot[matrix plot*, mesh/cols=8, point meta=explicit] table[x=x, y=y, meta=v] {figures/amazon_dest.dat};
+		\end{axis}
+	\end{tikzpicture}\hspace{3mm}
+	\begin{tikzpicture}
+		\begin{axis}[
+			width=6.6cm, height=6.6cm, enlargelimits=false, axis on top,
+			xtick={0,...,7}, xticklabels={a,b,c,d,e,f,g,h},
+			ytick={0,...,7}, yticklabels={1,2,3,4,5,6,7,8},
+			tick style={draw=none}, colormap/viridis,
+			colorbar, colorbar style={width=2.5mm, ytick={0,1,2,3}, yticklabels={1,10,100,1000}},
+			title={\small Tartózkodási hely (log)},
+		]
+			\addplot[matrix plot*, mesh/cols=8, point meta=explicit] table[x=x, y=y, meta expr={log10(\thisrow{v}+1)}] {figures/amazon_occ.dat};
+		\end{axis}
+	\end{tikzpicture}
+	\caption{Az Amazon hőtérképe 64 önjátszmából (a sötét Amazon mezőit tükrözve, mindkettő világos szemszögéből). Balra: hová lépett az Amazon, jobbra: mely mezőkön állt félléptetésenként (logaritmikus skála).}
+	\label{fig:amazonHeatmap}
+\end{figure}
+
+\Aref{fig:amazonHeatmap}.~ábra szerint az Amazon leggyakoribb célmezői az e2 (47), e3 (35), c3 (33), g3 (29) és f3 (28): a kereső a megnyitásban nem rohamoz vele, hanem a második-harmadik sorban, a király közelében fejleszti, ahonnan huszárugrással és csúszó lépéssel egyaránt sok mezőt fenyeget. A tartózkodási térképen a d1 kiinduló mező dominál, hiszen az Amazon a játszmák elején gyakran sokáig a helyén marad, majd a tábla saját térfelére eső részén mozog; az ellenfél térfelén csak ritkán és rövid ideig tartózkodik.

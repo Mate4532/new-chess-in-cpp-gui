@@ -1,0 +1,69 @@
+%----------------------------------------------------------------------------
+\chapter{A grafikus felhasználói felület}\label{chap:gui}
+%----------------------------------------------------------------------------
+
+\section{Felépítés}
+
+A felület Qt~6-ban készült, a táblát a Qt Graphics View keretrendszere~\cite{QtGraphicsView} rajzolja. A szerkezet a Model--View--ViewModel mintát követi:
+\begin{itemize}
+	\item a \emph{modell} a \texttt{BoardManager} és a motor (\aref{chap:architecture}.~fejezet),
+	\item a \emph{nézetmodell} a \texttt{ChessViewModel}: lefordítja a felhasználói műveleteket (lépés, visszavonás, feladás, új játszma, beállítások) motorhívásokká, kezeli a robot keresőszálát és a sakkórák időzítőjét, és Qt-jelzésekkel (\texttt{boardChanged}, \texttt{moveMade}, \texttt{gameEnded}, \ldots) értesíti a nézeteket,
+	\item a \emph{nézetek}: a táblát rajzoló \texttt{ChessScene}/\texttt{ChessView}, a lépéslistát és a vezérlőgombokat tartalmazó \texttt{InfoView}, a játékosok adatait, óráit és a leütött bábukat mutató \texttt{BoardAndPlayerPanel}, valamint a \texttt{SettingsDialog}.
+\end{itemize}
+A nézetek soha nem érik el közvetlenül a motort, így a tábla rajzolása és a keresés egymástól teljesen független.
+
+\begin{figure}[H]
+	\centering
+	\screenshot{gui_main_start.png}{A teljes főablak a kezdőállásban: tábla, játékospanelek, lépéslista, gombok.}{width=150mm,keepaspectratio}
+	\caption{A program főablaka.}
+	\label{fig:guiMain}
+\end{figure}
+
+\section{A főablak}
+
+\Aref{fig:guiMain}.~ábrán látható főablak bal oldalán a tábla, felette és alatta a két játékos panelje áll. A panel a játékos nevét (robot esetén a kereső nevét és nehézségi szintjét), ikonját, a sakkórát, a leütött ellenséges bábukat és az anyagi előnyt (pl. ,,+3'') mutatja. A jobb oldali információs panelen a játszma lépései SAN-jelöléssel, a mozgó bábu ikonjával jelennek meg. A lépéslista alatt navigációs gombokkal (\guillemotleft, \guilsinglleft, \guilsinglright, \guillemotright) vagy egy lépésre kattintva a játszma bármely korábbi állása visszanézhető; ilyenkor a tábla és az órák a régi állapotot mutatják. Az ,,Új Játék'', ,,Visszavonás'' és ,,Feladás'' gombok, valamint a fogaskerék ikonú beállítások gomb zárják a panelt. A játszma végén a panel az eredményt (pl. ,,1 -- 0, Világos nyert'') is kiírja.
+
+\section{Interakció a táblán}
+
+A bábuk egérrel húzhatók (drag and drop), vagy kattintással kijelölhetők, majd a célmezőre kattintva léptethetők. Kijelöléskor a felület pontokkal jelöli a szabályos célmezőket (ez kikapcsolható), kiemeli a legutóbbi lépés két mezőjét, sakk esetén pirossal a megtámadott királyt, és az egér alatti mezőt is. A szabályos lépések listáját a motor számolja, a felület csak megjeleníti, így a felület soha nem enged szabálytalan lépést. Átváltozáskor a célmező oszlopában négy választható bábu jelenik meg (\ref{fig:guiPlay}.~ábra). Robot ellen játszva a robot a felhasználó lépése után automatikusan, külön szálon gondolkodik, ha a felhasználó közben visszavon vagy új játszmát indít, a keresés megszakad.
+
+\begin{figure}[H]
+	\centering
+	\screenshot{gui_midgame_legal.png}{Középjáték: kijelölt bábu a szabályos célmezőkkel, kiemelt utolsó lépés, leütött bábuk és anyagi előny a panelen.}{width=115mm,keepaspectratio}\\[4mm]
+	\screenshot{gui_promotion.png}{Gyalogátváltozás: a négy választható bábu a célmező oszlopában.}{width=115mm,keepaspectratio}
+	\caption{Lépés közben megjelenített segítségek (fent) és az átváltozás bábuválasztója (lent).}
+	\label{fig:guiPlay}
+\end{figure}
+
+\section{Beállítások}
+
+A beállítások ablak négy fülön csoportosítja a lehetőségeket (\ref{fig:guiSettings}.~ábra):
+\begin{itemize}
+	\item \emph{Robotok:} külön-külön beállítható, hogy világos és/vagy sötét robot legyen, és milyen nehézségi szinten (Kezdő, Haladó, Nehéz, Mester) játsszon; itt kapcsolható be a robot-robot mód és állítható a robot maximális gondolkodási ideje.
+	\item \emph{Tábla:} tábla megfordítása, a szabályos lépések jelölése és tetszőleges kezdőállás megadása FEN-ben.
+	\item \emph{Időkontroll:} óra nélküli vagy ,,torna'' mód, a két fél alapideje külön-külön, és a lépésenkénti bónuszidő.
+	\item \emph{Változatok:} a játékváltozat (Normál vagy Amazon sakk) kiválasztása (\aref{chap:amazon}.~fejezet).
+\end{itemize}
+A dialógus csak a ,,Mentés'' gombra írja vissza az értékeket; a nézetmodell ezután összeveti a régi és új beállításokat, és csak akkor indít új játszmát, ha erre szükség van (pl. megváltozott a kezdőállás vagy a robot típusa).
+
+\begin{figure}[H]
+	\centering
+	\screenshot{gui_settings_robots.png}{Beállítások -- Robotok fül.}{width=72mm,keepaspectratio}\hspace{4mm}
+	\screenshot{gui_settings_board.png}{Beállítások -- Tábla fül.}{width=72mm,keepaspectratio}\\[4mm]
+	\screenshot{gui_settings_time.png}{Beállítások -- Időkontroll fül, ,,Torna mód'' kiválasztva.}{width=72mm,keepaspectratio}\hspace{4mm}
+	\screenshot{gui_settings_variant.png}{Beállítások -- Változatok fül, ,,Amazon sakk'' kiválasztva.}{width=72mm,keepaspectratio}
+	\caption{A beállítások ablak négy füle.}
+	\label{fig:guiSettings}
+\end{figure}
+
+\section{Játék sakkórával és robot-robot mód}
+
+Torna módban mindkét fél órája a beállított alapidőről indul, a lépő fél órája másodpercenként frissül, lépés után pedig a bónuszidővel nő. Az órák állását a játékvezérlő minden félléptetés után elmenti, így visszavonáskor az órák is visszaállnak. Robot-robot módban a felület a megnyitáskönyvből véletlen kezdőállást választ, és a két kereső egymás ellen játszik, színcserés párokban; ez a mód a fejlesztés során a motor viselkedésének szemmel követésére szolgált (\ref{fig:guiClock}.~ábra).
+
+\begin{figure}[H]
+	\centering
+	\screenshot{gui_tournament_clock.png}{Torna módú játszma robot ellen, mindkét óra látszik, az egyik aktív.}{width=115mm,keepaspectratio}\\[4mm]
+	\screenshot{gui_game_over.png}{Befejezett játszma: matt, az eredmény a jobb oldali panelen.}{width=115mm,keepaspectratio}
+	\caption{Sakkórás játszma robot ellen (fent) és egy befejezett játszma eredménykijelzése (lent).}
+	\label{fig:guiClock}
+\end{figure}

@@ -1,0 +1,97 @@
+%----------------------------------------------------------------------------
+\chapter{Mérések és értékelés}\label{chap:measurements}
+%----------------------------------------------------------------------------
+
+A méréseket egy Intel Core i7-10700 processzoros (8 mag, 16 szál, 2,9~GHz), 32~GB memóriájú asztali gépen végeztem (Windows~11, MinGW-w64 GCC~13.1, \texttt{-O3 -march=native -flto}, a GUI projekt kiadási beállításaival megegyezően). A mérőprogram a motor forrásaiból, a felület nélkül fordult.
+
+\section{A lépésgenerálás helyessége és sebessége}\label{sec:perft}
+
+A lépésgenerátort öt, a szakirodalomban szabványos tesztállással ellenőriztem~\cite{CPWPerft}. A kezdőállás mellett a ,,Kiwipete'' (sáncolás, en passant és átváltozás egyszerre), a ,,3. állás'' (végjáték, en passant-kötések), a ,,4. állás'' (sakkból kilépő átváltozások) és az ,,5. állás'' (sáncolás és átváltozás csapdák) szerepel. \Aref{tab:perft}.~táblázat szerint a motor minden mélységen pontosan a referenciaértéket adja, összesen több mint 400 millió végállásra.
+
+\begin{table}[!ht]
+	\footnotesize
+	\centering
+	\begin{tabular}{l c r r r c}
+		\toprule
+		Állás & Mélység & Csomópontok & Idő [s] & Csomópont/s & Referencia \\
+		\midrule
+		Kezdőállás & 5 & 4\,865\,609 & 0,157 & 31,0\,M & egyezik \\
+		Kezdőállás & 6 & 119\,060\,324 & 3,948 & 30,2\,M & egyezik \\
+		Kiwipete & 4 & 4\,085\,603 & 0,125 & 32,6\,M & egyezik \\
+		Kiwipete & 5 & 193\,690\,690 & 5,798 & 33,4\,M & egyezik \\
+		3. állás & 6 & 11\,030\,083 & 0,434 & 25,4\,M & egyezik \\
+		4. állás & 5 & 15\,833\,292 & 0,508 & 31,2\,M & egyezik \\
+		5. állás & 5 & 89\,941\,194 & 2,839 & 31,7\,M & egyezik \\
+		\midrule
+		Amazon kezdőállás & 5 & 9\,319\,911 & 0,306 & 30,4\,M & (saját teszt) \\
+		\bottomrule
+	\end{tabular}
+	\caption{Perft-eredmények egy szálon (minden kisebb mélység is egyezik a referenciával).}
+	\label{tab:perft}
+\end{table}
+
+A lépésgenerátor egy szálon másodpercenként 25--33 millió állást jár be. Ez a szám tartalmazza minden lépés teljes végrehajtását, a legalitás ellenőrzését és a visszavonást, tehát a keresésben ténylegesen használt utat méri. Az Amazon változat sebessége a klasszikuséval azonos nagyságrendű, a többletbábu nem lassította érdemben a generátort.
+
+\section{A döntéshozatal hatékonysága}
+
+\Aref{tab:search}.~táblázat a ,,Mester'' szintű kereső mélységét és taktikai pontosságát mutatja. A taktikai állások a klasszikus \emph{Win At Chess} (WAC) feladatgyűjtemény~\cite{Reinfeld58} első darabjai, ahol a helyes lépés ismert.
+
+\begin{table}[!ht]
+	\footnotesize
+	\centering
+	\begin{tabular}{l c c c l}
+		\toprule
+		Feladat & Szálak & Idő & Elért mélység & Eredmény \\
+		\midrule
+		Kezdőállás & 1 & 1\,s & 15 & \texttt{e2e4} \\
+		Kezdőállás & 7 & 1\,s & 15 & \texttt{d2d4} \\
+		Kezdőállás & 7 & 5\,s & 20 & \texttt{d2d4} \\
+		Kiwipete & 7 & 1\,s & 20 & \texttt{e2a6} (Fxa6) \\
+		Matt 1 lépésben & 7 & 1\,s & 1 & \texttt{d1d8}\# helyes, 1\,ms alatt \\
+		WAC.001 & 7 & 2\,s & 14 & \texttt{g3g6} helyes, matt 2-ben, 69\,ms \\
+		WAC.002 & 7 & 2\,s & 25 & \texttt{b3b7} (a könyvbeli \texttt{b3b2} helyett) \\
+		WAC.003 & 7 & 2\,s & 20 & \texttt{e3g3} helyes \\
+		WAC.004 & 7 & 2\,s & 9 & \texttt{h6h7} helyes, matt 2-ben, 14\,ms \\
+		WAC.005 & 7 & 2\,s & 1 & \texttt{c6c4} helyes, matt 2-ben, $<$1\,ms \\
+		\bottomrule
+	\end{tabular}
+	\caption{Keresési mélység és taktikai feladatok (,,Mester'' szint, HalfKAv2 értékelés).}
+	\label{tab:search}
+\end{table}
+
+A hat feladatból ötöt a kereső a könyvbeli lépéssel oldott meg, a mattokat jellemzően ezredmásodpercek alatt. A WAC.002 esetén a motor más lépést választott, de saját értékelése szerint ez is nyerő (sötét szemszögéből kb. +10,8 gyalogegység). A kezdőállásból egy szálon egy másodperc alatt 15-ös mélységet ér el, ami a vágások és a lépésrendezés hatékonyságát mutatja: a 15 mélységű teljes fa bejárása ennél nagyságrendekkel több időt igényelne.
+
+\input{content/measurements-versions}
+
+\section{Abszolút erősség: mérés a Stockfish ellen}\label{sec:stockfish}
+
+A verziók közötti mérések csak relatív erősséget adnak. Az abszolút erősség becsléséhez a motort ismert erősségű ellenfél ellen kell játszatni. Erre a Stockfish~17.1~\cite{Stockfish} beépített erősségkorlátozását használtam (\texttt{UCI\_LimitStrength}, \texttt{UCI\_Elo}), amely a dokumentáció szerint a CCRL 40/4 (blitz) ranglistához~\cite{CCRL} van kalibrálva, 1320 és 3190 Elo között. A játszmákat a \emph{cutechess-cli}~\cite{CuteChess} vezérelte, a motor a konzolos backend UCI-kiszolgálóján keresztül játszott. Mindkét motor egy szálon, 128~MB hash-táblával, 10~s + 0,1~s időkontrollal futott; a kezdőállások a saját megnyitáskönyv véletlen állásai voltak, mindegyikből két játszmával, színcserével. A 300 játszma alatt egyetlen időtúllépés, szabálytalan lépés vagy összeomlás sem történt.
+
+\begin{table}[!ht]
+	\footnotesize
+	\centering
+	\begin{tabular}{l r r r c}
+		\toprule
+		Ellenfél (Stockfish 17.1) & Gy / V / D & Pontszám & $\Delta$Elo & Becsült erősség \\
+		\midrule
+		\texttt{UCI\_Elo} = 2600 & 92 / 5 / 3 & 93,5\% & $+463 \pm 157$ & $\approx 3063$ \\
+		\texttt{UCI\_Elo} = 2900 & 62 / 17 / 21 & 72,5\% & $+168 \pm 67$ & $\approx 3068$ \\
+		\texttt{UCI\_Elo} = 3190 & 15 / 34 / 51 & 40,5\% & $-67 \pm 48$ & $\approx 3123$ \\
+		\bottomrule
+	\end{tabular}
+	\caption{A motor (,,Mester'' szint, HalfKAv2) eredményei a korlátozott erősségű Stockfish ellen, szintenként 100 játszma (Gy/V/D: a saját motor győzelmei, vereségei és döntetlenjei).}
+	\label{tab:stockfish}
+\end{table}
+
+\Aref{tab:stockfish}.~táblázat szerint a 2600-as szint ellen a motor szinte minden játszmát megnyert; ilyen szélsőséges pontszámból az Elo-különbség csak pontatlanul becsülhető. A két informatív mérés (2900 és 3190) inverz varianciával súlyozott átlaga alapján a motor ereje \textbf{kb. 3100~$\pm$~40 Elo a CCRL blitz skálán}, és a három mérés egymással összhangban van. Az eredmény értelmezésénél figyelembe kell venni, hogy a Stockfish korlátozását 120~s + 1~s időkontrollal kalibrálták, a mérés viszont gyorsabb időkontrollal készült, ahol a korlátozott Stockfish valamivel gyengébben játszhat a névleges értékénél; másrészt a saját motor egy szálon futott, így több szálon ennél erősebb. A CCRL-értékek nem vethetők össze közvetlenül a FIDE-értékszámokkal, de ezen a szinten a motor bármely emberi játékosnál lényegesen erősebb.
+
+\section{Mérések a konzolos backendben}\label{sec:terminal}
+
+A végleges kereső erejét a konzolos backend robot-robot szimulációjával mértem két időkontrollal: mindkét félnek 10~másodperc alapidő lépésenként 0,1~másodperc bónusszal, illetve 60~másodperc alapidő 0,6~másodperc bónusszal. A szimuláció a megnyitáskönyvből választott kezdőállásokból színcserés párokban játszik, és a végén összesíti a győzelmeket, a döntetleneket és a pontszázalékot. \Aref{fig:terminal}.~ábra egy futás közbeni példakimenetet mutat.
+
+\begin{figure}[!ht]
+	\centering
+	\screenshot{terminal_bot_measurement.png}{Konzolos robot-robot szimuláció kimenete futás közben.}{width=150mm,keepaspectratio}
+	\caption{Példa a backend robot-robot szimulációjának futás közbeni kimenetére.}
+	\label{fig:terminal}
+\end{figure}

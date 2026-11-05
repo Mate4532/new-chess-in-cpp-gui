@@ -1,0 +1,35 @@
+%----------------------------------------------------------------------------
+\chapter{Táblareprezentáció és lépésgenerálás}\label{chap:movegen}
+%----------------------------------------------------------------------------
+
+\section{Az állás tárolása}
+
+A \texttt{Board} osztály az állást színenként és bábutípusonként egy-egy 64 bites bitboardban tárolja (m\_bitboards[2][PIECE\_TYPE\_COUNT]); a mezők számozása a1~=~0-tól h8~=~63-ig halad. Ezek mellett színenként egy foglaltsági bitboard és egy összesített foglaltság is rendelkezésre áll, amelyeket minden lépés inkrementálisan frissít. A nem bitboard jellegű állapotot (sáncjogok, en passant mező, ütött bábu típusa, félléptetés-számláló, lépésszám, Zobrist-kulcs) egy kompakt \texttt{BoardState} rekord tárolja, és ezekből egy 1024 elemű tömb őrzi a teljes előzményt. Így a lépés visszavonásához nem kell semmit újraszámolni, csak az előző rekordra visszalépni.
+
+\section{A lépés kódolása}
+
+Egy lépés (\texttt{Move}) 16 bitbe tömörítve tárolja a kiinduló mezőt (6 bit), a célmezőt (6 bit) és egy 4 bites jelzőt, mellette egy bájton a mozgó bábu típusát. A jelzőbitek külön-külön kódolják az ütést és az átváltozást, a maradék két bit pedig a lépés altípusát: dupla gyaloglépés, rövid vagy hosszú sánc, en passant, illetve átváltozásnál a választott bábut (huszár, futó, bástya, vezér). A tömör forma miatt egy lépés egyetlen gépi szóban mozgatható, és a transzpozíciós tábla bejegyzésébe is belefér. A lépéslista (\texttt{MoveList}) egy 256 elemű, rögzített méretű tömb: a keresés során így egyáltalán nincs dinamikus memóriafoglalás.
+
+\section{Támadási táblák és mágikus bitboardok}
+
+A program indulásakor egyszer (\texttt{std::call\_once}) épülnek fel az előre kiszámított táblák:
+\begin{itemize}
+	\item a huszár, a király és a gyalogok (színenként) támadási halmaza mind a 64 mezőre,
+	\item a bástyák ($64\times4096$) és futók ($64\times512$) mágikus bitboard-táblái, előre megkeresett mágikus konstansokkal és eltolásokkal,
+	\item a szabad gyalog maszkok, amelyeket a kézzel írt értékelés és a keresés is használ.
+\end{itemize}
+Egy csúszó bábu támadásainak lekérdezése így egy maszkolás, egy szorzás, egy eltolás és egy táblaolvasás; a vezér támadása a bástya- és a futótámadás uniója.
+
+\section{Pszeudolegális generálás és legalitásvizsgálat}
+
+A \texttt{MoveGenerator} a lépő fél minden bábujára előállítja a pszeudolegális lépéseket, vagyis azokat, amelyek a bábu mozgásszabályainak megfelelnek, de esetleg sakkban hagyják a saját királyt. A sáncolásnál a generátor már itt ellenőrzi, hogy a király nem áll sakkban, és nem halad át megtámadott mezőn. A nyugalmi kereséshez létezik egy csak ütéseket előállító mód is.
+
+A legalitás eldöntése a \texttt{MakeMove} feladata: a lépés végrehajtása után megvizsgálja, hogy a lépő fél királyát támadja-e valami (isSquareAttacked), és ha igen, a lépést azonnal visszavonja és elutasítja. A támadásvizsgálat fordított irányban dolgozik: a király mezőjéről indítja a huszár-, király-, gyalog- és csúszótámadásokat, és ezek metszetét képezi az ellenfél megfelelő bitboardjaival. Ez a megközelítés egyszerűbb a teljesen legális generálásnál, és a keresésben nem drágább, mert a lépések jelentős része a vágások miatt végre sem hajtódik.
+
+A lépés végrehajtásakor a sáncjogok frissítéséhez egy mezőnkénti maszk (castling\_mask) elég: ha egy lépés a király vagy egy bástya kiinduló mezőjét érinti, a megfelelő jog egyetlen ÉS művelettel törlődik. A Zobrist-kulcsot a \texttt{MakeMove} inkrementálisan, XOR-okkal frissíti, a GenerateFullHash csak a FEN betöltésekor számol teljes kulcsot, mivel ez egy lassú művelet. A \texttt{MakeMove} kétféle módban hívható: keresési módban csak a fenti minimális munkát végzi, játszma módban (a felület és a játékvezérlő számára) eltárolja a lépést, a táblaképet, a sakkjelzést és a következő állás szabályos lépéseit is, amelyekből a lépéslista, a SAN-jelölés és a visszajátszás dolgozik.
+
+\section{Döntetlenek és ismétlésfigyelés}
+
+A \texttt{RepetitionTable} a játszma és a keresés során előforduló állások kulcsait tárolja. Mivel ütés vagy gyaloglépés után korábbi állás már nem ismétlődhet meg, minden ilyen visszafordíthatatlan lépés új ablakot nyit, és az ismétlést csak az aktuális ablakban kell keresni. A játszmában a háromszori ismétlés a döntetlen, a keresésben viszont már a kétszeri is annak számít: ha egy állás egyszer már előfordult, a motor az ismétlésre vezető ágat döntetlenként értékeli, így felesleges mélységet takarít meg. Ezen felül a tábla az ötvenlépéses szabályt (100 féllépés) és az elégtelen anyagot is felismeri (csak királyok, király és egy könnyűtiszt, azonos színű futók).
+
+A lépésgenerátor helyességét és sebességét \aref{sec:perft}.~szakasz perft-mérései igazolják.

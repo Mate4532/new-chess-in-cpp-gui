@@ -1,0 +1,244 @@
+\makeatletter \ifx\bibEarlyBegin\hfuzz
+  \def\bibEarlyBegin{\begingroup\everypar{}\sloppy\hbadness10000
+    \def\Hy@colorlink##1{\begingroup}
+    \def\Hy@endcolorlink{\endgroup}
+    \def\@inpenc@loop##1##2{}
+    \def\thebibliography##1{}
+    \def\endthebibliography{\skip@egroup\aftergroup\bibEarlyEnd}%
+    \def\inputencoding##1{}\c@enumi\z@
+    \def\bibitem{\skip@egroup \let\skip@egroup\egroup
+      \advance\c@enumi\@ne\@ifnextchar[\@lbibitem\@bibitem}%
+    \def\@lbibitem[##1]##2{\bibcite{##2}{##1}%
+      \setbox0\vbox\bgroup}% avoid emitting boxes
+    \def\@bibitem##1{\expandafter\skip@bibcite\expandafter
+      {\the\c@enumi}{##1}\setbox0\vbox\bgroup}% avoid emitting boxes
+    \def\skip@bibcite##1##2{\bibcite{##2}{##1}}%
+    \catcode11=9 % ignored
+    \@tempcnta  1 \loop\catcode\@tempcnta=9
+      \ifnum\@tempcnta<  8 \advance\@tempcnta\@ne\repeat
+    \@tempcnta 14 \loop\catcode\@tempcnta=9
+      \ifnum\@tempcnta< 31 \advance\@tempcnta\@ne\repeat
+    \@tempcnta127 \loop\catcode\@tempcnta=9
+      \ifnum\@tempcnta<255 \advance\@tempcnta\@ne\repeat
+    \let\skip@egroup\relax}
+  \def\bibEarlyEnd{\endgroup \let\bibcite\@gobbletwo
+    \global\let\bibEarlyRead\relax}
+  \bibEarlyBegin
+\else \let\bibEarlyEnd\relax \fi
+
+\begin{thebibliography}{10}
+\frenchspacing
+\makeatletter
+\global\def\bibIE@lowc{%
+  \expandafter\ifx\csname inputencoding\endcsname\relax
+    \def\NeedsTeXFormat##1]{}%
+    \def\ProvidesPackage##1]{}%
+    \def\DeclareOption##1##2{}%
+    \def\ProcessOptions{\@ifstar\@gobble\@empty}%
+    \input inputenc.sty
+    \let\NeedsTeXFormat \@notprerr
+    \let\ProvidesPackage\@notprerr
+    \let\DeclareOption  \@notprerr
+    \let\ProcessOptions \@notprerr
+  \fi
+  \global\let\bibIE@lowc\relax}
+\def\bibIE@lowa#1#2{%
+  \global\def\bibResetInputEncoding{\bibIE@lowb{ascii}}% anti-warning
+  \ifx#1\relax\else
+  \ifx#1\@inpenc@undefined@\@empty
+    \global\def\bibResetInputEncoding{\bibIE@lowb{#2}}%
+    \ifx\bibResetInputEncoding\reserved@a% keep old encoding
+      \global\let\bibResetInputEncoding\@empty \let\reserved@a\@empty \fi
+  \fi\fi}
+\let\bibIE@input\input
+\def\bibIE@ascii{ascii}
+\def\bibIE@lowb#1{%
+  \def\reserved@a{#1}\ifx\reserved@a\bibIE@ascii
+    \gdef\@inpenc@test{\global\let\@inpenc@test\relax}%
+    \edef\@inpenc@undefined{\noexpand\@inpenc@undefined@{ascii}}%
+    \@inpenc@loop\^^A\^^H\@inpenc@loop\^^K\^^K%
+    \@inpenc@loop\^^N\^^_\@inpenc@loop\^^?\^^ff%
+\else\def\input{\global\let\@inpenc@test\relax \bibIE@input}% no {ascii} warn
+  \inputencoding{#1}\fi}%
+\def\bibInputEncoding#1{%
+  \bibIE@lowc
+  \def\reserved@a{\bibIE@lowb{#1}}%
+  % vvv \@inpenc@undefined -> `\@inpenc@undefined@{latin2}' or undefined
+  \expandafter\expandafter\expandafter\bibIE@lowa\csname
+    @inpenc@undefined\endcsname\relax
+  \reserved@a}
+
+\def\leftflushbreak{\ifx\\\@centercr\penalty100 \else
+  \unpenalty\unpenalty{\@tempdima\lastskip\unskip\nobreak
+  \hskip\@tempdima plus1fil}\null\penalty100 \hskip0pt plus-1fil\relax\fi}
+\begingroup\lccode\string`~=\string`\^^M
+  \lowercase{\endgroup\def\verb@eol@error{\obeylines\def~{\bibVerbNoSp}}}
+\begingroup\lccode\string`~=\string`\ \relax
+  \lowercase{\endgroup\def\bibVerbNoSp#1{\ifx#1~\expandafter\bibVerbNoSp
+  \else\expandafter#1\fi}}
+\expandafter\ifx\csname bibUrll\endcsname\relax
+\expandafter\ifx\csname url\endcsname\relax
+     \def\bibUrll#1>{\leavevmode\leftflushbreak #1~\verb>}
+\else\def\bibUrll#1>{\leavevmode\leftflushbreak#1~\begingroup
+       \catcode\string`\%=12 \catcode\string`\#=12 \bibUrlll}
+     \def\bibUrlll#1>{\url{#1}\endgroup}\fi
+\fi
+\def\bibHU@mix#1{\egroup#1}
+\def\bibAnd#1{\nobreak\,\nobreak\hbox{--}\,}
+\def\bibEtAl#1{ \'es m\'asok}
+\def\bibEd#1{ (szerk.)}
+\def\bibNewBlock{\unskip\space}
+\def\bibVolume#1#2{#1 k\"ot.} \let\bibNumVolumes\bibVolume
+\def\bibTechRep#1{Jelent\'{e}s}
+\def\bibInSelf#1{In u\H{o}: }
+\csname bibOverride\endcsname
+
+\bibitem{Betza}
+Ralph Betza:
+\bibNewBlock {Funny Notation -- leaper and rider notation for fairy pieces}.
+\bibNewBlock The Chess Variant Pages,
+  \url{https://www.chessvariants.com/piececlopedia.dir/betzanot.html}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{CCRL}
+{CCRL -- Computer Chess Rating Lists}:
+\bibNewBlock {CCRL Blitz (40/4) rating list}.
+\bibNewBlock \url{https://computerchess.org.uk/ccrl/404/}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{CPWBitboards}
+{Chess Programming Wiki}:
+\bibNewBlock {Bitboards}.
+\bibNewBlock \url{https://www.chessprogramming.org/Bitboards}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{CPWLazySMP}
+{Chess Programming Wiki}:
+\bibNewBlock {Lazy SMP}.
+\bibNewBlock \url{https://www.chessprogramming.org/Lazy_SMP}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{CPWMagic}
+{Chess Programming Wiki}:
+\bibNewBlock {Magic Bitboards}.
+\bibNewBlock \url{https://www.chessprogramming.org/Magic_Bitboards}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{CPWPerft}
+{Chess Programming Wiki}:
+\bibNewBlock {Perft Results}.
+\bibNewBlock \url{https://www.chessprogramming.org/Perft_Results}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{CPWPruning}
+{Chess Programming Wiki}:
+\bibNewBlock {Pruning, Reductions and Extensions}.
+\bibNewBlock \url{https://www.chessprogramming.org/Pruning}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{CPWSEE}
+{Chess Programming Wiki}:
+\bibNewBlock {Static Exchange Evaluation}.
+\bibNewBlock \url{https://www.chessprogramming.org/Static_Exchange_Evaluation}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{CPWTT}
+{Chess Programming Wiki}:
+\bibNewBlock {Transposition Table}.
+\bibNewBlock \url{https://www.chessprogramming.org/Transposition_Table}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{FairyStockfish}
+Fabian Fichter:
+\bibNewBlock {Fairy-Stockfish -- chess variant engine}.
+\bibNewBlock \url{https://github.com/fairy-stockfish/Fairy-Stockfish}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{FIDELaws}
+{FIDE -- Fédération Internationale des Échecs}:
+\bibNewBlock {FIDE Laws of Chess (taking effect from 1 January 2023)}.
+\bibNewBlock \url{https://handbook.fide.com/chapter/E012023}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{Knuth75}
+Donald~E. Knuth\bibAnd 1Ronald~W. Moore:
+\bibNewBlock {An Analysis of Alpha-Beta Pruning}.
+\bibNewBlock {\em Artificial Intelligence}, 6. \'evf. (1975) 4. sz.,
+  293--326.~p.
+
+\bibitem{UCI}
+Stefan Meyer-Kahlen\bibAnd 1Rudolf Huber:
+\bibNewBlock {Description of the Universal Chess Interface (UCI)}.
+\bibNewBlock \url{https://www.wbec-ridderkerk.nl/html/UCIProtocol.html}.
+\bibNewBlock 2004, elérve: 2026.~október~26.
+
+\bibitem{Nasu18}
+Yu~Nasu:
+\bibNewBlock {Efficiently Updatable Neural-Network-based Evaluation Functions
+  for Computer Shogi}.
+\bibNewBlock Technical report, 2018, Ziosoft Computer Shogi Club.
+\bibNewBlock Eredetileg japán nyelven, a 28. World Computer Shogi Championship
+  alkalmából.
+
+\bibitem{Pritchard07}
+David~B. Pritchard\bibAnd 1John Beasley:
+\bibNewBlock {\em {The Classified Encyclopedia of Chess Variants}}.
+\bibNewBlock 2. kiad.
+\bibNewBlock 2007, John Beasley.
+
+\bibitem{Reinfeld58}
+Fred Reinfeld:
+\bibNewBlock {\em {Win at Chess}}.
+\bibNewBlock 1958, Dover Publications.
+
+\bibitem{Shannon50}
+Claude~E. Shannon:
+\bibNewBlock {Programming a Computer for Playing Chess}.
+\bibNewBlock {\em Philosophical Magazine}, 41. \'evf. (1950) 314. sz.,
+  256--275.~p.
+
+\bibitem{NnueProbe}
+Daniel Shawul:
+\bibNewBlock {nnue-probe: Library for probing Stockfish NNUE networks}.
+\bibNewBlock \url{https://github.com/dshawul/nnue-probe}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{ChessVariantsAmazon}
+{The Chess Variant Pages}:
+\bibNewBlock {Amazon (Queen + Knight compound piece)}.
+\bibNewBlock \url{https://www.chessvariants.com/piececlopedia.dir/amazon.html}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{CuteChess}
+{The Cute Chess developers}:
+\bibNewBlock {Cute Chess -- graphical user interface, command-line interface
+  and library for playing chess}.
+\bibNewBlock \url{https://github.com/cutechess/cutechess}.
+\bibNewBlock 1.5.1-es verzió, elérve: 2026.~október~26.
+
+\bibitem{QtGraphicsView}
+{The Qt Company}:
+\bibNewBlock {Graphics View Framework -- Qt 6 documentation}.
+\bibNewBlock \url{https://doc.qt.io/qt-6/graphicsview.html}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{NnuePytorch}
+{The Stockfish developers}:
+\bibNewBlock {nnue-pytorch: NNUE training code and documentation}.
+\bibNewBlock
+  \url{https://github.com/official-stockfish/nnue-pytorch/blob/master/docs/nnue.md}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{Stockfish}
+{The Stockfish developers}:
+\bibNewBlock {Stockfish -- A free and strong UCI chess engine}.
+\bibNewBlock \url{https://github.com/official-stockfish/Stockfish}.
+\bibNewBlock Elérve: 2026.~október~26.
+
+\bibitem{Zobrist70}
+Albert~L. Zobrist:
+\bibNewBlock {A New Hashing Method with Application for Game Playing}.
+\bibNewBlock 88. Technical Report, 1970, University of Wisconsin, Computer
+  Sciences Department.
+
+\end{thebibliography}

@@ -1,0 +1,134 @@
+%----------------------------------------------------------------------------
+\chapter{A keresőmotor}\label{chap:search}
+%----------------------------------------------------------------------------
+
+A motor agya az \texttt{ImprovedSearcher} névtér \texttt{Searcher} osztálya. Ez a fejezet a kereső minden funkcióját bemutatja. A zárójelben szereplő \textbf{vN} jelzés azt a verziót adja meg, amelyben az adott technika először megjelent, a hozzá tartozó mérést \aref{sec:versions}.~szakasz tartalmazza. A kereső a v1-ben szándékosan egy minimális magról (alfa-béta, NNUE, nyugalmi keresés) indult, és minden további elem külön verzióként, mérve került bele.
+
+\section{A keresés kerete}
+
+\paragraph{Iteratív mélyítés (v1).} A kereső 1-es mélységtől kezdve egyre mélyebben keres, amíg az időkezelő meg nem állítja. Minden befejezett iteráció legjobb lépése és értéke megmarad, így egy félbeszakított iteráció sem okoz rossz döntést, az előző iteráció eredménye pedig a következő lépésrendezését és ablakát segíti.
+
+\paragraph{Negamax alfa-béta, fail-soft (v4, teljesen v23).} A rekurzív negamax a szokásos alfa-béta vágással dolgozik. A fail-soft változat az ablakon kívül eső értékeket is a lehető legpontosabban adja vissza, ami a transzpozíciós tábla bejegyzéseit és az aspirációs ablak újrakeresését is pontosabbá teszi.
+
+\paragraph{Principal Variation Search (v7).} Egy csomópont első (legjobbnak vélt) lépését teljes ablakkal, a többit nulla szélességű ablakkal ($[\alpha, \alpha+1]$) keresi. Ha egy későbbi lépés mégis jobbnak bizonyul, teljes ablakkal újrakeresi. Jó lépésrendezés esetén a nulla ablakos keresések sokkal olcsóbbak.
+
+\paragraph{Aspirációs ablak (v14, mai formája v23).} 4-es mélységtől a gyökérkeresés nem $(-\infty, +\infty)$ ablakkal indul, hanem az előző iteráció értéke körüli $\pm\delta$ ablakkal, ahol $\delta = 25 + |s|/8$ centigyalog. Ha az eredmény az ablakon kívül esik, a kereső a megfelelő irányban duplázza az ablakot, és újrakeres.
+
+\paragraph{Gyökérlépés-rendezés és főváltozat (v17).} A gyökérben a lépéseket az előző iteráció pontszáma szerint rendezi. A főváltozatot (PV) egy  PV-tábla gyűjti, amelyet a BuildPvString a transzpozíciós táblából legális lépésekkel tovább bővít, ez jelenik meg az info kimenetben.
+
+\paragraph{Matt-távolság vágás és döntetlenek (v1).} Ha már egy rövidebb matt ismert, az ennél hosszabb mattot kereső ágak azonnal levághatók. A keresés minden csomópontban ellenőrzi az ötvenlépéses szabályt, az elégtelen anyagot és az ismétlést; a fán belül már a kétszeri ismétlés is döntetlen (\aref{chap:movegen}.~fejezet).
+
+\section{Transzpozíciós tábla (v3, klaszterek v13, zármentes v23)}
+
+A transzpozíciós tábla (TT) 128~MB méretű, kettő hatványa számú, 64 bájtra igazított klaszterből áll. Egy klaszter négy 16 bájtos bejegyzést tartalmaz, így egy lekérdezés egyetlen gyorsítótár-sort érint. A bejegyzés egy 64 bites kulcsot és egy 64 bites, tömörített adatot tárol: érték (16 bit), lépés (16 bit), bábutípus, mélység, korlát típusa (pontos, alsó vagy felső korlát) és generáció (8--8 bit).
+
+A többszálú kereséshez a tábla zármentes: a kulcs helyett a kulcs XOR adat értéket tárolja. Ha két szál egyszerre írja ugyanazt a bejegyzést, és az olvasó egy félig frissített állapotot lát, a XOR-ellenőrzés nem egyezik, és a bejegyzés egyszerűen érvénytelennek számít. Ez lényegesen gyorsabb a korábbi (v16--v20) mutex-, illetve spinlock-alapú megoldásnál.
+
+A csere sorrendje: üres hely, azonos kulcsú bejegyzés, végül a legkisebb ,,$4\cdot\text{kor} - \text{mélység}$'' értékű bejegyzés. A matt-értékeket a tárolás a gyökértől mért távolságra korrigálja. TT-vágás csak nem-PV csomópontban történik, és nem, ha a félléptetés-számláló már 90 felett van (az ötvenlépéses szabály közelében a tárolt érték félrevezető lehet). A tábla a következő csomópont klaszterét előre betölti (prefetch), mielőtt a lépést végrehajtaná.
+
+\section{Lépésrendezés}
+
+Az alfa-béta hatékonysága szinte teljesen a lépésrendezésen múlik. A lépéseket a kereső pontozza (\aref{tab:ordering}.~táblázat), majd nem rendezi az egész listát, hanem mindig csak a következő legjobbat választja ki (lazy pick-best, v17), mert egy vágás után a többi lépést úgysem kell megvizsgálni.
+
+\begin{table}[!ht]
+	\footnotesize
+	\centering
+	\begin{tabular}{l r l}
+		\toprule
+		Lépés típusa & Pontszám & Verzió \\
+		\midrule
+		TT-lépés & 10\,000\,000 & v3 \\
+		Ütés vezérré/Amazonná vagy huszárrá változással & 9\,000\,000 / 8\,000\,000 & v12 \\
+		Nem vesztes ütés (MVV-LVA, SEE $\ge 0$) & $5\,000\,000 + 16\cdot\text{áldozat} - \text{támadó}$ & v1/v12 \\
+		Csendes átváltozás vezérré/Amazonná vagy huszárrá & 4\,000\,000 / 3\,000\,000 & v12 \\
+		1. és 2. gyilkos lépés & 2\,000\,000 / 1\,500\,000 & v5 \\
+		Ellenlépés (countermove) & 1\,200\,000 & v6 \\
+		Csendes lépés & történeti érték & v6 \\
+		Vesztes ütés (SEE $<0$) & $-1\,000\,000$ & v12 \\
+		Bástyává/futóvá alulátváltozás & $-2\,000\,000$ & v12 \\
+		\bottomrule
+	\end{tabular}
+	\caption{A lépések rendezési pontszámai.}
+	\label{tab:ordering}
+\end{table}
+
+\paragraph{MVV-LVA és SEE.} Az ütéseket elsősorban az ütött bábu értéke, másodsorban az ütő bábu olcsósága szerint rendezi (Most Valuable Victim -- Least Valuable Attacker). Ha az ütő értékesebb az áldozatnál, a statikus cserekiértékelés (SEE)~\cite{CPWSEE} dönti el, hogy a cserelánc a végén nyereséges-e: a mező összes támadóját a legolcsóbbtól kezdve felváltva üti le, a röntgentámadásokat (pl. bástya a bástya mögött) is figyelembe véve.
+
+\paragraph{Gyilkos lépések (v5) és ellenlépés (v6).} Egy csendes lépés, amely egy testvércsomópontban vágást okozott, valószínűleg itt is jó: ezt féllépésenként két gyilkos lépés tárolja. Az ellenlépés-heurisztika az ellenfél előző lépésére (bábutípus és célmező) adott legjobb választ jegyzi meg.
+
+\paragraph{Történeti heurisztika (v6, gravitáció v18).} Minden csendes lépés (szín, honnan, hová) kap egy pontszámot, amely vágás esetén nő, a vágás előtt kipróbált, sikertelen csendes lépéseknél pedig csökken. A gravitációs frissítés a pontszámot korlátok között tartja, így a régi információ fokozatosan elévül.
+
+\section{Vágások, redukciók és kiterjesztések}
+
+\Aref{tab:pruning}.~táblázat a végleges kereső összes vágási és redukciós technikáját foglalja össze; a feltételek a nem-PV csomópontokra vonatkoznak, ha nincs sakk.
+
+\begin{table}[!ht]
+	\scriptsize
+	\centering
+	\begin{tabularx}{\linewidth}{l X l}
+		\toprule
+		Technika & Működés (végleges paraméterek) & Verzió \\
+		\midrule
+		Fordított futility & ha $\text{eval} - (100d - 75\cdot\text{javuló}) \ge \beta$ és $d \le 6$, a csomópont azonnal elvágható & v9 \\
+		Razoring & ha $d \le 3$ és $\text{eval} + 200 + 150d < \alpha$, csak nyugalmi keresés dönt & v9 \\
+		Null-lépés vágás & a lépésjogot átadva, $R = (823 + 67d)/256 + \min((\text{eval}-\beta)/200, 3)$ redukcióval keres; ha az ellenfél így sem éri el $\beta$-t, vágás; gyalogvégjátékban tiltott (zugzwang) & v8 \\
+		Futility vágás & $d \le 6$ esetén a csendes lépések kihagyása, ha $\text{eval} + 120d \le \alpha$ & v10 \\
+		Késői lépések vágása & $(\text{javuló} ? 4 : 2) + d^2$ csendes lépés után a többi kihagyása, $d \le 8$ & v11 \\
+		SEE-vágás & $d \le 7$ esetén a $-50d$ (csendes) vagy $-90d$ (ütés) alatti SEE-jű lépések kihagyása & v11 \\
+		LMR & a késői, csendes lépések csökkentett mélységű keresése (lásd lent) & v7 \\
+		IIR & TT-lépés hiányában a mélység eggyel csökken & v23 \\
+		Szinguláris kiterjesztés & ha a TT-lépés minden más lépésnél jelentősen jobb, $+1$ mélység; több vágó alternatíva esetén ,,multi-cut'' vágás vagy $-1$ kiterjesztés & v23 \\
+		\bottomrule
+	\end{tabularx}
+	\caption{Vágások, redukciók és kiterjesztések ($d$: hátralévő mélység, eval: statikus értékelés).}
+	\label{tab:pruning}
+\end{table}
+
+\paragraph{A javulás jelző (v9).} Ha a lépő fél statikus értékelése jobb, mint két félléptetéssel korábban, az állás javuló. Ilyenkor a kereső óvatosabban vág (nagyobb futility-ráhagyás, több lépés a késői lépések vágása előtt, kisebb LMR-redukció), hiszen az állás valószínűleg még tartogat valamit.
+
+\paragraph{Késői lépések redukciója (v7, külön PV-tábla v11).} A rendezés végén álló csendes lépések nagy valószínűséggel rosszak, ezért a kereső csökkentett mélységgel vizsgálja őket, és csak akkor keresi újra teljes mélységgel, ha meglepően jónak bizonyulnak. Az alapredukció egy előre kiszámított táblából jön: nem-PV csomópontban $0{,}5 + \ln d \cdot \ln m / 2{,}5$, PV-ben $-0{,}25 + \ln d \cdot \ln m / 3$, ahol $m$ a lépés sorszáma. Ezt módosítja, hogy javuló-e az állás, gyilkos lépésről, szabad gyalog előretolásáról, sakkadásról, átváltozásról van-e szó, illetve a lépés történeti pontszáma ($\pm2$).
+
+\paragraph{Szinguláris kiterjesztés (v23).} Ha 8-as mélység felett a TT-lépés értéke megbízható, a kereső a TT-lépés kihagyásával, csökkentett mélységgel és $\text{TT-érték} - (3 + d/2)$ korláttal ellenőrzi a többi lépést. Ha egyik sem éri el ezt, a TT-lépés az egyetlen jó lépés, ezért egy mélységgel tovább keresi; ha viszont már a korlát is vágást okoz, több jó lépés van, és a csomópont azonnal levágható.
+
+\paragraph{Sakk-kiterjesztés.} A korai verziók minden sakkadást egy mélységgel meghosszabbítottak. A v23 ezt kivette, mert a szinguláris kiterjesztés és a nyugalmi keresés a fontos sakkokat már lefedi, a kiterjesztés pedig a mérésekben inkább rontott.
+
+\section{Nyugalmi keresés (v1)}
+
+A mélységkorlát elérésekor a kereső nem azonnal értékel, hanem csak az ütéseket (és az erős átváltozásokat) vizsgálja tovább, amíg az állás nyugodt nem lesz. A lépő fél állva maradhat: ha a statikus értékelés már eléri $\beta$-t, nem kell tovább keresni. A végleges változat elemei: kitérő lépések generálása sakkban (v2--v3), delta-vágás (v3; kihagyja azt az ütést, amely még a legnagyobb lehetséges nyereséggel sem érné el $\alpha$-t), SEE-vágás (v11), TT-lekérdezés és -tárolás (v23), valamint a bástyává és futóvá alakuló átváltozások elhagyása.
+
+\section{Állásértékelés}
+
+\paragraph{NNUE HalfKP (v1).} A kezdeti értékelés a Stockfish egy HalfKP formátumú hálója (\texttt{nn-62ef826d1a6d.nnue}) a \texttt{nnue-probe} könyvtáron keresztül. A kereső minden lépésnél csak a megváltozott bábukat (dirty pieces: mozgó bábu, ütött bábu, sáncnál a bástya, átváltozásnál a gyalog és az új bábu) adja át, a könyvtár ezekből inkrementálisan frissíti az akkumulátort.
+
+\paragraph{NNUE HalfKAv2\_hm (v23).} A legfrissebb verzió egy újabb generációs, HalfKAv2\_hm formátumú Stockfish-hálót (nn-dabb1ed23026.nnue) használ, amelynek kiértékelését saját kóddal valósítottam meg (nnue-halfkav2). A háló $22\,528$ bemeneti jellemzőt (király helye $\times$ bábu $\times$ mező, a király oldalára tükrözve), $2\times1024$ neuronos első réteget, 8 anyagi vödröt és vödrönként külön 15--32--1 neuronos réteghalmazt tartalmaz. A vödröt a táblán lévő bábuk száma választja ki, így a háló külön réteget használ a megnyitásra, a középjátékra és a végjátékra. Az akkumulátorok egy veremben, félléptetésenként inkrementálisan frissülnek, ha valamelyik király mozog, az adott nézőpont akkumulátorát a kód teljesen újraszámolja. A belső szorzások AVX2 utasításokkal futnak.
+
+\paragraph{Kézzel írt értékelés.} A gyengébb nehézségi szintek egy saját, kézzel hangolt értékelőt használnak: anyag és bábu-mező táblák középjátékra és végjátékra külön, játékfázis szerinti átmenettel, mobilitás, gyalogszerkezet (szabad, elszigetelt gyalogok), királybiztonság és gyalogpajzs, bábuegyensúly, ismert döntetlen végjátékok felismerése és a mop-up tag, amely nyert végjátékban a vesztes királyt a szélre szorítja. Ez gyengébb, mint az NNUE, de pont ez a cél: emberibb, hibázó játékot ad.
+
+\section{Időkezelés}\label{sec:time}
+
+Fix idős módban a kereső a megadott ideig gondolkodik. Órás módban két határt számol: a puha határ $\text{hátralévő idő}/40 + 0{,}8\cdot\text{bónusz}$, a kemény határ ennek háromszorosa (mindkettő a hátralévő időhöz korlátozva). Új iterációt csak a puha határ előtt kezd; ha a legjobb lépés háromszor egymás után nem változott, a puha határ 60\%-ánál is megáll. Válság esetén, ha az érték 50 centigyalognál többet esett, de az állás még nem dőlt el ($\pm800$ centigyalogon belül), a puha határon túl is folytatja, a kemény határ 80\%-áig.
+
+\section{Többszálú keresés: Lazy SMP (v16)}\label{sec:lazysmp}
+
+A kereső a beállított számú szálon fut. A segédszálak ugyanazt az állást keresik, saját előzménytáblával és lépésrendezéssel, de közös transzpozíciós táblán keresztül. Mivel a szálak kissé eltérő sorrendben haladnak, egymás számára hasznos TT-bejegyzéseket hagynak hátra, így a fő szál gyorsabban ér el egy adott mélységet. A szálak egy közös megállító jelzőn keresztül állnak le, az eredményt mindig a fő szál adja.
+
+\section{Nehézségi szintek}
+
+A négy nehézségi szint (\aref{tab:difficulty}.~táblázat) nem egyszerűen a keresési mélységet korlátozza. Az alsó három szint kézzel írt értékelést használ, és a \texttt{GetBestAmongTopMoves} egy több jelöltlépést kiértékelő keresés után szándékos hibát is véthet: adott valószínűséggel a legjobb $N$ lépés közül választ egy olyat, amely legfeljebb a küszöbnyit rosszabb a legjobbnál. A Haladó és Nehéz szint kiszűri a kínos hibákat (amikor a választott lépés után egy bábu védtelenül üthetővé válik), és egy ingyen kínálkozó bábut mindig leüt. Két szándékos hiba között legalább egy-két normál lépést tesz.
+
+\begin{table}[!ht]
+	\footnotesize
+	\centering
+	\begin{tabular}{l c c c c c c}
+		\toprule
+		Szint & Max. mélység & Értékelés & Hiba esélye & Top $N$ & Küszöb [cp] & Kínos hiba szűrése \\
+		\midrule
+		Kezdő & 6 & kézzel írt & 40\% & bármelyik & 900 & nem \\
+		Haladó & 6 & kézzel írt & 30\% & 10 & 500 & igen \\
+		Nehéz & 9 & kézzel írt & 20\% & 8 & 300 & igen \\
+		Mester & -- & NNUE & 0\% & -- & -- & -- \\
+		\bottomrule
+	\end{tabular}
+	\caption{A nehézségi szintek paraméterei (\texttt{SearcherSettings}).}
+	\label{tab:difficulty}
+\end{table}

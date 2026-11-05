@@ -1,0 +1,32 @@
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+\selecthungarian
+
+%----------------------------------------------------------------------------
+% Abstract in Hungarian
+%----------------------------------------------------------------------------
+\chapter*{Kivonat}\addcontentsline{toc}{chapter}{Kivonat}
+
+A szakdolgozatban egy saját fejlesztésű, C++20 nyelvű sakkmotort mutatok be, amely a klasszikus FIDE-szabályok mellett tündérsakk-bábuk kezelésére is képes. A motor bitboard-alapú táblareprezentációt és mágikus bitboardokkal gyorsított lépésgenerátort használ, döntéseit alfa-béta alapú kereséssel hozza, amelyet transzpozíciós tábla, PVS, aspirációs ablak, többféle vágási, redukciós és kiterjesztési technika, többszálú (Lazy SMP) keresés, valamint NNUE neurális hálós állásértékelés egészít ki. A sakkprogram HalfKP (régebbi verzió) mellett HalfKAv2 hálót is támogat. A motor szabványos UCI protokollon kommunikál, és saját, Qt~6 alapú grafikus felülettel rendelkezik, amely négy nehézségi szintet, sakkórát, lépésvisszavonást és játszma-visszajátszást is kínál.
+
+A kereső fejlődését verziókezelt, robot-robot mérésekkel követtem: húsz mérés, összesen több mint tizenkétezer játszma igazolja az egyes optimalizációk hatását. A lépésgenerálás helyességét öt szabványos perft-tesztállás igazolja, egy szálon másodpercenként 25--33 millió állással. A korlátozott erősségű Stockfish~17.1 elleni 300 játszma alapján a motor ereje a CCRL blitz skálán kb. 3100 Elo. A tündérsakk-kiterjesztést az Amazon (vezér + huszár) bábun keresztül valósítottam meg: a bábu a lépésgenerátortól az értékelésen át a felületig minden réteget érint, mégis kevés, jól körülhatárolt módosítással illeszkedett a meglévő architektúrába. A dolgozat végül önjátszmák alapján elemzi, hogyan használja a kereső az új bábut.
+
+\vfill
+\selectenglish
+
+%----------------------------------------------------------------------------
+% Abstract in English
+%----------------------------------------------------------------------------
+\chapter*{Abstract}\addcontentsline{toc}{chapter}{Abstract}
+
+This thesis presents a chess engine written from scratch in C++20 that plays by the classical FIDE rules and can also handle fairy chess pieces. The engine uses a bitboard board representation with a magic-bitboard move generator. Its decisions come from an alpha-beta search extended with a transposition table, principal variation search, aspiration windows, a range of pruning, reduction and extension techniques, multi-threaded (Lazy SMP) search and NNUE neural network evaluation, supporting both HalfKP (older version) and HalfKAv2 network. The engine communicates through the standard UCI protocol and has its own Qt~6 graphical user interface with four difficulty levels, chess clocks, move takeback and game review.
+
+The development of the search was tracked with versioned bot-versus-bot measurements: twenty matches with more than twelve thousand games quantify the effect of each optimization. The correctness of the move generator is verified on five standard perft positions, running at 25--33 million positions per second on a single thread. Based on 300 games against strength-limited Stockfish~17.1, the engine plays at about 3100 Elo on the CCRL blitz scale. The fairy chess extension was implemented through the Amazon (queen + knight) piece. Although the piece affects every layer from move generation through evaluation to the user interface, it fit into the existing architecture with a small number of well-contained changes. Finally, the thesis analyses self-play games to show how the search makes use of the new piece.
+
+\vfill
+\selectthesislanguage
+
+\newcounter{romanPage}
+\setcounter{romanPage}{\value{page}}
+\stepcounter{romanPage}

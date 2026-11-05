@@ -1,0 +1,41 @@
+%----------------------------------------------------------------------------
+\chapter{Előzmények és szakirodalmi háttér}\label{chap:background}
+%----------------------------------------------------------------------------
+
+\section{Táblareprezentáció}
+
+A modern sakkmotorok túlnyomó többsége bitboardokkal írja le az állást~\cite{CPWBitboards}. A bitboard egy 64 bites egész szám, amelynek $i$-edik bitje azt jelzi, hogy az $i$-edik mezőn áll-e az adott típusú bábu. Bábutípusonként és színenként egy-egy bitboardot tárolva a lépésgenerálás és a támadásszámítás nagy része néhány bitművelettel (ÉS, VAGY, eltolás, \texttt{popcount}, legalacsonyabb bit keresése) elvégezhető, amelyeket a modern processzorok egyetlen utasítással hajtanak végre.
+
+A csúszó bábuk (bástya, futó, vezér) támadásai a köztes mezők foglaltságától függenek. Erre a legelterjedtebb megoldás a magic bitboard technika~\cite{CPWMagic}: a releváns foglaltsági bitek egy előre megkeresett magic konstanssal szorozva és eltolva egy tömbindexet adnak, így a támadási halmaz egyetlen táblázat-kiolvasással megkapható.
+
+Az állások gyors azonosítására a Zobrist-hash~\cite{Zobrist70} szolgál: minden (bábu, mező) párhoz, a lépésjoghoz, a sáncjogokhoz és az en passant oszlophoz egy-egy véletlen 64 bites számot rendelünk, és az állás kulcsa ezek XOR-ja. Lépéskor a kulcs inkrementálisan, néhány XOR-ral frissíthető. A kulcs az ismétlésfigyeléshez és a transzpozíciós táblához is használható.
+
+A lépésgenerátor helyességét a perft (performance test) módszerrel szokás ellenőrizni: adott mélységig megszámoljuk az összes szabályos lépéssorozat végállását, és az eredményt ismert referenciaértékekkel vetjük össze~\cite{CPWPerft}.
+
+\section{Keresés}
+
+A kétszemélyes játékok klasszikus keresőeljárása a minimax, illetve ennek negamax alakja (amennyiben a két félnek a szabályai szimmetrikusak). Az alfa-béta vágás~\cite{Knuth75} ugyanazt az eredményt adja, mint a minimax, de jó lépésrendezés esetén a vizsgált csomópontok száma nagyjából a négyzetgyökére csökken. Erre az alapra épülnek a modern motorok további technikái:
+
+\begin{itemize}
+	\item \emph{Iteratív mélyítés:} a motor egyre nagyobb mélységgel keres, és az előző iteráció eredményét a lépésrendezéshez és az időkezeléshez használja.
+	\item \emph{Transzpozíciós tábla (TT):} a már kiértékelt állások eredményét Zobrist-kulccsal indexelt hash-táblában tárolja~\cite{CPWTT}.
+	\item \emph{Principal Variation Search (PVS):} a legjobbnak vélt lépés után a többit csak nulla szélességű ablakkal ellenőrzi.
+	\item \emph{Nyugalmi keresés} (\emph{quiescence search}): a horizont-effektus elkerülésére a levélcsomópontokban az ütéseket tovább vizsgálja.
+	\item \emph{Vágások és redukciók:} Null-Move pruning, Late Move reduction (LMR), futility, razoring jellegű vágások~\cite{CPWPruning}.
+	\item \emph{Lépésrendezés:} TT-move, MVV-LVA, Static Exchange Evaluation (SEE), killer move, move history, counter move history.
+	\item \emph{Párhuzamosítás:} a Lazy SMP eljárásban több szál keresi ugyanazt a fát, közös transzpozíciós táblán keresztül osztva meg az eredményeket~\cite{CPWLazySMP}.
+\end{itemize}
+
+\section{Állásértékelés: kézzel írt függvénytől az NNUE-ig}
+
+Hagyományosan az állásértékelő függvény kézzel hangolt tagok összege: anyagérték, bábu-mező táblák, mobilitás, gyalogszerkezet, királybiztonság stb. 2018-ban Yu Nasu bemutatta az NNUE (Efficiently Updatable Neural Network) architektúrát~\cite{Nasu18}, amelyet 2020-ban a Stockfish is átvett. Az NNUE első rétege nagyon széles, de ritka bemenetű: a bemeneti jellemzők (például ,,saját király a g1-en, ellenséges huszár f6-on'') egy lépés hatására csak néhány helyen változnak, így az első réteg kimenete (az akkumulátor) lépésenként inkrementálisan frissíthető. Ettől lesz az értékelés elég gyors ahhoz, hogy a keresés minden csomópontjában használható legyen.
+
+A motor két hálót is használ: a régebbi \emph{HalfKP} formátumú Stockfish-hálót a nyílt forrású \texttt{nnue-probe} könyvtáron~\cite{NnueProbe} keresztül, valamint egy újabb, \emph{HalfKAv2\_hm} formátumú hálót~\cite{NnuePytorch}.
+
+\section{UCI protokoll}
+
+A UCI~\cite{UCI} szöveges, soronkénti protokoll, amelyen keresztül egy grafikus felület (pl. Arena, Cute Chess, Lichess-bot) a motor standard bemenetére és kimenetére írva vezérli a motort. A legfontosabb parancsok: \texttt{uci} (azonosítás, válasz: \texttt{uciok}), \texttt{isready} (\texttt{readyok}), \texttt{ucinewgame}, \texttt{position startpos|fen \ldots{} moves \ldots}, \texttt{go} (paraméterei: \texttt{wtime}, \texttt{btime}, \texttt{winc}, \texttt{binc}, \texttt{movetime}), \texttt{stop} és \texttt{quit}. A motor a keresés végén \texttt{bestmove} sorral válaszol.
+
+\section{Hasonló alkotások}
+
+A legerősebb nyílt forrású motor a Stockfish~\cite{Stockfish}, amely a NNUE-t a fent vázolt keresési technikák igen kifinomult változataival kombinálja. Tündérsakk-változatok tekintetében a Fairy-Stockfish~\cite{FairyStockfish} a meghatározó: ez a Stockfish olyan elágazása, amely konfigurációs fájlból tetszőleges bábukat és szabályokat képes betölteni. Ennek a motor célja egy áttekinthető, mérésekkel alátámasztott, saját kódbázis volt, amelybe a tündérbábuk támogatása kis, jól körülhatárolt módosításokkal illeszthető.

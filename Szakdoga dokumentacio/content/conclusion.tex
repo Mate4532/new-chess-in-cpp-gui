@@ -1,0 +1,25 @@
+%----------------------------------------------------------------------------
+\chapter{Összefoglalás és továbbfejlesztési lehetőségek}\label{chap:conclusion}
+%----------------------------------------------------------------------------
+
+\section{Az elvégzett munka értékelése}
+
+A feladatkiírás minden pontját teljesítettem:
+\begin{itemize}
+	\item \emph{FIDE-szabályok és tündérsakk:} a motor a klasszikus szabályokat teljes egészében megvalósítja (sáncolás, en passant, átváltozás, ismétlés, ötvenlépéses szabály, elégtelen anyag), a tündérsakk alapelveit és az Amazon bábut \aref{chap:rules}.~fejezet mutatja be.
+	\item \emph{Architektúra és UCI:} a rétegzett felépítésnek köszönhetően ugyanaz a motor fut konzolos UCI-kiszolgálóként és grafikus felülettel; a keresők egy közös interfész mögött cserélhetők és egymás ellen futtathatók.
+	\item \emph{Klasszikus és új bábuk:} az Amazon sakk változat a lépésgenerálástól az értékelésig minden réteget érint, mégis néhány jól körülhatárolt módosítással illeszkedett, és a klasszikus játék működését bizonyíthatóan nem változtatta meg.
+	\item \emph{Grafikus felület:} a Qt-alapú felület négy nehézségi szintet, sakkórát, visszavonást, visszajátszást és változatválasztást kínál.
+	\item \emph{Mérések:} a lépésgenerálás helyességét perft-tesztek, a döntéshozatal hatékonyságát taktikai feladatok, több mint tizenkétezer verziók közötti mérőjátszma, valamint a korlátozott Stockfish elleni mérés igazolja, amely szerint a motor ereje kb. 3100 Elo a CCRL blitz skálán.
+\end{itemize}
+
+A legfontosabb tanulság a mérésvezérelt fejlesztés értéke volt. Több, papíron ígéretes ötlet (pl. a sakk-kiterjesztés) a mérésekben nem hozott javulást, míg más, látszólag apró változtatások (zármentes transzpozíciós tábla) jelentős erősödést okoztak. Automatikus verziózás és sok száz játszmás mérések nélkül ezek a döntések csak találgatások lettek volna.
+
+\section{Továbbfejlesztési lehetőségek}
+
+\begin{itemize}
+	\item \emph{Általános tündérbábu-leírás:} jelenleg az Amazon kódba épített bábutípus. A következő lépés egy Betza-jelölésen alapuló, konfigurálható bábuleírás lehetne, amelyből a lépésgenerátor és a támadásszámítás automatikusan felépül, így új bábuk újrafordítás nélkül is felvehetők.
+	\item \emph{Saját NNUE tanítása:} az Amazon értékét a motor jelenleg egy rögzített, $+300$ centigyalogos korrekcióval becsüli. Önjátszmákon tanított, az Amazont külön bemenetként kezelő háló pontosabb értékelést adhatna.
+	\item \emph{UCI-opciók:} a hash-méret, a szálszám és a változat UCI \texttt{setoption} paranccsal is állíthatóvá tehető, és támogatható a \texttt{go depth}, \texttt{go infinite} és \texttt{ponder} mód.
+	\item \emph{Pontosabb erősségmérés:} a Stockfish elleni mérést érdemes lenne a kalibráció időkontrolljával (120~s + 1~s), több szálon és több játszmával megismételni, valamint az Amazon változatban is elvégezni (pl. a Fairy-Stockfish ellen).
+\end{itemize}

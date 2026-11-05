@@ -1,0 +1,79 @@
+%----------------------------------------------------------------------------
+\chapter{Szoftverarchitektúra és UCI kommunikációs réteg}\label{chap:architecture}
+%----------------------------------------------------------------------------
+
+\section{Áttekintés}
+
+A rendszer C++20 nyelven készült, és két tárolóban él. A backend egy konzolos projekt, amely a motort, a UCI-kiszolgálót és a robot-robot elleni mérőkörnyezetet tartalmazza. A GUI projekt ugyanazokat a motorforrásokat egy grafikus felülettel egészíti ki. A két tároló motorrésze forrásszinten megegyezik, így minden kereső- és lépésgenerátor-fejlesztés mindkét programban elérhető. A rétegeket \aref{fig:architecture}.~ábra mutatja.
+
+\begin{figure}[!ht]
+	\centering
+	\begin{tikzpicture}[
+		box/.style={draw, rounded corners=2pt, align=center, font=\footnotesize, minimum height=8mm, inner sep=3pt, fill=white},
+		layer/.style={draw, dashed, rounded corners=4pt, inner sep=5pt},
+		arr/.style={-{Stealth[length=2mm]}, thick}
+	]
+		\node[box, fill=blue!8] (scene) {ChessScene /\\ ChessView};
+		\node[box, fill=blue!8, right=4mm of scene] (info) {InfoView};
+		\node[box, fill=blue!8, right=4mm of info] (panel) {BoardAndPlayer-\\Panel};
+		\node[box, fill=blue!8, right=4mm of panel] (settings) {Settings-\\Dialog};
+		\node[box, fill=blue!18, below=8mm of info, xshift=12mm, minimum width=50mm] (vm) {ChessViewModel};
+		\node[box, fill=green!12, left=12mm of vm] (uci) {UCI-kiszolgáló\\(konzol)};
+		\node[box, fill=orange!15, below=8mm of vm, minimum width=50mm] (bm) {BoardManager\\{\scriptsize (játékvezérlés, órák, szimuláció)}};
+		\node[box, fill=orange!8, below left=9mm and 2mm of bm] (board) {Board, MoveGenerator,\\Zobrist, RepetitionTable};
+		\node[box, fill=orange!8, below right=9mm and 2mm of bm] (isearch) {ISearcher\\+ BotFactory};
+		\node[box, fill=red!10, below=8mm of isearch, xshift=-14mm] (imp) {ImprovedSearcher};
+		\node[box, fill=red!10, right=3mm of imp] (old) {OldSearcher};
+		\node[box, fill=gray!15, below=8mm of board] (nnue) {NNUE: nnue-probe\\(HalfKP), HalfKAv2};
+		\node[box, fill=gray!15, left=6mm of nnue] (util) {VersionControl,\\ResultManager, PGN};
+		\begin{scope}[on background layer]
+			\node[layer, fit=(scene)(settings), label={[font=\scriptsize]above:Megjelenítés (Qt)}] {};
+		\end{scope}
+		\draw[arr] (scene) -- (vm); \draw[arr] (info) -- (vm); \draw[arr] (panel) -- (vm); \draw[arr] (settings) -- (vm);
+		\draw[arr] (vm) -- (bm); \draw[arr] (uci) |- (bm);
+		\draw[arr] (bm) -- (board); \draw[arr] (bm) -- (isearch);
+		\draw[arr] (isearch) -- (imp); \draw[arr] (isearch) -- (old);
+		\draw[arr] (imp) -- (nnue); \draw[arr] (bm) -| (util);
+	\end{tikzpicture}
+	\caption{A rendszer rétegei. A kék elemek csak a GUI projektben, a zöld csak a konzolos backendben léteznek, a többi közös.}
+	\label{fig:architecture}
+\end{figure}
+
+\section{Rétegek és felelősségek}
+
+\begin{itemize}
+	\item \textbf{Szabályréteg} (\texttt{Board}, \texttt{MoveGenerator}, \texttt{Zobrist}, \texttt{RepetitionTable}): az állás tárolása, a pszeudolegális lépések előállítása, a lépés végrehajtása és visszavonása, a sakk-, matt-, patt- és döntetlenfigyelés. Ez a réteg semmit sem tud a keresésről és a felületről.
+	\item \textbf{Játékvezérlő} (\texttt{BoardManager}): egy játszma teljes állapotát kezeli: a sakkórákat, a robotok létrehozását és időbeállításait, a lépések visszavonását, a játszma végének felismerését, a megnyitáskönyvből indított robot-robot szimulációt és a UCI-hurkot.
+	\item \textbf{Keresők} (\texttt{ISearcher} interfész): minden robot ugyanazt az interfészt valósítja meg (\texttt{setState}, \texttt{GetRobotMove}, \texttt{setDifficulty}, időkezelő függvények, \texttt{stopSearch}). A \texttt{BotFactory} típus alapján példányosítja az aktuális (\texttt{ImprovedSearcher}) vagy a referenciaként megtartott korábbi (\texttt{OldSearcher}) keresőt. A két kereső külön névtérben él, így egyszerre, egymás ellen is futtathatók.
+	\item \textbf{Segédmodulok}: a \texttt{VersionControl} a keresők forráskódjáról SHA-256 lenyomatot készít, és minden új kódállapotot \texttt{vN} néven archivál; a \texttt{ResultManager} a robot-robot játszmák eredményét és PGN-jét verziópáronként menti; a \texttt{PGNFormatter} a lépéseket szabványos algebrai jelölésre (SAN) alakítja.
+	\item \textbf{Megjelenítés} (csak GUI): MVVM jellegű felépítés, ahol a \texttt{ChessViewModel} közvetít a Qt-nézetek és a \texttt{BoardManager} között (részletesen \aref{chap:gui}.~fejezet).
+\end{itemize}
+
+A beállításokat egyszerű adatszerkezetek (\texttt{RobotSettings}, \texttt{BoardSettings}, \texttt{TimeSettings}, \texttt{VariantSettings}) hordozzák; ezek \texttt{operator!=} műveletével a nézetmodell pontosan eldönti, hogy egy változtatás új játszmát igényel-e, vagy elég a meglévőt frissíteni.
+
+\section{Szálkezelés}
+
+A keresés mindig külön szálon fut, hogy a felület és a sakkóra ne akadjon meg. A GUI a robot lépését QThread-ben számolja, és az eredményt sorba állított jelzéssel juttatja vissza a fő szálra; egy keresésazonosító biztosítja, hogy egy időközben megszakított (pl. visszavont) keresés eredménye ne kerüljön a táblára. Maga a kereső további segédszálakat indíthat (Lazy SMP, \aref{sec:lazysmp}.~szakasz). A tömeges robot-robot szimuláció során minden szál saját \texttt{BoardManager} példánnyal és saját robotokkal dolgozik, csak a statisztika összesítése és a konzolkimenet közös, mutex-szel védve.
+
+\section{Verziókezelés és mérési infrastruktúra}\label{sec:versioning}
+
+A fejlesztés egyik legfontosabb eszköze az automatikus verziózás volt. Robot-robot szimuláció indításakor a \texttt{VersionControl} kiszámítja mindkét kereső forráskönyvtárának hash-ét, ha ilyen kódállapot még nem volt, a forrásokat \texttt{generatedBotVersions/<kereső>/vN/src} alá másolja. Az eredmények \texttt{botvsbotresults/<kereső1>-<kereső2>/<kereső1\_vN>-<kereső2\_vM>/} mappába kerülnek: a \texttt{results.txt} az összesített győzelem/döntetlen/vereség számokat, a \texttt{Matches} alkönyvtár pedig eredmény szerint csoportosítva minden játszma PGN-jét tartalmazza. Így minden mérés utólag is visszakereshető és megismételhető.
+
+A szimuláció a 22\,234 különböző állást tartalmazó megnyitáskönyvből (assets/openings.txt) véletlenszerű kezdőállást választ, és minden kezdőállásból két játszmát játszat, színcserével. Ez kiszűri a megnyitásválasztásból és a világos kezdés előnyéből adódó torzítást.
+
+\section{A UCI kommunikációs réteg}\label{sec:uci}
+
+A konzolos program UCI-kiszolgálóként indul (\texttt{BoardManager::runUCIService}). A szöveges parancsokat soronként olvassa, és az első szó alapján dolgozza fel; a lépések UCI-formátumú (pl. \texttt{e7e8q}) szövegét a \texttt{UCIParsing} alakítja belső lépéssé és vissza. A \texttt{go} parancs fix idős (\texttt{movetime}) és órás (\texttt{wtime}/\texttt{btime}/\texttt{winc}/\texttt{binc}) módot is ismer; ez utóbbit a robot időkezelője (\aref{sec:time}.~szakasz) használja fel. Egy rövid, valódi munkamenet:
+
+\begin{lstlisting}[caption={UCI munkamenet (bemenet és a motor válaszai)}, label={lst:uci}]
+> uci                                   < id name <bot's name>
+                                        < id author <name>
+                                        < uciok
+> isready                               < readyok
+> position startpos moves e2e4 e7e5
+> go movetime 1000                      < bestmove g1f3
+> position fen 6k1/5ppp/8/8/8/8/5PPP/3Q2K1 w - - 0 1
+> go movetime 500                       < bestmove d1d8
+\end{lstlisting}
+
+A protokollnak köszönhetően a motor bármely UCI-kompatibilis felületről (pl. Cute Chess, általam haszsnált környezet) használható, és más motorok ellen is versenyeztethető.

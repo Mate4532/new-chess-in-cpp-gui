@@ -1,0 +1,21 @@
+%----------------------------------------------------------------------------
+\chapter{\bevezetes}
+%----------------------------------------------------------------------------
+
+A sakk évtizedek óta a mesterséges intelligencia kutatásának egyik kedvelt terepe: szabályai pontosan definiáltak, állapottere azonban olyan hatalmas, hogy a teljes játékfa bejárása gyakorlatilag lehetetlen. Claude Shannon már 1950-ben megfogalmazta a számítógépes sakk alapproblémáját, és megbecsülte, hogy egy átlagos játszma lehetséges folytatásainak száma nagyságrendileg $10^{120}$~\cite{Shannon50}. Egy erős sakkmotor ezért nem brute-force kereséssel, hanem jól megválasztott vágási és értékelési heurisztikákkal dolgozik.
+
+A szakdolgozatom célja egy saját fejlesztésű sakkmotor megtervezése és megvalósítása volt, amely
+\begin{itemize}
+	\item a klasszikus (FIDE) szabályok szerint játszik,
+	\item az iparági szabványnak tekinthető UCI (Universal Chess Interface) protokollon keresztül más programokkal is együttműködik,
+	\item saját, interaktív grafikus felhasználói felülettel rendelkezik,
+	\item és úgy épül fel, hogy új, nem szabványos (tündérsakk) bábukkal is bővíthető legyen.
+\end{itemize}
+
+A tündérsakk-kiterjesztés bemutatására az Amazon bábut választottam, amely a vezér és a huszár lépésmódját egyesíti. Egy ilyen bábu bevezetése nemcsak a lépésgenerátort érinti, hanem a cserék kiértékelését, a lépésrendezést és az állásértékelést is, így jól megmutatja, mennyire általános egy motor architektúrája.
+
+A munka két forráskód-tárolóban készült. A backend a motor konzolos változata, ebben fut a UCI és a robot-robot elleni tömeges mérés. A GUI projekt ugyanezt a motort egy grafikus felülettel egészíti ki. A fejlesztés 2025 decemberében indult, a motor 2026 áprilisától kezdve mért, verziózott lépésekben fejlődött: minden módosított keresőt egy korábbi verzió ellen több ezer játszmában teszteltem, és csak a bizonyítottan erősebb változatot tartottam meg.
+
+\section*{A dolgozat felépítése}
+
+\Aref{chap:rules}. fejezet bemutatja a vonatkozó FIDE-szabályokat és a tündérsakk bábuk alapelveit. \Aref{chap:background}. fejezet a sakkmotorok szakirodalmi hátterét foglalja össze. \Aref{chap:architecture}. fejezet a szoftverarchitektúrát és a UCI kommunikációs réteget, \aref{chap:movegen}. fejezet a táblareprezentációt és a lépésgenerálást ismerteti. \Aref{chap:search}. fejezet a keresőmotor összes funkcióját és optimalizációját tárgyalja, verziók szerint. \Aref{chap:gui}. fejezet a grafikus felületet, \aref{chap:amazon}. fejezet az Amazon bábuval bővített játékváltozatot mutatja be. \Aref{chap:measurements}. fejezetben mérésekkel igazolom a lépésgenerálás helyességét és hatékonyságát, valamint a motor fejlődését. A dolgozatot az eredmények értékelése és a továbbfejlesztési lehetőségek zárják.
