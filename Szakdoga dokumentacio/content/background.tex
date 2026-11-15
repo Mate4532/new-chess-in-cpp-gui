@@ -14,17 +14,45 @@ A lépésgenerátor helyességét a perft (performance test) módszerrel szokás
 
 \section{Keresés}
 
-A kétszemélyes játékok klasszikus keresőeljárása a minimax, illetve ennek negamax alakja (amennyiben a két félnek a szabályai szimmetrikusak). Az alfa-béta vágás~\cite{Knuth75} ugyanazt az eredményt adja, mint a minimax, de jó lépésrendezés esetén a vizsgált csomópontok száma nagyjából a négyzetgyökére csökken. Erre az alapra épülnek a modern motorok további technikái:
+A kétszemélyes játékok klasszikus keresőeljárása a minimax, illetve ennek negamax alakja (amennyiben a két félnek a szabályai szimmetrikusak). Az alfa-béta vágás~\cite{Knuth75} ugyanazt az eredményt adja, mint a minimax, de jó lépésrendezés esetén a vizsgált csomópontok száma nagyjából a négyzetgyökére csökken. Erre az alapra épülnek a modern motorok további technikái.
 
+\subsection{A keresés kerete}
+
+\paragraph{Iteratív mélyítés.} A motor 1-es mélységtől kezdve egyre nagyobb mélységgel keres, amíg az ideje el nem fogy. Minden befejezett iteráció legjobb lépése és értéke megmarad, így egy félbeszakított iteráció sem okoz rossz döntést, az előző iteráció eredménye pedig a következő lépésrendezését, ablakát és az időkezelést segíti.
+
+\paragraph{Fail-hard és fail-soft alfa-béta.} A fail-hard változat az $[\alpha, \beta]$ ablakon kívül eső értékeket az ablak határára vágja, a fail-soft változat viszont ezeket is a lehető legpontosabban adja vissza. Ez a transzpozíciós tábla bejegyzéseit és az aspirációs ablak újrakeresését is pontosabbá teszi.
+
+\paragraph{Principal Variation Search (PVS).} Egy csomópont első (legjobbnak vélt) lépését teljes ablakkal, a többit nulla szélességű ablakkal ($[\alpha, \alpha+1]$) keresi, ami csak azt dönti el, hogy a lépés jobb-e az eddigi legjobbnál. Ha egy későbbi lépés mégis jobbnak bizonyul, teljes ablakkal újrakeresi. Jó lépésrendezés esetén a nulla ablakos keresések sokkal olcsóbbak.
+
+\paragraph{Aspirációs ablak.} A gyökérkeresés nem $(-\infty, +\infty)$ ablakkal indul, hanem az előző iteráció értéke körüli szűk ablakkal. Ha az eredmény az ablakon kívül esik, a kereső a megfelelő irányban kiszélesíti az ablakot, és újrakeres.
+
+\paragraph{Nyugalmi keresés (\emph{quiescence search}).} A mélységkorlát elérésekor a kereső nem azonnal értékel, mert egy félbehagyott cserénél a statikus érték félrevezető lenne (horizont-effektus). Ehelyett csak az ütéseket (és az erős átváltozásokat) vizsgálja tovább, amíg az állás nyugodt nem lesz. A lépő fél ,,állva maradhat'': ha a statikus értékelés már eléri $\beta$-t, nem kell tovább keresni. A delta-vágás kihagyja azt az ütést, amely még a legnagyobb lehetséges nyereséggel sem érné el $\alpha$-t.
+
+\paragraph{Transzpozíciós tábla (TT).} Különböző lépéssorrendek gyakran ugyanahhoz az álláshoz vezetnek. A TT a már kiértékelt állások eredményét (érték, legjobb lépés, mélység, korlát típusa) Zobrist-kulccsal indexelt hash-táblában tárolja~\cite{CPWTT}, így ezeket nem kell újra keresni, a tárolt lépés pedig a lépésrendezést segíti.
+
+\subsection{Lépésrendezés}
+
+Az alfa-béta hatékonysága szinte teljesen a lépésrendezésen múlik: minél korábban kerül sorra a vágást okozó lépés, annál kevesebb testvércsomópontot kell megvizsgálni. Az elterjedt heurisztikák:
+
+\paragraph{MVV-LVA és SEE.} Az ütéseket elsősorban az ütött bábu értéke, másodsorban az ütő bábu olcsósága szerint rendezik (Most Valuable Victim -- Least Valuable Attacker). Ha az ütő értékesebb az áldozatnál, a statikus cserekiértékelés (SEE)~\cite{CPWSEE} dönti el, hogy a cserelánc a végén nyereséges-e: a mező összes támadóját a legolcsóbbtól kezdve felváltva üti le, a röntgentámadásokat (pl. bástya a bástya mögött) is figyelembe véve.
+
+\paragraph{Gyilkos lépések és ellenlépés.} Egy csendes lépés, amely egy testvércsomópontban vágást okozott, valószínűleg itt is jó: ezt féllépésenként néhány gyilkos (\emph{killer}) lépés tárolja. Az ellenlépés-heurisztika (\emph{countermove}) az ellenfél előző lépésére adott legjobb választ jegyzi meg.
+
+\paragraph{Történeti heurisztika.} Minden csendes lépés (szín, honnan, hová) kap egy pontszámot, amely vágás esetén nő, a vágás előtt kipróbált, sikertelen csendes lépéseknél pedig csökken. A gravitációs frissítés a pontszámot korlátok között tartja, így a régi információ fokozatosan elévül.
+
+\subsection{Vágások, redukciók és kiterjesztések}
+
+A modern motorok a játékfa jelentős részét heurisztikusan vágják le vagy csökkentett mélységgel vizsgálják~\cite{CPWPruning}:
 \begin{itemize}
-	\item \emph{Iteratív mélyítés:} a motor egyre nagyobb mélységgel keres, és az előző iteráció eredményét a lépésrendezéshez és az időkezeléshez használja.
-	\item \emph{Transzpozíciós tábla (TT):} a már kiértékelt állások eredményét Zobrist-kulccsal indexelt hash-táblában tárolja~\cite{CPWTT}.
-	\item \emph{Principal Variation Search (PVS):} a legjobbnak vélt lépés után a többit csak nulla szélességű ablakkal ellenőrzi.
-	\item \emph{Nyugalmi keresés} (\emph{quiescence search}): a horizont-effektus elkerülésére a levélcsomópontokban az ütéseket tovább vizsgálja.
-	\item \emph{Vágások és redukciók:} Null-Move pruning, Late Move reduction (LMR), futility, razoring jellegű vágások~\cite{CPWPruning}.
-	\item \emph{Lépésrendezés:} TT-move, MVV-LVA, Static Exchange Evaluation (SEE), killer move, move history, counter move history.
-	\item \emph{Párhuzamosítás:} a Lazy SMP eljárásban több szál keresi ugyanazt a fát, közös transzpozíciós táblán keresztül osztva meg az eredményeket~\cite{CPWLazySMP}.
+	\item \emph{Null-lépés vágás:} a lépő fél ,,passzol'', és csökkentett mélységgel keres. Ha az ellenfél így sem tudja $\beta$ alá vinni az értéket, az állás olyan jó, hogy a csomópont elvágható. Zugzwang-veszélyes (pl. gyalog-) végjátékokban nem alkalmazható.
+	\item \emph{Futility-jellegű vágások:} kis hátralévő mélységnél, ha a statikus értékelés egy ráhagyással is $\beta$ felett (fordított futility) vagy $\alpha$ alatt (futility, razoring) marad, a csomópont vagy a csendes lépései kihagyhatók.
+	\item \emph{Késői lépések vágása és redukciója (LMR):} a rendezés végén álló csendes lépések nagy valószínűséggel rosszak, ezért a kereső egy idő után kihagyja, vagy csökkentett mélységgel vizsgálja őket, és csak akkor keresi újra teljes mélységgel, ha meglepően jónak bizonyulnak.
+	\item \emph{Szinguláris kiterjesztés:} ha a TT-lépés minden más lépésnél jelentősen jobb, akkor egyetlen jó lépés van, ezért azt a kereső mélyebben vizsgálja.
 \end{itemize}
+
+\subsection{Párhuzamosítás}
+
+A Lazy SMP eljárásban~\cite{CPWLazySMP} több szál keresi ugyanazt a fát, közös transzpozíciós táblán keresztül osztva meg az eredményeket. Mivel a szálak kissé eltérő sorrendben haladnak, egymás számára hasznos TT-bejegyzéseket hagynak hátra, így a fő szál gyorsabban ér el egy adott mélységet. Az eljárás egyszerűsége ellenére a bonyolultabb, munkamegosztáson alapuló módszerekkel versenyképes.
 
 \section{Állásértékelés: kézzel írt függvénytől az NNUE-ig}
 

@@ -29,14 +29,13 @@ Az összetett bábuk két vagy több atom unióját mozgatják. A legismertebbek
 	\item {Amazon} (QN): vezér + huszár.
 \end{itemize}
 
-\begin{figure}[!ht]
-	\centering
-	\begin{tikzpicture}[scale=0.55]
+\newcommand{\fairyboard}[3]{%
+	\begin{tikzpicture}[scale=0.45]
 		\foreach \x in {0,...,7} \foreach \y in {0,...,7} {
 			\pgfmathparse{mod(\x+\y,2)==0 ? "brown!45" : "brown!12"}
 			\fill[\pgfmathresult] (\x,\y) rectangle ++(1,1);
 		}
-		\foreach \dx/\dy in {1/0,-1/0,0/1,0/-1,1/1,1/-1,-1/1,-1/-1} {
+		\foreach \dx/\dy in {#1} {
 			\foreach \k in {1,...,7} {
 				\pgfmathsetmacro{\px}{3+\k*\dx}\pgfmathsetmacro{\py}{3+\k*\dy}
 				\ifdim \px pt>-1pt \ifdim \px pt<8pt \ifdim \py pt>-1pt \ifdim \py pt<8pt
@@ -47,13 +46,21 @@ Az összetett bábuk két vagy több atom unióját mozgatják. A legismertebbek
 		\foreach \dx/\dy in {1/2,2/1,-1/2,-2/1,1/-2,2/-1,-1/-2,-2/-1} {
 			\fill[red!75!black] (3+\dx+0.5,3+\dy+0.5) circle (0.22);
 		}
-		\node[font=\bfseries\large] at (3.5,3.5) {A};
+		\node[font=\bfseries] at (3.5,3.5) {#2};
 		\draw[thick] (0,0) rectangle (8,8);
 		\foreach \f [count=\i from 0] in {a,...,h} \node[font=\scriptsize] at (\i+0.5,-0.4) {\f};
 		\foreach \r in {1,...,8} \node[font=\scriptsize] at (-0.4,\r-0.5) {\r};
-	\end{tikzpicture}
-	\caption{Az Amazon lépései a d4 mezőről: kék a vezérszerű , piros a huszárszerű célmezők.}
+		\node[font=\small] at (4,-1.3) {#3};
+	\end{tikzpicture}%
+}
+
+\begin{figure}[!ht]
+	\centering
+	\fairyboard{1/1,1/-1,-1/1,-1/-1}{BN}{Arkangyal}\hspace{6mm}
+	\fairyboard{1/0,-1/0,0/1,0/-1}{RN}{Kancellár}\hspace{6mm}
+	\fairyboard{1/0,-1/0,0/1,0/-1,1/1,1/-1,-1/1,-1/-1}{QN}{Amazon}
+	\caption{Az összetett tündérbábuk lépései a d4 mezőről: kék a csúszó (futó-, bástya-, illetve vezérszerű), piros a huszárszerű célmezők.}
 	\label{fig:amazonMoves}
 \end{figure}
 
-Az Amazon (\ref{fig:amazonMoves}.~ábra) üres táblán egy középső mezőről akár 35 mezőt is elérhet (27 vezérszerű + 8 huszárugrás), szemben a vezér 27 mezőjével. A huszárugrás az egyetlen olyan támadási forma, amelyet a vezér nem tud kivédeni közbeállással, ezért az Amazon egyedül is mattot adhat a magára hagyott királynak. Mivel a király ilyen bábu ellen különösen sebezhető, az Amazon jelentősen felülmúlja a vezért; a szakirodalom értékét általában 12--13 gyalogegységre teszi~\cite{ChessVariantsAmazon}. A motorban az Amazon a vezér helyén áll, és az ilyen változatban a vezér teljesen eltűnik a játékból: a gyalog is Amazonná változik a vezér helyett.
+Az Amazon (\ref{fig:amazonMoves}.~ábra, jobbra) üres táblán egy középső mezőről akár 35 mezőt is elérhet (27 vezérszerű + 8 huszárugrás), szemben a vezér 27 mezőjével. A huszárugrás az egyetlen olyan támadási forma, amelyet a vezér nem tud kivédeni közbeállással, ezért az Amazon egyedül is mattot adhat a magára hagyott királynak. Mivel a király ilyen bábu ellen különösen sebezhető, az Amazon jelentősen felülmúlja a vezért; a szakirodalom értékét általában 12--13 gyalogegységre teszi~\cite{ChessVariantsAmazon}. A motorban az Amazon a vezér helyén áll, és az ilyen változatban a vezér teljesen eltűnik a játékból: a gyalog is Amazonná változik a vezér helyett.

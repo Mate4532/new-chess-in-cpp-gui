@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.12) (preloaded format=xelatex 2026.10.26)  29 OCT 2026 19:00
+This is XeTeX, Version 3.141592653-2.6-0.999997 (MiKTeX 25.12) (preloaded format=xelatex 2026.10.26)  15 NOV 2026 18:21
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -25,8 +25,8 @@ File: size11.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
 \bibindent=\dimen148
 )
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/pgf/frontendlayer\tikz.
+sty (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/pgf/basiclayer\pgf.
 sty
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/pgf/basiclayer\pgf.sty
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/pgf/utilities\pgfrcs.st
 y
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfutil
@@ -40,24 +40,21 @@ y
 \pgfutil@abb=\box53
 )
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfrcs.
-code.tex
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/pgf\pgf.revision.tex)
+code.tex (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/pgf\pgf.revi
+sion.tex)
 Package: pgfrcs 2025-08-29 v3.1.11a (3.1.11a)
 ))
 Package: pgf 2025-08-29 v3.1.11a (3.1.11a)
 
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/pgf/basiclayer\pgfcore.
-sty
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.sty
+sty (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.s
+ty
 Package: graphicx 2024/12/31 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.sty
 Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
 \KV@toks@=\toks18
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics.sty
 Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.sty
 Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
 )
@@ -66,7 +63,6 @@ fg
 File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
 )
 Package graphics Info: Driver file: xetex.def on input line 106.
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\xetex.def
 File: xetex.def 2025/11/01 v5.0p Graphics/color driver for xetex
 ))
@@ -138,10 +134,8 @@ File: pgfsyssoftpath.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer\pgfsy
 sprotocol.code.tex
 File: pgfsysprotocol.code.tex 2025-08-29 v3.1.11a (3.1.11a)
-))
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
+)) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
 Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\color.cfg
 File: color.cfg 2016/01/02 v1.6 sample color configuration
 )
@@ -322,8 +316,8 @@ y
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/pgf/utilities\pgfkeys.s
 ty
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfkeys
-.code.tex))
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/pgf/math\pgfmath.sty
+.code.tex)) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/pgf/math\pg
+fmath.sty
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmath.code
 .tex))
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgffor.
@@ -411,8 +405,8 @@ File: tikzlibrarybackgrounds.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/pgf/frontendlayer/tik
 z/libraries\tikzlibrarybabel.code.tex
 File: tikzlibrarybabel.code.tex 2025-08-29 v3.1.11a (3.1.11a)
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/pgfplots\pgfplots.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/pgfplots\pgfplots.sty
+
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/pgfplots\pgfplots.rev
 ision.tex)
 Package: pgfplots 2021/05/15 v1.18.1 Data Visualization (1.18.1)
@@ -544,20 +538,18 @@ aryplotmarks.code.tex
 File: pgflibraryplotmarks.code.tex 2025-08-29 v3.1.11a (3.1.11a)
 )))
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/pgfplots/libs\tikzlib
-rarypgfplots.colormaps.code.tex) (include/packages.tex
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/iftex\ifxetex.sty
+rarypgfplots.colormaps.code.tex) (include/packages.tex (C:\Users\szeke\AppData\
+Local\Programs\MiKTeX\tex/generic/iftex\ifxetex.sty
 Package: ifxetex 2019/10/25 v0.7 ifxetex legacy package. Use iftex instead.
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.sty
 Package: iftex 2024/12/12 v1.0g TeX engine tests
-))
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/iftex\ifluatex.sty
+)) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/iftex\ifluatex.sty
 Package: ifluatex 2019/10/25 v1.5 ifluatex legacy package. Use iftex instead.
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec.sty
+
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/l3packages/xparse\xpars
-e.sty
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/l3kernel\expl3.sty
+e.sty (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/l3kernel\expl3.st
+y
 Package: expl3 2025-12-24 L3 programming layer (loader) 
 
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-xet
@@ -589,11 +581,10 @@ X
 \l__fontspec_tmpa_dim=\dimen275
 \l__fontspec_tmpb_dim=\dimen276
 \l__fontspec_tmpc_dim=\dimen277
- (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty
+(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty
 Package: fontenc 2025/07/18 v2.1d Standard LaTeX package
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec.cfg))
-) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/babel\babel.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/fontspec\fontspec.cfg
+))) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/babel\babel.sty
 Package: babel 2025/12/11 v25.17 The multilingual framework for LuaLaTeX, pdfLa
 TeX and XeLaTeX
 \babel@savecnt=\count324
@@ -613,14 +604,12 @@ LaTeX Encoding Info:    Ignoring declaration for text command \SS (encoding ?)
 on input line 2101.
 \U@D=\dimen278
 \l@unhyphenated=\language79
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/babel\xebabel.def)
 \bbl@readstream=\read3
 \bbl@dirlevel=\count325
 Package babel Info: Configuration files are deprecated, as
 (babel)             they can break document portability.
 (babel)             Reported on input line 4196.
-
 *************************************
 * Local config file bblopts.cfg used
 *
@@ -647,7 +636,7 @@ Package babel Info: Hyphen rules for 'newzealand' set to \l@ukenglish
 )
 Package babel Info: Importing font and identification data for magyar
 (babel)             from babel-hu.ini. Reported on input line 4320.
- (magyar.ldf
+(magyar.ldf
 Invalid UTF-8 byte or sequence at line 61 replaced by U+FFFD.
 Invalid UTF-8 byte or sequence at line 61 replaced by U+FFFD.
 Language: magyar 2015/11/24 v1.5c Magyar support from the babel v3.7 system
@@ -807,8 +796,8 @@ Invalid UTF-8 byte or sequence at line 5772 replaced by U+FFFD.
 Invalid UTF-8 byte or sequence at line 5784 replaced by U+FFFD.
 Invalid UTF-8 byte or sequence at line 5789 replaced by U+FFFD.
 Invalid UTF-8 byte or sequence at line 5794 replaced by U+FFFD.
-))
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amsfonts.sty
+)) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amsfonts.st
+y
 Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
 \@emptytoks=\toks37
 \symAMSa=\mathgroup4
@@ -816,25 +805,20 @@ Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
 LaTeX Font Info:    Redeclaring math symbol \hbar on input line 98.
 LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
 (Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.sty
 Package: amsmath 2025/07/09 v2.17z AMS math features
 \@mathmargin=\skip51
-
 For additional information on amsmath, use the `?' option.
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amstext.sty
 Package: amstext 2024/11/17 v2.01 AMS text
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsgen.sty
 File: amsgen.sty 1999/11/30 v2.0 generic functions
 \@emptytoks=\toks38
 \ex@=\dimen279
-))
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.sty
+)) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.sty
 Package: amsbsy 1999/11/29 v1.2d Bold Symbols
 \pmbraise@=\dimen280
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.sty
 Package: amsopn 2022/04/08 v2.04 operator names
 )
 \inf@bad=\count328
@@ -884,11 +868,9 @@ LaTeX Info: Redefining \Relbar on input line 970.
 \mathdisplay@stack=\toks42
 LaTeX Info: Redefining \[ on input line 2950.
 LaTeX Info: Redefining \] on input line 2951.
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amssymb.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amssymb.sty
 Package: amssymb 2013/01/14 v3.01 AMS font symbols
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty
 Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \heavyrulewidth=\dimen288
 \lightrulewidth=\dimen289
@@ -907,10 +889,8 @@ Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \@thisruleclass=\count342
 \@lastruleclass=\count343
 \@thisrulewidth=\dimen300
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/anysize\anysize.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/anysize\anysize.sty
 Package: anysize 1994/08/13 setting margin sizes
-
 document style option `anysize' loaded
 Michael Salzenberg, Thomas Esser, Dirk Hillbrecht
 Version 1.0, Aug 13, 1994
@@ -933,7 +913,6 @@ Package: kvdefinekeys 2019-12-19 v1.6 Define keys (HO)
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/pdfescape\pdfescape.s
 ty
 Package: pdfescape 2019/12/09 v1.15 Implements pdfTeX's escape features (HO)
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/ltxcmds\ltxcmds.sty
 Package: ltxcmds 2023-12-04 v1.26 LaTeX kernel commands for general use (HO)
 )
@@ -949,13 +928,10 @@ Package: infwarerr 2019/12/03 v1.5 Providing info/warning/error messages (HO)
 Package pdftexcmds Info: \pdf@primitive is available.
 Package pdftexcmds Info: \pdf@ifprimitive is available.
 Package pdftexcmds Info: \pdfdraftmode not found.
-))
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/hycolor\hycolor.sty
+)) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/hycolor\hycolor.sty
 Package: hycolor 2020-01-27 v1.10 Color options for hyperref/bookmark (HO)
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\nameref.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\nameref.sty
 Package: nameref 2025-06-21 v2.57 Cross-referencing by name of section
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/refcount\refcount.sty
 Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
 )
@@ -967,8 +943,7 @@ Package: gettitlestring 2019/12/15 v1.6 Cleanup title references (HO)
 Package: kvoptions 2022-06-15 v3.15 Key value format for package options (HO)
 ))
 \c@section@level=\count344
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbox.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbox.sty
 Package: etoolbox 2025/10/02 v2.5m e-TeX tools for LaTeX (JAW)
 \etb@tempcnta=\count345
 )
@@ -980,13 +955,13 @@ Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO
 \@linkdim=\dimen305
 \Hy@linkcounter=\count346
 \Hy@pagecounter=\count347
- (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\pd1enc.def
+(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\pd1enc.def
 File: pd1enc.def 2025-07-12 v7.01o Hyperref: PDFDocEncoding definition (HO)
 ) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/intcalc\intcalc.sty
 Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
 )
 \Hy@SavedSpaceFactor=\count348
- (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\puenc.def
+(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\puenc.def
 File: puenc.def 2025-07-12 v7.01o Hyperref: PDF Unicode definition (HO)
 )
 Package hyperref Info: Option `unicode' set `true' on input line 4066.
@@ -998,14 +973,12 @@ Package hyperref Info: Backreferencing OFF on input line 4215.
 Package hyperref Info: Implicit mode ON; LaTeX internals redefined.
 Package hyperref Info: Bookmarks ON on input line 4462.
 \c@Hy@tempcnt=\count349
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/url\url.sty
 \Urlmuskip=\muskip18
 Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
 )
 LaTeX Info: Redefining \url on input line 4801.
 \XeTeXLinkMargin=\dimen306
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/generic/bitset\bitset.sty
 Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
 
@@ -1029,7 +1002,6 @@ Package hyperref Info: PDF/A mode OFF on input line 6108.
 \c@Hfootnote=\count353
 )
 Package hyperref Info: Driver (autodetected): hxetex.
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hxetex.def
 File: hxetex.def 2025-07-12 v7.01o Hyperref driver for XeTeX
 \pdfm@box=\box69
@@ -1050,8 +1022,7 @@ Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 2
 84.
 )
 \Hy@SectionHShift=\skip54
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/listings\listings.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/listings\listings.sty
 \lst@mode=\count358
 \lst@gtempboxa=\box70
 \lst@token=\toks43
@@ -1064,17 +1035,14 @@ Package uniquecounter Info: New unique counter `rerunfilecheck' on input line 2
 \lst@newlines=\count362
 \lst@lineno=\count363
 \lst@maxwidth=\dimen312
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/listings\lstpatch.sty
 File: lstpatch.sty 2025/11/14 1.11b (Carsten Heinz)
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/listings\lstmisc.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/listings\lstmisc.sty
 File: lstmisc.sty 2025/11/14 1.11b (Carsten Heinz)
 \c@lstnumber=\count364
 \lst@skipnumbers=\count365
 \lst@framebox=\box71
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/listings\listings.cfg
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/listings\listings.cfg
 File: listings.cfg 2025/11/14 1.11b listings configuration
 ))
 Package: listings 2025/11/14 1.11b (Carsten Heinz)
@@ -1128,10 +1096,8 @@ Package ntheorem Info: option `amsmath' handling for `thmmarks' loaded on input
  line 1175.
 \thm@amstmpdepth=\dimen317
 \tagwidth=\dimen318
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/caption\caption.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/caption\caption.sty
 Package: caption 2023/08/05 v3.6o Customizing captions (AR)
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/caption\caption3.sty
 Package: caption3 2023/07/31 v2.4d caption3 kernel (AR)
 \caption@tempdima=\dimen319
@@ -1150,27 +1116,22 @@ Package caption Info: hungarian babel package is loaded.
 Package caption Info: hungarian babel package is loaded.
 Package caption Info: hyperref package is loaded.
 Package caption Info: listings package is loaded.
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/natbib\natbib.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/natbib\natbib.sty
 Package: natbib 2010/09/13 8.31b (PWD, AO)
 \bibhang=\skip64
 \bibsep=\skip65
 LaTeX Info: Redefining \cite on input line 694.
 \c@NAT@ctr=\count370
-))
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/tools\xspace.sty
+)) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/tools\xspace.sty
 Package: xspace 2014/10/28 v1.13 Space after command names (DPC,MH)
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/multirow\multirow.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/multirow\multirow.sty
 Package: multirow 2024/11/12 v2.9 Span multiple rows of a table
 \multirow@colwidth=\skip66
 \multirow@cntb=\count371
 \multirow@dima=\skip67
 \bigstrutjot=\dimen327
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/tools\tabularx.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/tools\tabularx.sty
 Package: tabularx 2023/12/11 v2.12a `tabularx' package (DPC)
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty
 Package: array 2025/09/25 v2.6n Tabular extension package (FMi)
 \col@sep=\dimen328
@@ -1188,16 +1149,14 @@ Package: array 2025/09/25 v2.6n Tabular extension package (FMi)
 \TX@delta=\dimen334
 \TX@cols=\count372
 \TX@ftn=\toks63
-)
-(C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/float\float.sty
+) (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/float\float.sty
 Package: float 2001/11/08 v1.3d Float enhancements (AL)
 \c@float@type=\count373
 \float@exts=\toks64
 \float@box=\box74
 \@float@everytoks=\toks65
 \@floatcapt=\box75
-)
-(include/tdk-variables.tex) (include/thesis-hu.tex) (include/preamble.tex
+) (include/tdk-variables.tex) (include/thesis-hu.tex) (include/preamble.tex
 Package hyperref Info: Option `unicode' set `true' on input line 39.
 Package hyperref Info: Option `pdfnewwindow' set `true' on input line 39.
 Package hyperref Info: Option `colorlinks' set `true' on input line 39.
@@ -1210,12 +1169,11 @@ Package hyperref Info: Option `colorlinks' set `true' on input line 39.
 \c@currtheoremctr=\count380
 \c@endtheoremctr=\count381
 \c@theorem=\count382
-)
-(thesis.aux (include/titlepage.aux) (include/declaration_HU.aux)
-(content/abstract.aux) (content/introduction.aux) (content/rules.aux)
-(content/background.aux) (content/architecture.aux) (content/movegen.aux)
-(content/search.aux) (content/gui.aux) (content/amazon.aux)
-(content/measurements.aux) (content/conclusion.aux) (content/appendices.aux))
+) (thesis.aux (include/titlepage.aux) (include/declaration_HU.aux) (content/abs
+tract.aux) (content/introduction.aux) (content/rules.aux) (content/background.a
+ux) (content/architecture.aux) (content/movegen.aux) (content/search.aux) (cont
+ent/gui.aux) (content/amazon.aux) (content/measurements.aux) (content/conclusio
+n.aux) (content/appendices.aux))
 \openout1 = `thesis.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 57.
@@ -1238,7 +1196,6 @@ LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 57.
 LaTeX Font Info:    ... okay on input line 57.
 LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 57.
 LaTeX Font Info:    ... okay on input line 57.
-
 Package pgfplots notification 'compat/show suggested version=true': you might b
 enefit from \pgfplotsset{compat=1.18} (current compat level: 1.17).
 
@@ -1317,7 +1274,6 @@ Package hyperref Info: Link coloring ON on input line 57.
 Package caption Info: Begin \AtBeginDocument code.
 Package caption Info: float package is loaded.
 Package caption Info: End \AtBeginDocument code.
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/base\report.cls
 LaTeX Info: Redefining \cal on input line 577.
 LaTeX Info: Redefining \mit on input line 578.
@@ -1326,24 +1282,20 @@ Package babel Info: 'magyar' activates 'magyar' shorthands.
 (babel)             Reported on input line 57.
 \openout2 = `include/titlepage.aux'.
 
-
 (include/titlepage.tex
 Package hyperref Info: Option `pageanchor' set `false' on input line 1.
 File: figures/bme_logo.pdf Graphic file (type pdf)
 <use figures/bme_logo.pdf>
 LaTeX Font Info:    Trying to load font information for U+msa on input line 20.
 
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
 LaTeX Font Info:    Trying to load font information for U+msb on input line 20.
 
-
 (C:\Users\szeke\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-)
-[1
+) [1
 
 
 
@@ -1357,14 +1309,13 @@ Package hyperref Info: Option `pageanchor' set `false' on input line 32.
 \tf@toc=\write5
 \openout5 = `thesis.toc'.
 
- [2]
+[2]
 \openout2 = `include/declaration_HU.aux'.
 
- (include/declaration_HU.tex [1
+(include/declaration_HU.tex [1
 
 ])
 \openout2 = `content/abstract.aux'.
-
 
 (content/abstract.tex [1
 
@@ -1379,7 +1330,7 @@ Package hyperref Info: Option `pageanchor' set `false' on input line 32.
 ]
 \openout2 = `content/introduction.aux'.
 
- (content/introduction.tex
+(content/introduction.tex
 1. fejezet.
 ) [1
 
@@ -1389,7 +1340,7 @@ Package hyperref Info: Option `pageanchor' set `false' on input line 32.
 ]
 \openout2 = `content/rules.aux'.
 
- (content/rules.tex
+(content/rules.tex
 2. fejezet.
 [2
 
@@ -1399,24 +1350,24 @@ Package hyperref Info: Option `pageanchor' set `false' on input line 32.
 ]) [3]
 \openout2 = `content/background.aux'.
 
- (content/background.tex
+(content/background.tex
 3. fejezet.
 [4
 
 
 
 
-]) [5]
+] [5]) [6] [7]
 \openout2 = `content/architecture.aux'.
 
- (content/architecture.tex
+(content/architecture.tex
 4. fejezet.
 
 Overfull \hbox (30.16856pt too wide) in paragraph at lines 37--38
  [][] 
  []
 
-[6
+[8
 
 
 
@@ -1471,15 +1422,15 @@ Underfull \hbox (badness 3803) in paragraph at lines 62--63
 önyvből (as-
  []
 
-[7]
+[9]
 Package hyperref Info: bookmark level for unknown lstlisting defaults to 0 on i
 nput line 68.
-) [8]
+) [10]
 \openout2 = `content/movegen.aux'.
 
- (content/movegen.tex
+(content/movegen.tex
 5. fejezet.
-[9
+[11
 
 
 
@@ -1490,24 +1441,24 @@ Underfull \hbox (badness 7433) in paragraph at lines 29--30
 kénti maszk
  []
 
-) [10]
+) [12]
 \openout2 = `content/search.aux'.
 
- (content/search.tex
+(content/search.tex
 6. fejezet.
-[11
+[13
 
 
 
 
-] [12] [13] [14]) [15]
+] [14] [15]) [16]
 \openout2 = `content/gui.aux'.
 
- (content/gui.tex
+(content/gui.tex
 7. fejezet.
 File: figures/gui_main_start.png Graphic file (type bmp)
 <figures/gui_main_start.png>
-[16
+[17
 
 
 
@@ -1517,7 +1468,7 @@ File: figures/gui_midgame_legal.png Graphic file (type bmp)
 <figures/gui_midgame_legal.png>
 File: figures/gui_promotion.png Graphic file (type bmp)
 <figures/gui_promotion.png>
- [17] [18]
+[18]
 File: figures/gui_settings_robots.png Graphic file (type bmp)
 <figures/gui_settings_robots.png>
 File: figures/gui_settings_board.png Graphic file (type bmp)
@@ -1533,7 +1484,7 @@ File: figures/gui_game_over.png Graphic file (type bmp)
 ) [19] [20]
 \openout2 = `content/amazon.aux'.
 
- (content/amazon.tex
+(content/amazon.tex
 8. fejezet.
 [21
 
@@ -1545,13 +1496,13 @@ File: figures/gui_amazon_start.png Graphic file (type bmp)
 <figures/gui_amazon_start.png>
 File: figures/gui_amazon_promotion.png Graphic file (type bmp)
 <figures/gui_amazon_promotion.png>
- [22]
+[22]
 PGFPlots: reading {figures/amazon_dest.dat}
 PGFPlots: reading {figures/amazon_occ.dat}
 ) [23]
 \openout2 = `content/measurements.aux'.
 
- (content/measurements.tex
+(content/measurements.tex
 9. fejezet.
 [24
 
@@ -1583,7 +1534,7 @@ File: figures/terminal_bot_measurement.png Graphic file (type bmp)
 ) [27]
 \openout2 = `content/conclusion.aux'.
 
- (content/conclusion.tex
+(content/conclusion.tex
 10. fejezet.
 [28
 
@@ -1628,7 +1579,7 @@ Underfull \hbox (badness 3179) in paragraph at lines 226--231
 ) [31]
 \openout2 = `content/appendices.aux'.
 
- (content/appendices.tex (include/AI_nyilatkozat_tablazat_HU.tex))
+(content/appendices.tex (include/AI_nyilatkozat_tablazat_HU.tex))
 Overfull \hbox (4.47552pt too wide) in paragraph at lines 12--96
 []
  []
@@ -1645,24 +1596,24 @@ Underfull \hbox (badness 10000) in paragraph at lines 12--96
 \tf@thm=\write6
 \openout6 = `thesis.thm'.
 
- (thesis.aux (include/titlepage.aux) (include/declaration_HU.aux)
-(content/abstract.aux) (content/introduction.aux) (content/rules.aux)
-(content/background.aux) (content/architecture.aux) (content/movegen.aux)
-(content/search.aux) (content/gui.aux) (content/amazon.aux)
-(content/measurements.aux) (content/conclusion.aux) (content/appendices.aux))
+(thesis.aux (include/titlepage.aux) (include/declaration_HU.aux) (content/abstr
+act.aux) (content/introduction.aux) (content/rules.aux) (content/background.aux
+) (content/architecture.aux) (content/movegen.aux) (content/search.aux) (conten
+t/gui.aux) (content/amazon.aux) (content/measurements.aux) (content/conclusion.
+aux) (content/appendices.aux))
  ***********
 LaTeX2e <2025-11-01>
 L3 programming layer <2025-12-24>
  ***********
 Package rerunfilecheck Info: File `thesis.out' has not changed.
-(rerunfilecheck)             Checksum: EE34A5E42C81E1314D583DC68813646A;11204.
+(rerunfilecheck)             Checksum: 254B229E99E2BFC8FDF1A4614C72CE1E;11898.
  ) 
 Here is how much of TeX's memory you used:
- 40691 strings out of 402987
- 955675 string characters out of 5448523
- 1730958 words of memory out of 5000000
- 68694 multiletter control sequences out of 15000+600000
- 636157 words of font info for 96 fonts, out of 8000000 for 9000
+ 40697 strings out of 402987
+ 955813 string characters out of 5448523
+ 1734710 words of memory out of 5000000
+ 68698 multiletter control sequences out of 15000+600000
+ 636165 words of font info for 97 fonts, out of 8000000 for 9000
  1352 hyphenation exceptions out of 8191
  102i,17n,107p,923b,2768s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
