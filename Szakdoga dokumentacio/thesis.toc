@@ -1,86 +1,86 @@
 \select@language {magyar} \contentsline {chapter}{Kivonat}{i}{chapter*.2}%
 \select@language {english} \contentsline {chapter}{Abstract}{ii}{chapter*.3}%
 \select@language {magyar} \contentsline {chapter}{\numberline {1}Bevezetés}{1}{chapter.1}%
-\select@language {magyar} \contentsline {chapter}{\numberline {2}Sakkszabályok és tündérsakk}{2}{chapter.2}%
-\select@language {magyar} \contentsline {section}{\numberline {2.1}A FIDE-szabályok motor szempontjából fontos részei}{2}{section.2.1}%
-\select@language {magyar} \contentsline {section}{\numberline {2.2}A tündérsakk alapelvei}{2}{section.2.2}%
-\select@language {magyar} \contentsline {chapter}{\numberline {3}Előzmények és szakirodalmi háttér}{4}{chapter.3}%
-\select@language {magyar} \contentsline {section}{\numberline {3.1}Táblareprezentáció}{4}{section.3.1}%
-\select@language {magyar} \contentsline {section}{\numberline {3.2}Keresés}{4}{section.3.2}%
-\select@language {magyar} \contentsline {subsection}{\numberline {3.2.1}A keresés kerete}{4}{subsection.3.2.1}%
-\select@language {magyar} \contentsline {paragraph}{Iteratív mélyítés.}{4}{section*.6}%
-\select@language {magyar} \contentsline {paragraph}{Fail-hard és fail-soft alfa-béta.}{5}{section*.7}%
-\select@language {magyar} \contentsline {paragraph}{Principal Variation Search (PVS).}{5}{section*.8}%
-\select@language {magyar} \contentsline {paragraph}{Aspirációs ablak.}{5}{section*.9}%
-\select@language {magyar} \contentsline {paragraph}{Nyugalmi keresés (\emph {quiescence search}).}{5}{section*.10}%
-\select@language {magyar} \contentsline {paragraph}{Transzpozíciós tábla (TT).}{5}{section*.11}%
-\select@language {magyar} \contentsline {subsection}{\numberline {3.2.2}Lépésrendezés}{5}{subsection.3.2.2}%
-\select@language {magyar} \contentsline {paragraph}{MVV-LVA és SEE.}{5}{section*.12}%
-\select@language {magyar} \contentsline {paragraph}{Gyilkos lépések és ellenlépés.}{5}{section*.13}%
-\select@language {magyar} \contentsline {paragraph}{Történeti heurisztika.}{5}{section*.14}%
-\select@language {magyar} \contentsline {subsection}{\numberline {3.2.3}Vágások, redukciók és kiterjesztések}{6}{subsection.3.2.3}%
-\select@language {magyar} \contentsline {subsection}{\numberline {3.2.4}Párhuzamosítás}{6}{subsection.3.2.4}%
-\select@language {magyar} \contentsline {section}{\numberline {3.3}Állásértékelés: kézzel írt függvénytől az NNUE-ig}{6}{section.3.3}%
-\select@language {magyar} \contentsline {section}{\numberline {3.4}UCI protokoll}{6}{section.3.4}%
-\select@language {magyar} \contentsline {section}{\numberline {3.5}Hasonló alkotások}{7}{section.3.5}%
-\select@language {magyar} \contentsline {chapter}{\numberline {4}Szoftverarchitektúra és UCI kommunikációs réteg}{8}{chapter.4}%
-\select@language {magyar} \contentsline {section}{\numberline {4.1}Áttekintés}{8}{section.4.1}%
-\select@language {magyar} \contentsline {section}{\numberline {4.2}Rétegek és felelősségek}{8}{section.4.2}%
-\select@language {magyar} \contentsline {section}{\numberline {4.3}Szálkezelés}{9}{section.4.3}%
-\select@language {magyar} \contentsline {section}{\numberline {4.4}Verziókezelés és mérési infrastruktúra}{9}{section.4.4}%
-\select@language {magyar} \contentsline {section}{\numberline {4.5}A UCI kommunikációs réteg}{10}{section.4.5}%
-\select@language {magyar} \contentsline {chapter}{\numberline {5}Táblareprezentáció és lépésgenerálás}{11}{chapter.5}%
-\select@language {magyar} \contentsline {section}{\numberline {5.1}Az állás tárolása}{11}{section.5.1}%
-\select@language {magyar} \contentsline {section}{\numberline {5.2}A lépés kódolása}{11}{section.5.2}%
-\select@language {magyar} \contentsline {section}{\numberline {5.3}Támadási táblák és mágikus bitboardok}{11}{section.5.3}%
-\select@language {magyar} \contentsline {section}{\numberline {5.4}Pszeudolegális generálás és legalitásvizsgálat}{12}{section.5.4}%
-\select@language {magyar} \contentsline {section}{\numberline {5.5}Döntetlenek és ismétlésfigyelés}{12}{section.5.5}%
-\select@language {magyar} \contentsline {chapter}{\numberline {6}A keresőmotor}{13}{chapter.6}%
-\select@language {magyar} \contentsline {section}{\numberline {6.1}A keresés kerete}{13}{section.6.1}%
-\select@language {magyar} \contentsline {paragraph}{Iteratív mélyítés (v1), negamax alfa-béta (fail-soft v4, teljesen v23) és PVS (v7).}{13}{section*.16}%
-\select@language {magyar} \contentsline {paragraph}{Aspirációs ablak (v14, mai formája v23).}{13}{section*.17}%
-\select@language {magyar} \contentsline {paragraph}{Gyökérlépés-rendezés és főváltozat (v17).}{13}{section*.18}%
-\select@language {magyar} \contentsline {paragraph}{Matt-távolság vágás és döntetlenek (v1).}{13}{section*.19}%
-\select@language {magyar} \contentsline {section}{\numberline {6.2}Transzpozíciós tábla (v3, klaszterek v13, zármentes v23)}{13}{section.6.2}%
-\select@language {magyar} \contentsline {section}{\numberline {6.3}Lépésrendezés}{14}{section.6.3}%
-\select@language {magyar} \contentsline {section}{\numberline {6.4}Vágások, redukciók és kiterjesztések}{14}{section.6.4}%
-\select@language {magyar} \contentsline {paragraph}{A javulás jelző (v9).}{14}{section*.22}%
-\select@language {magyar} \contentsline {paragraph}{Késői lépések redukciója (v7, külön PV-tábla v11).}{14}{section*.23}%
-\select@language {magyar} \contentsline {paragraph}{Szinguláris kiterjesztés (v23).}{15}{section*.24}%
-\select@language {magyar} \contentsline {paragraph}{Sakk-kiterjesztés.}{15}{section*.25}%
-\select@language {magyar} \contentsline {section}{\numberline {6.5}Nyugalmi keresés (v1)}{15}{section.6.5}%
-\select@language {magyar} \contentsline {section}{\numberline {6.6}Állásértékelés}{15}{section.6.6}%
-\select@language {magyar} \contentsline {paragraph}{NNUE HalfKP (v1).}{15}{section*.26}%
-\select@language {magyar} \contentsline {paragraph}{NNUE HalfKAv2\_hm (v23).}{15}{section*.27}%
-\select@language {magyar} \contentsline {paragraph}{Kézzel írt értékelés.}{15}{section*.28}%
-\select@language {magyar} \contentsline {section}{\numberline {6.7}Időkezelés}{16}{section.6.7}%
-\select@language {magyar} \contentsline {section}{\numberline {6.8}Többszálú keresés: Lazy SMP (v16)}{16}{section.6.8}%
-\select@language {magyar} \contentsline {section}{\numberline {6.9}Nehézségi szintek}{16}{section.6.9}%
-\select@language {magyar} \contentsline {chapter}{\numberline {7}A grafikus felhasználói felület}{17}{chapter.7}%
-\select@language {magyar} \contentsline {section}{\numberline {7.1}Felépítés}{17}{section.7.1}%
-\select@language {magyar} \contentsline {section}{\numberline {7.2}A főablak}{18}{section.7.2}%
-\select@language {magyar} \contentsline {section}{\numberline {7.3}Interakció a táblán}{18}{section.7.3}%
-\select@language {magyar} \contentsline {section}{\numberline {7.4}Beállítások}{18}{section.7.4}%
-\select@language {magyar} \contentsline {section}{\numberline {7.5}Játék sakkórával és robot-robot mód}{19}{section.7.5}%
-\select@language {magyar} \contentsline {chapter}{\numberline {8}Tündérsakk-kiterjesztés: az Amazon sakk}{21}{chapter.8}%
-\select@language {magyar} \contentsline {section}{\numberline {8.1}A változat szabályai}{21}{section.8.1}%
-\select@language {magyar} \contentsline {section}{\numberline {8.2}Megvalósítás a motorban}{21}{section.8.2}%
-\select@language {magyar} \contentsline {paragraph}{Bábutípus és állapot.}{21}{section*.34}%
-\select@language {magyar} \contentsline {paragraph}{Lépésgenerálás és támadásszámítás.}{21}{section*.35}%
-\select@language {magyar} \contentsline {paragraph}{Átváltozás.}{21}{section*.36}%
-\select@language {magyar} \contentsline {paragraph}{Értékelés.}{21}{section*.37}%
-\select@language {magyar} \contentsline {paragraph}{Felület.}{22}{section*.38}%
-\select@language {magyar} \contentsline {section}{\numberline {8.3}Ellenőrzés}{22}{section.8.3}%
-\select@language {magyar} \contentsline {section}{\numberline {8.4}Hogyan játszik a kereső Amazonnal?}{22}{section.8.4}%
-\select@language {magyar} \contentsline {chapter}{\numberline {9}Mérések és értékelés}{24}{chapter.9}%
-\select@language {magyar} \contentsline {section}{\numberline {9.1}A lépésgenerálás helyessége és sebessége}{24}{section.9.1}%
-\select@language {magyar} \contentsline {section}{\numberline {9.2}A döntéshozatal hatékonysága}{24}{section.9.2}%
-\select@language {magyar} \contentsline {section}{\numberline {9.3}A kereső fejlődése verzióról verzióra}{25}{section.9.3}%
-\select@language {magyar} \contentsline {section}{\numberline {9.4}Abszolút erősség: mérés a Stockfish ellen}{26}{section.9.4}%
-\select@language {magyar} \contentsline {section}{\numberline {9.5}Mérések a konzolos backendben}{27}{section.9.5}%
-\select@language {magyar} \contentsline {chapter}{\numberline {10}Összefoglalás és továbbfejlesztési lehetőségek}{28}{chapter.10}%
-\select@language {magyar} \contentsline {section}{\numberline {10.1}Az elvégzett munka értékelése}{28}{section.10.1}%
-\select@language {magyar} \contentsline {section}{\numberline {10.2}Továbbfejlesztési lehetőségek}{28}{section.10.2}%
-\select@language {magyar} \contentsline {chapter}{Irodalomjegyz\'ek}{30}{section.10.2}%
-\select@language {magyar} \contentsline {chapter}{Függelék}{32}{appendix*.48}%
-\select@language {magyar} \contentsline {section}{\numberline {F.1}Nyilatkozat generatív mesterséges intelligencia alkalmazásáról}{32}{section.F.1}%
+\select@language {magyar} \contentsline {chapter}{\numberline {2}Sakkszabályok és tündérsakk}{3}{chapter.2}%
+\select@language {magyar} \contentsline {section}{\numberline {2.1}A FIDE-szabályok motor szempontjából fontos részei}{3}{section.2.1}%
+\select@language {magyar} \contentsline {section}{\numberline {2.2}A tündérsakk alapelvei}{3}{section.2.2}%
+\select@language {magyar} \contentsline {chapter}{\numberline {3}Előzmények és szakirodalmi háttér}{5}{chapter.3}%
+\select@language {magyar} \contentsline {section}{\numberline {3.1}Táblareprezentáció}{5}{section.3.1}%
+\select@language {magyar} \contentsline {section}{\numberline {3.2}Keresés}{5}{section.3.2}%
+\select@language {magyar} \contentsline {subsection}{\numberline {3.2.1}A keresés kerete}{5}{subsection.3.2.1}%
+\select@language {magyar} \contentsline {paragraph}{Iteratív mélyítés.}{5}{section*.6}%
+\select@language {magyar} \contentsline {paragraph}{Fail-hard és fail-soft alfa-béta.}{6}{section*.7}%
+\select@language {magyar} \contentsline {paragraph}{Principal Variation Search (PVS).}{6}{section*.8}%
+\select@language {magyar} \contentsline {paragraph}{Aspirációs ablak.}{6}{section*.9}%
+\select@language {magyar} \contentsline {paragraph}{Nyugalmi keresés (\emph {quiescence search}).}{6}{section*.10}%
+\select@language {magyar} \contentsline {paragraph}{Transzpozíciós tábla (TT).}{6}{section*.11}%
+\select@language {magyar} \contentsline {subsection}{\numberline {3.2.2}Lépésrendezés}{6}{subsection.3.2.2}%
+\select@language {magyar} \contentsline {paragraph}{MVV-LVA és SEE.}{6}{section*.12}%
+\select@language {magyar} \contentsline {paragraph}{Gyilkos lépések és ellenlépés.}{6}{section*.13}%
+\select@language {magyar} \contentsline {paragraph}{Történeti heurisztika.}{6}{section*.14}%
+\select@language {magyar} \contentsline {subsection}{\numberline {3.2.3}Vágások, redukciók és kiterjesztések}{7}{subsection.3.2.3}%
+\select@language {magyar} \contentsline {subsection}{\numberline {3.2.4}Párhuzamosítás}{7}{subsection.3.2.4}%
+\select@language {magyar} \contentsline {section}{\numberline {3.3}Állásértékelés: kézzel írt függvénytől az NNUE-ig}{7}{section.3.3}%
+\select@language {magyar} \contentsline {section}{\numberline {3.4}UCI protokoll}{7}{section.3.4}%
+\select@language {magyar} \contentsline {section}{\numberline {3.5}Hasonló alkotások}{8}{section.3.5}%
+\select@language {magyar} \contentsline {chapter}{\numberline {4}Szoftverarchitektúra és UCI kommunikációs réteg}{9}{chapter.4}%
+\select@language {magyar} \contentsline {section}{\numberline {4.1}Áttekintés}{9}{section.4.1}%
+\select@language {magyar} \contentsline {section}{\numberline {4.2}Rétegek és felelősségek}{9}{section.4.2}%
+\select@language {magyar} \contentsline {section}{\numberline {4.3}Szálkezelés}{10}{section.4.3}%
+\select@language {magyar} \contentsline {section}{\numberline {4.4}Verziókezelés és mérési infrastruktúra}{10}{section.4.4}%
+\select@language {magyar} \contentsline {section}{\numberline {4.5}A UCI kommunikációs réteg}{11}{section.4.5}%
+\select@language {magyar} \contentsline {chapter}{\numberline {5}Táblareprezentáció és lépésgenerálás}{12}{chapter.5}%
+\select@language {magyar} \contentsline {section}{\numberline {5.1}Az állás tárolása}{12}{section.5.1}%
+\select@language {magyar} \contentsline {section}{\numberline {5.2}A lépés kódolása}{12}{section.5.2}%
+\select@language {magyar} \contentsline {section}{\numberline {5.3}Támadási táblák és mágikus bitboardok}{12}{section.5.3}%
+\select@language {magyar} \contentsline {section}{\numberline {5.4}Pszeudolegális generálás és legalitásvizsgálat}{13}{section.5.4}%
+\select@language {magyar} \contentsline {section}{\numberline {5.5}Döntetlenek és ismétlésfigyelés}{13}{section.5.5}%
+\select@language {magyar} \contentsline {chapter}{\numberline {6}A keresőmotor}{14}{chapter.6}%
+\select@language {magyar} \contentsline {section}{\numberline {6.1}A keresés kerete}{14}{section.6.1}%
+\select@language {magyar} \contentsline {paragraph}{Iteratív mélyítés (v1), negamax alfa-béta (fail-soft v4, teljesen v23) és PVS (v7).}{14}{section*.16}%
+\select@language {magyar} \contentsline {paragraph}{Aspirációs ablak (v14, mai formája v23).}{14}{section*.17}%
+\select@language {magyar} \contentsline {paragraph}{Gyökérlépés-rendezés és főváltozat (v17).}{14}{section*.18}%
+\select@language {magyar} \contentsline {paragraph}{Matt-távolság vágás és döntetlenek (v1).}{14}{section*.19}%
+\select@language {magyar} \contentsline {section}{\numberline {6.2}Transzpozíciós tábla (v3, klaszterek v13, zármentes v23)}{14}{section.6.2}%
+\select@language {magyar} \contentsline {section}{\numberline {6.3}Lépésrendezés}{15}{section.6.3}%
+\select@language {magyar} \contentsline {section}{\numberline {6.4}Vágások, redukciók és kiterjesztések}{15}{section.6.4}%
+\select@language {magyar} \contentsline {paragraph}{A javulás jelző (v9).}{15}{section*.22}%
+\select@language {magyar} \contentsline {paragraph}{Késői lépések redukciója (v7, külön PV-tábla v11).}{15}{section*.23}%
+\select@language {magyar} \contentsline {paragraph}{Szinguláris kiterjesztés (v23).}{16}{section*.24}%
+\select@language {magyar} \contentsline {paragraph}{Sakk-kiterjesztés.}{16}{section*.25}%
+\select@language {magyar} \contentsline {section}{\numberline {6.5}Nyugalmi keresés (v1)}{16}{section.6.5}%
+\select@language {magyar} \contentsline {section}{\numberline {6.6}Állásértékelés}{16}{section.6.6}%
+\select@language {magyar} \contentsline {paragraph}{NNUE HalfKP (v1).}{16}{section*.26}%
+\select@language {magyar} \contentsline {paragraph}{NNUE HalfKAv2\_hm (v23).}{16}{section*.27}%
+\select@language {magyar} \contentsline {paragraph}{Kézzel írt értékelés.}{16}{section*.28}%
+\select@language {magyar} \contentsline {section}{\numberline {6.7}Időkezelés}{17}{section.6.7}%
+\select@language {magyar} \contentsline {section}{\numberline {6.8}Többszálú keresés: Lazy SMP (v16)}{17}{section.6.8}%
+\select@language {magyar} \contentsline {section}{\numberline {6.9}Nehézségi szintek}{17}{section.6.9}%
+\select@language {magyar} \contentsline {chapter}{\numberline {7}A grafikus felhasználói felület}{18}{chapter.7}%
+\select@language {magyar} \contentsline {section}{\numberline {7.1}Felépítés}{18}{section.7.1}%
+\select@language {magyar} \contentsline {section}{\numberline {7.2}A főablak}{19}{section.7.2}%
+\select@language {magyar} \contentsline {section}{\numberline {7.3}Interakció a táblán}{19}{section.7.3}%
+\select@language {magyar} \contentsline {section}{\numberline {7.4}Beállítások}{19}{section.7.4}%
+\select@language {magyar} \contentsline {section}{\numberline {7.5}Játék sakkórával és robot-robot mód}{20}{section.7.5}%
+\select@language {magyar} \contentsline {chapter}{\numberline {8}Tündérsakk-kiterjesztés: az Amazon sakk}{22}{chapter.8}%
+\select@language {magyar} \contentsline {section}{\numberline {8.1}A változat szabályai}{22}{section.8.1}%
+\select@language {magyar} \contentsline {section}{\numberline {8.2}Megvalósítás a motorban}{22}{section.8.2}%
+\select@language {magyar} \contentsline {paragraph}{Bábutípus és állapot.}{22}{section*.34}%
+\select@language {magyar} \contentsline {paragraph}{Lépésgenerálás és támadásszámítás.}{22}{section*.35}%
+\select@language {magyar} \contentsline {paragraph}{Átváltozás.}{22}{section*.36}%
+\select@language {magyar} \contentsline {paragraph}{Értékelés.}{22}{section*.37}%
+\select@language {magyar} \contentsline {paragraph}{Felület.}{23}{section*.38}%
+\select@language {magyar} \contentsline {section}{\numberline {8.3}Ellenőrzés}{23}{section.8.3}%
+\select@language {magyar} \contentsline {section}{\numberline {8.4}Hogyan játszik a kereső Amazonnal?}{23}{section.8.4}%
+\select@language {magyar} \contentsline {chapter}{\numberline {9}Mérések és értékelés}{25}{chapter.9}%
+\select@language {magyar} \contentsline {section}{\numberline {9.1}A lépésgenerálás helyessége és sebessége}{25}{section.9.1}%
+\select@language {magyar} \contentsline {section}{\numberline {9.2}A döntéshozatal hatékonysága}{25}{section.9.2}%
+\select@language {magyar} \contentsline {section}{\numberline {9.3}A kereső fejlődése verzióról verzióra}{26}{section.9.3}%
+\select@language {magyar} \contentsline {section}{\numberline {9.4}Abszolút erősség: mérés a Stockfish ellen}{27}{section.9.4}%
+\select@language {magyar} \contentsline {section}{\numberline {9.5}Mérések a konzolos backendben}{28}{section.9.5}%
+\select@language {magyar} \contentsline {chapter}{\numberline {10}Összefoglalás és továbbfejlesztési lehetőségek}{29}{chapter.10}%
+\select@language {magyar} \contentsline {section}{\numberline {10.1}Az elvégzett munka értékelése}{29}{section.10.1}%
+\select@language {magyar} \contentsline {section}{\numberline {10.2}Továbbfejlesztési lehetőségek}{29}{section.10.2}%
+\select@language {magyar} \contentsline {chapter}{Irodalomjegyz\'ek}{31}{section.10.2}%
+\select@language {magyar} \contentsline {chapter}{Függelék}{33}{appendix*.48}%
+\select@language {magyar} \contentsline {section}{\numberline {F.1}Nyilatkozat generatív mesterséges intelligencia alkalmazásáról}{33}{section.F.1}%
